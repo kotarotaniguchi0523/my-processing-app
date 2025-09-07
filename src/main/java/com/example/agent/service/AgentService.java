@@ -45,7 +45,7 @@ public class AgentService {
         this.toolInvoker = new ToolInvoker();
         this.toolRegistry = ToolRegistry.getInstance();
         this.gson = new Gson();
-        this.currentState = new DrawingState();
+        this.currentState = DrawingState.empty();
         this.pendingActions = new ArrayList<>();
     }
     

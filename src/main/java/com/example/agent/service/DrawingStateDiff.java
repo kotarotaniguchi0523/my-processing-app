@@ -58,9 +58,10 @@ public class DrawingStateDiff {
         }
         
         // Check background changes
-        if (!Objects.equals(originalState.getBackground(), newState.getBackground())) {
-            changeList.add(new Change(ChangeType.MODIFIED, "Background",
-                originalState.getBackground() + " -> " + newState.getBackground()));
+        String origBg = originalState != null ? originalState.getStringSetting("backgroundColor", "white") : "white";
+        String newBg = newState != null ? newState.getStringSetting("backgroundColor", "white") : "white";
+        if (!Objects.equals(origBg, newBg)) {
+            changeList.add(new Change(ChangeType.MODIFIED, "Background", origBg + " -> " + newBg));
         }
         
         return changeList;
@@ -87,12 +88,9 @@ public class DrawingStateDiff {
         if (s1 == null || s2 == null) return false;
         
         return Objects.equals(s1.getType(), s2.getType()) &&
-               Objects.equals(s1.getX(), s2.getX()) &&
-               Objects.equals(s1.getY(), s2.getY()) &&
-               Objects.equals(s1.getWidth(), s2.getWidth()) &&
-               Objects.equals(s1.getHeight(), s2.getHeight()) &&
-               Objects.equals(s1.getFillColor(), s2.getFillColor()) &&
-               Objects.equals(s1.getStrokeColor(), s2.getStrokeColor());
+               Objects.equals(s1.getPosition(), s2.getPosition()) &&
+               Objects.equals(s1.getBounds(), s2.getBounds()) &&
+               Objects.equals(s1.getStyle(), s2.getStyle());
     }
     
     /**
@@ -102,14 +100,14 @@ public class DrawingStateDiff {
      * @return true if it's the same shape but modified
      */
     private boolean isSameShapeModified(Shape orig, Shape newShape) {
-        // Same type and position but different attributes
-        return Objects.equals(orig.getType(), newShape.getType()) &&
-               Objects.equals(orig.getX(), newShape.getX()) &&
-               Objects.equals(orig.getY(), newShape.getY()) &&
-               (!Objects.equals(orig.getWidth(), newShape.getWidth()) ||
-                !Objects.equals(orig.getHeight(), newShape.getHeight()) ||
-                !Objects.equals(orig.getFillColor(), newShape.getFillColor()) ||
-                !Objects.equals(orig.getStrokeColor(), newShape.getStrokeColor()));
+        // Same ID but different properties
+        return Objects.equals(orig.getId(), newShape.getId()) &&
+               Objects.equals(orig.getType(), newShape.getType()) &&
+               (!Objects.equals(orig.getPosition(), newShape.getPosition()) ||
+                !Objects.equals(orig.getBounds(), newShape.getBounds()) ||
+                !Objects.equals(orig.getStyle(), newShape.getStyle()) ||
+                orig.isVisible() != newShape.isVisible() ||
+                orig.getLayerOrder() != newShape.getLayerOrder());
     }
     
     /**

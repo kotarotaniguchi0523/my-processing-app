@@ -184,6 +184,17 @@ com.example.aiagent/
 9. **State Update**: `EventHandler`が`AgentService`の待機処理を再開させ、`AgentService`は`StateService`に新しい状態で更新するよう指示する。
 10. **Redraw**: `StateService`の更新を検知した`UIController`が、`DrawingCanvas`に再描画を命令する。
 
+## 4.2 MVP 実装上のリファクタ要点（M1最終）
+
+- CommandFactory 導入: `ParsedCommand` → `DrawCommand/ToolCommand` 生成を `application/CommandFactory` に集約し、`ApplicationController` の肥大化を抑制。
+- 描画経路の一元化: UI は `engine/DrawingEngine` を用いて Domain 形状を描画（`SimpleSketch` からの直接描画ロジックを排除）。
+- セッション永続化: 保存/読込/一覧は `services/SessionManager` を経由（内部で `FileStateRepository` を使用）。ユーザーメッセージは "session" に統一。
+- 状態更新の検証: `StateService.updateState` で `StateManager.validateState` を必ず実行し、無効な状態は反映しない（ログのみ）。
+- 実行前ガード: `CommandExecutor.execute` で `canExecute(command)` を必ず確認し、不正コマンドは実行しない（安全網）。
+- テキスト描画品質: `DrawingEngine` で `Text` のフォントサイズ/アラインメントを反映。
+
+これらは M2 以降（AI連携・承認ワークフロー）にも影響せず、責務の境界を明確化するための基盤整備である。
+
 ## 5. API通信設計
 
 ### 5.1 AIへのリクエスト構造 (システムプロンプト)

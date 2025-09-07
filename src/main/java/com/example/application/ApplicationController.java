@@ -1,19 +1,11 @@
 package com.example.application;
 
-import com.example.domain.commands.AddShapeCommand;
 import com.example.domain.commands.ClearCanvasCommand;
 import com.example.domain.commands.DrawCommand;
 import com.example.domain.model.DrawingSession;
-import com.example.domain.models.Circle;
-import com.example.domain.models.Rectangle;
 import com.example.domain.services.CommandExecutor;
 import com.example.domain.services.StateService;
-import com.example.domain.tools.ToolCommand;
 import com.example.domain.tools.ToolInitializer;
-import com.example.domain.tools.impl.ModifyShapeTool;
-import com.example.domain.values.Color;
-import com.example.domain.values.Position;
-import com.example.domain.values.Style;
 import com.example.events.DomainEvent;
 import com.example.events.EventDispatcher;
 import com.example.events.EventType;
@@ -24,7 +16,6 @@ import com.example.services.SessionManager;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
@@ -37,11 +28,6 @@ import java.util.logging.Logger;
 public class ApplicationController {
   private static final Logger LOGGER = Logger.getLogger(ApplicationController.class.getName());
   private static final String READY = "Ready";
-  private static final String COLOR = "color";
-  private static final String WIDTH = "width";
-  private static final String HEIGHT = "height";
-  private static final String SIZE = "size";
-  private static final String POSITION = "position";
   private static final String CMD_SAVE = "save";
   private static final String CMD_LOAD = "load";
   private static final String CMD_LIST = "list";
@@ -334,203 +320,15 @@ public class ApplicationController {
     });
   }
 
-  /** Create a draw command from parsed command data. */
-  private DrawCommand createCommandFromParsed(ParsedCommand parsedCommand) {
-    switch (parsedCommand.getType()) {
-      case "circle":
-        return createCircleCommand(parsedCommand);
-      case "rectangle":
-        return createRectangleCommand(parsedCommand);
-      case "clear":
-        return new ClearCanvasCommand();
-      case "modify":
-        return createModifyCommand(parsedCommand);
-      default:
-        if (LOGGER.isLoggable(Level.WARNING)) {
-          LOGGER.warning("Unknown command type: " + parsedCommand.getType());
-        }
-        return null;
-    }
-  }
+  
 
-  /** Create a circle command from parsed data. */
-  private AddShapeCommand createCircleCommand(ParsedCommand parsedCommand) {
-    try {
-      float x = parsedCommand.getFloatParam("x", 100.0f);
-      float y = parsedCommand.getFloatParam("y", 100.0f);
-      float diameter = parsedCommand.getFloatParam("diameter", 50.0f);
-      String color = parsedCommand.getStringParam(COLOR, "black");
+  
 
-      Position position = new Position(x, y);
-      Color fillColor = parseColor(color);
-      Style style = Style.builder().fillColor(fillColor).build();
-      Circle circle = new Circle(position, diameter / 2, style); // diameter to radius
-      return new AddShapeCommand(circle);
+  
 
-    } catch (Exception e) {
-      if (LOGGER.isLoggable(Level.WARNING)) {
-        LOGGER.warning("Error creating circle command: " + e.getMessage());
-      }
-      return null;
-    }
-  }
+  
 
-  /** Create a rectangle command from parsed data. */
-  private AddShapeCommand createRectangleCommand(ParsedCommand parsedCommand) {
-    try {
-      float x = parsedCommand.getFloatParam("x", 100.0f);
-      float y = parsedCommand.getFloatParam("y", 100.0f);
-      float width = parsedCommand.getFloatParam(WIDTH, 100.0f);
-      float height = parsedCommand.getFloatParam(HEIGHT, 50.0f);
-      String color = parsedCommand.getStringParam(COLOR, "black");
-
-      Position position = new Position(x, y);
-      Color fillColor = parseColor(color);
-      Style style = Style.builder().fillColor(fillColor).build();
-      Rectangle rectangle = new Rectangle(position, width, height, style);
-      return new AddShapeCommand(rectangle);
-
-    } catch (Exception e) {
-      if (LOGGER.isLoggable(Level.WARNING)) {
-        LOGGER.warning("Error creating rectangle command: " + e.getMessage());
-      }
-      return null;
-    }
-  }
-
-  /** Create a modify command from parsed data. */
-  private ToolCommand createModifyCommand(ParsedCommand parsedCommand) {
-    try {
-      // Validate required parameters
-      String shapeId = parsedCommand.getStringParam("id");
-      String property = parsedCommand.getStringParam("property");
-
-      if (shapeId == null || shapeId.isBlank()) {
-        throw new IllegalArgumentException("Shape ID is required for modify command");
-      }
-
-      if (property == null || property.isBlank()) {
-        throw new IllegalArgumentException("Property type is required for modify command");
-      }
-
-      // Validate property type
-      if (!isValidProperty(property)) {
-        throw new IllegalArgumentException(
-            "Invalid property type: " + property + ". Valid properties are: color, position, size");
-      }
-
-      // Build parameters map for ModifyShapeTool
-      Map<String, Object> parameters = buildModifyParameters(parsedCommand);
-
-      // Create the modify tool and tool command
-      ModifyShapeTool modifyTool = new ModifyShapeTool();
-      return new ToolCommand(modifyTool, parameters);
-
-    } catch (Exception e) {
-      if (LOGGER.isLoggable(Level.WARNING)) {
-        LOGGER.warning("Error creating modify command: " + e.getMessage());
-      }
-      handleError("Error with modify command: " + e.getMessage());
-      return null;
-    }
-  }
-
-  /** Check if a property type is valid for modification. */
-  private boolean isValidProperty(String property) {
-    return COLOR.equals(property) || POSITION.equals(property) || SIZE.equals(property);
-  }
-
-  /** Build parameters for ModifyShapeTool from parsed command data. */
-  private Map<String, Object> buildModifyParameters(ParsedCommand parsedCommand) {
-    Map<String, Object> parameters = new HashMap<>();
-
-    // Add shape identifier
-    String shapeId = parsedCommand.getStringParam("id");
-    if (shapeId != null) {
-      parameters.put("id", shapeId);
-    }
-
-    // Get the property being modified
-    String property = parsedCommand.getStringParam("property");
-
-    switch (property) {
-      case COLOR:
-        // Build style modification
-        Map<String, Object> style = new HashMap<>();
-        String colorValue = parsedCommand.getStringParam(COLOR);
-        if (colorValue != null) {
-          Color color = parseColor(colorValue);
-          Map<String, Object> colorMap = new HashMap<>();
-          colorMap.put("r", color.getRed());
-          colorMap.put("g", color.getGreen());
-          colorMap.put("b", color.getBlue());
-          colorMap.put("a", color.getAlpha());
-          style.put("fillColor", colorMap);
-        }
-        parameters.put("style", style);
-        break;
-
-      case POSITION:
-        // Build position modification
-        if (parsedCommand.hasParam("x") && parsedCommand.hasParam("y")) {
-          Map<String, Object> position = new HashMap<>();
-          position.put("x", parsedCommand.getFloatParam("x", 0));
-          position.put("y", parsedCommand.getFloatParam("y", 0));
-          parameters.put("position", position);
-        } else {
-          throw new IllegalArgumentException(
-              "Position modification requires both x and y coordinates");
-        }
-        break;
-
-      case SIZE:
-        // Build properties modification for size
-        Map<String, Object> properties = new HashMap<>();
-
-        if (parsedCommand.hasParam(SIZE)) {
-          // Single size value - could be radius for circle or width/height for rectangle
-          float size = parsedCommand.getFloatParam(SIZE, 0);
-          if (size <= 0) {
-            throw new IllegalArgumentException("Size must be greater than 0");
-          }
-          properties.put("radius", size); // For circles
-          properties.put(WIDTH, size); // For rectangles/squares
-          properties.put(HEIGHT, size); // For rectangles/squares
-        } else {
-          // Separate width and height
-          boolean hasSize = false;
-          if (parsedCommand.hasParam(WIDTH)) {
-            float width = parsedCommand.getFloatParam(WIDTH, 0);
-            if (width <= 0) {
-              throw new IllegalArgumentException("Width must be greater than 0");
-            }
-            properties.put(WIDTH, width);
-            hasSize = true;
-          }
-          if (parsedCommand.hasParam(HEIGHT)) {
-            float height = parsedCommand.getFloatParam(HEIGHT, 0);
-            if (height <= 0) {
-              throw new IllegalArgumentException("Height must be greater than 0");
-            }
-            properties.put(HEIGHT, height);
-            hasSize = true;
-          }
-
-          if (!hasSize) {
-            throw new IllegalArgumentException(
-                "Size modification requires either a size value or width/height" + " values");
-          }
-        }
-
-        parameters.put("properties", properties);
-        break;
-
-      default:
-        throw new IllegalArgumentException("Unknown property: " + property);
-    }
-
-    return parameters;
-  }
+  
 
   /** Update UI status through callback. */
   private void updateUIStatus(String status) {
@@ -576,60 +374,7 @@ public class ApplicationController {
     return stateService;
   }
 
-  /**
-   * Parse a color string into a Color object. Supports hex colors (#FF0000) and basic color names.
-   */
-  private Color parseColor(String colorString) {
-    if (colorString == null || colorString.isBlank()) {
-      return Color.BLACK;
-    }
-
-    String color = colorString.trim().toLowerCase(Locale.ROOT);
-
-    // Try hex color first
-    if (color.startsWith("#")) {
-      try {
-        return Color.fromHex(color);
-      } catch (Exception e) {
-        if (LOGGER.isLoggable(Level.WARNING)) {
-          LOGGER.warning("Invalid hex color: " + color + ", using black instead");
-        }
-        return Color.BLACK;
-      }
-    }
-
-    // Basic color names
-    switch (color) {
-      case "black":
-        return Color.BLACK;
-      case "white":
-        return Color.WHITE;
-      case "red":
-        return Color.RED;
-      case "green":
-        return Color.GREEN;
-      case "blue":
-        return Color.BLUE;
-      case "yellow":
-        return new Color(255, 255, 0);
-      case "purple":
-        return new Color(128, 0, 128);
-      case "orange":
-        return new Color(255, 165, 0);
-      case "pink":
-        return new Color(255, 192, 203);
-      case "brown":
-        return new Color(165, 42, 42);
-      case "gray":
-      case "grey":
-        return new Color(128, 128, 128);
-      default:
-        if (LOGGER.isLoggable(Level.WARNING)) {
-          LOGGER.warning("Unknown color: " + color + ", using black instead");
-        }
-        return Color.BLACK;
-    }
-  }
+  
 
   /** Execute save command. */
   private void executeSaveCommand(ParsedCommand parsedCommand) {
