@@ -5,12 +5,34 @@ echo ========================================
 
 echo.
 echo [1/3] Google Java Format実行中...
-java -jar google-java-format-1.17.0-all-deps.jar --replace src/main/java/**/*.java
-if %ERRORLEVEL% NEQ 0 (
-    echo Google Java Format失敗
+setlocal EnableDelayedExpansion
+set GF_JAR=google-java-format-1.17.0-all-deps.jar
+REM AOSPスタイルにすることで4スペースインデントに合わせる
+set GF_OPTS=--aosp
+set FORMAT_ERRORS=0
+
+REM src/main/java を再帰整形
+if exist src\main\java (
+    for /R "src\main\java" %%f in (*.java) do (
+        echo   Formatting: %%f
+        java -jar %GF_JAR% %GF_OPTS% --replace "%%f" || set /A FORMAT_ERRORS+=1 >nul 2>&1
+    )
+)
+
+REM src/test/java も再帰整形
+if exist src\test\java (
+    for /R "src\test\java" %%f in (*.java) do (
+        echo   Formatting: %%f
+        java -jar %GF_JAR% %GF_OPTS% --replace "%%f" || set /A FORMAT_ERRORS+=1 >nul 2>&1
+    )
+)
+
+if %FORMAT_ERRORS% GTR 0 (
+    echo Google Java Formatで !FORMAT_ERRORS! 件のファイルでエラーが発生しました
 ) else (
     echo Google Java Format完了
 )
+endlocal
 
 echo.
 echo [2/3] Checkstyle違反チェック中...

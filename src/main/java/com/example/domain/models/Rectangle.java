@@ -2,6 +2,7 @@ package com.example.domain.models;
 
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
+
 import java.util.Map;
 import java.util.Objects;
 
@@ -9,271 +10,275 @@ import java.util.Objects;
  * Rectangle shape implementation Represents a rectangular shape with position, width, and height
  */
 public final class Rectangle extends Shape {
-  private final float width;
-  private final float height;
+    private final float width;
+    private final float height;
 
-  public Rectangle(
-      String id,
-      Position position,
-      float width,
-      float height,
-      Style style,
-      boolean visible,
-      int layerOrder) {
-    super(id, position, style, visible, layerOrder);
-    this.width = Math.max(0, width);
-    this.height = Math.max(0, height);
-  }
-
-  public Rectangle(String id, Position position, float width, float height, Style style) {
-    this(id, position, width, height, style, true, 0);
-  }
-
-  public Rectangle(Position position, float width, float height, Style style) {
-    this(generateId("rectangle"), position, width, height, style);
-  }
-
-  public Rectangle(Position position, float width, float height) {
-    this(position, width, height, Style.DEFAULT);
-  }
-
-  public float getWidth() {
-    return width;
-  }
-
-  public float getHeight() {
-    return height;
-  }
-
-  public Position getTopLeft() {
-    return position;
-  }
-
-  public Position getTopRight() {
-    return new Position(position.getX() + width, position.getY());
-  }
-
-  public Position getBottomLeft() {
-    return new Position(position.getX(), position.getY() + height);
-  }
-
-  public Position getBottomRight() {
-    return new Position(position.getX() + width, position.getY() + height);
-  }
-
-  public Position getCenter() {
-    return new Position(position.getX() + width / 2, position.getY() + height / 2);
-  }
-
-  public float getArea() {
-    return width * height;
-  }
-
-  public float getPerimeter() {
-    return 2 * (width + height);
-  }
-
-  public boolean isSquare() {
-    return Float.compare(width, height) == 0;
-  }
-
-  @Override
-  public ShapeType getType() {
-    return ShapeType.RECTANGLE;
-  }
-
-  @Override
-  public Rectangle moveTo(Position newPosition) {
-    return new Rectangle(id, newPosition, width, height, style, visible, layerOrder);
-  }
-
-  @Override
-  public Rectangle withStyle(Style newStyle) {
-    return new Rectangle(id, position, width, height, newStyle, visible, layerOrder);
-  }
-
-  public Rectangle withDimensions(float newWidth, float newHeight) {
-    return new Rectangle(id, position, newWidth, newHeight, style, visible, layerOrder);
-  }
-
-  public Rectangle withWidth(float newWidth) {
-    return new Rectangle(id, position, newWidth, height, style, visible, layerOrder);
-  }
-
-  public Rectangle withHeight(float newHeight) {
-    return new Rectangle(id, position, width, newHeight, style, visible, layerOrder);
-  }
-
-  @Override
-  public boolean contains(Position point) {
-    return point.getX() >= position.getX()
-        && point.getX() <= position.getX() + width
-        && point.getY() >= position.getY()
-        && point.getY() <= position.getY() + height;
-  }
-
-  @Override
-  public BoundingBox getBounds() {
-    return new BoundingBox(position.getX(), position.getY(), width, height);
-  }
-
-  @Override
-  protected Shape createWithProperties(
-      String id, Position position, Style style, boolean visible, int layerOrder) {
-    return new Rectangle(id, position, width, height, style, visible, layerOrder);
-  }
-
-  @Override
-  protected void performDraw(Object canvas) {
-    // This would be implemented based on the specific rendering system
-    // For now, it's a placeholder that would work with Processing
-    if (canvas instanceof processing.core.PGraphics) {
-      processing.core.PGraphics pg = (processing.core.PGraphics) canvas;
-
-      // Apply style
-      if (style.hasFill()) {
-        pg.fill(style.getFillColor().toProcessingColor());
-      } else {
-        pg.noFill();
-      }
-
-      if (style.hasStroke()) {
-        pg.stroke(style.getStrokeColor().toProcessingColor());
-        pg.strokeWeight(style.getStrokeWeight());
-      } else {
-        pg.noStroke();
-      }
-
-      // Draw rectangle
-      pg.rect(position.getX(), position.getY(), width, height);
-    }
-  }
-
-  // Check if this rectangle intersects with another rectangle
-  public boolean intersects(Rectangle other) {
-    return getBounds().overlaps(other.getBounds());
-  }
-
-  // Check if this rectangle contains another rectangle completely
-  public boolean contains(Rectangle other) {
-    return contains(other.getTopLeft()) && contains(other.getBottomRight());
-  }
-
-  // Get the closest point on the rectangle's perimeter to a given point
-  public Position getClosestPointOnPerimeter(Position point) {
-    float px = point.getX();
-    float py = point.getY();
-
-    // Clamp point to rectangle bounds
-    float clampedX = Math.max(position.getX(), Math.min(px, position.getX() + width));
-    float clampedY = Math.max(position.getY(), Math.min(py, position.getY() + height));
-
-    // If point is inside rectangle, find closest edge
-    if (contains(point)) {
-      float distToLeft = px - position.getX();
-      float distToRight = (position.getX() + width) - px;
-      float distToTop = py - position.getY();
-      float distToBottom = (position.getY() + height) - py;
-
-      float minDist =
-          Math.min(Math.min(distToLeft, distToRight), Math.min(distToTop, distToBottom));
-
-      if (Float.compare(minDist, distToLeft) == 0) {
-        return new Position(position.getX(), py);
-      } else if (Float.compare(minDist, distToRight) == 0) {
-        return new Position(position.getX() + width, py);
-      } else if (Float.compare(minDist, distToTop) == 0) {
-        return new Position(px, position.getY());
-      } else {
-        return new Position(px, position.getY() + height);
-      }
+    public Rectangle(
+            String id,
+            Position position,
+            float width,
+            float height,
+            Style style,
+            boolean visible,
+            int layerOrder) {
+        super(id, position, style, visible, layerOrder);
+        this.width = Math.max(0, width);
+        this.height = Math.max(0, height);
     }
 
-    return new Position(clampedX, clampedY);
-  }
-
-  // Scale rectangle from center
-  public Rectangle scale(float scaleX, float scaleY) {
-    Position center = getCenter();
-    float newWidth = width * Math.abs(scaleX);
-    float newHeight = height * Math.abs(scaleY);
-    Position newPosition =
-        new Position(center.getX() - newWidth / 2, center.getY() - newHeight / 2);
-    return new Rectangle(id, newPosition, newWidth, newHeight, style, visible, layerOrder);
-  }
-
-  public Rectangle scale(float scale) {
-    return scale(scale, scale);
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
+    public Rectangle(String id, Position position, float width, float height, Style style) {
+        this(id, position, width, height, style, true, 0);
     }
-    if (!(obj instanceof Rectangle)) {
-      return false;
+
+    public Rectangle(Position position, float width, float height, Style style) {
+        this(generateId("rectangle"), position, width, height, style);
     }
-    if (!super.equals(obj)) {
-      return false;
+
+    public Rectangle(Position position, float width, float height) {
+        this(position, width, height, Style.DEFAULT);
     }
-    Rectangle rectangle = (Rectangle) obj;
-    return Float.compare(rectangle.width, width) == 0
-        && Float.compare(rectangle.height, height) == 0;
-  }
 
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), width, height);
-  }
+    public float getWidth() {
+        return width;
+    }
 
-  @Override
-  public String toString() {
-    return String.format(
-        "Rectangle(id=%s, position=%s, size=%.2fx%.2f, visible=%s)",
-        id, position, width, height, visible);
-  }
+    public float getHeight() {
+        return height;
+    }
 
-  // YAML Serialization
-  @Override
-  public Map<String, Object> toYamlMap() {
-    Map<String, Object> map =
-        com.example.domain.serialization.YamlUtils.createYamlMap(getYamlType());
-    map.put("id", id);
-    map.put("position", position.toYamlMap());
-    map.put("width", width);
-    map.put("height", height);
-    map.put("style", style.toYamlMap());
-    map.put("visible", visible);
-    map.put("layerOrder", layerOrder);
-    return map;
-  }
+    public Position getTopLeft() {
+        return position;
+    }
 
-  @Override
-  public String getYamlType() {
-    return "rectangle";
-  }
+    public Position getTopRight() {
+        return new Position(position.getX() + width, position.getY());
+    }
 
-  public static Rectangle fromYamlMap(Map<String, Object> yamlMap) {
-    com.example.domain.serialization.YamlUtils.validateYamlType(yamlMap, "rectangle");
-    com.example.domain.serialization.YamlUtils.validateRequiredFields(
-        yamlMap, "id", "position", "width", "height");
+    public Position getBottomLeft() {
+        return new Position(position.getX(), position.getY() + height);
+    }
 
-    String id = com.example.domain.serialization.YamlUtils.getRequiredString(yamlMap, "id");
-    Position position =
-        Position.fromYamlMap(
-            com.example.domain.serialization.YamlUtils.getRequiredMap(yamlMap, "position"));
-    float width = com.example.domain.serialization.YamlUtils.getRequiredFloat(yamlMap, "width");
-    float height = com.example.domain.serialization.YamlUtils.getRequiredFloat(yamlMap, "height");
-    Style style =
-        com.example.domain.serialization.YamlUtils.getMap(yamlMap, "style", null) != null
-            ? Style.fromYamlMap(
-                com.example.domain.serialization.YamlUtils.getRequiredMap(yamlMap, "style"))
-            : Style.DEFAULT;
-    boolean visible =
-        com.example.domain.serialization.YamlUtils.getBoolean(yamlMap, "visible", true);
-    int layerOrder = com.example.domain.serialization.YamlUtils.getInt(yamlMap, "layerOrder", 0);
+    public Position getBottomRight() {
+        return new Position(position.getX() + width, position.getY() + height);
+    }
 
-    return new Rectangle(id, position, width, height, style, visible, layerOrder);
-  }
+    public Position getCenter() {
+        return new Position(position.getX() + width / 2, position.getY() + height / 2);
+    }
+
+    public float getArea() {
+        return width * height;
+    }
+
+    public float getPerimeter() {
+        return 2 * (width + height);
+    }
+
+    public boolean isSquare() {
+        return Float.compare(width, height) == 0;
+    }
+
+    @Override
+    public ShapeType getType() {
+        return ShapeType.RECTANGLE;
+    }
+
+    @Override
+    public Rectangle moveTo(Position newPosition) {
+        return new Rectangle(id, newPosition, width, height, style, visible, layerOrder);
+    }
+
+    @Override
+    public Rectangle withStyle(Style newStyle) {
+        return new Rectangle(id, position, width, height, newStyle, visible, layerOrder);
+    }
+
+    public Rectangle withDimensions(float newWidth, float newHeight) {
+        return new Rectangle(id, position, newWidth, newHeight, style, visible, layerOrder);
+    }
+
+    public Rectangle withWidth(float newWidth) {
+        return new Rectangle(id, position, newWidth, height, style, visible, layerOrder);
+    }
+
+    public Rectangle withHeight(float newHeight) {
+        return new Rectangle(id, position, width, newHeight, style, visible, layerOrder);
+    }
+
+    @Override
+    public boolean contains(Position point) {
+        return point.getX() >= position.getX()
+                && point.getX() <= position.getX() + width
+                && point.getY() >= position.getY()
+                && point.getY() <= position.getY() + height;
+    }
+
+    @Override
+    public BoundingBox getBounds() {
+        return new BoundingBox(position.getX(), position.getY(), width, height);
+    }
+
+    @Override
+    protected Shape createWithProperties(
+            String id, Position position, Style style, boolean visible, int layerOrder) {
+        return new Rectangle(id, position, width, height, style, visible, layerOrder);
+    }
+
+    @Override
+    protected void performDraw(Object canvas) {
+        // This would be implemented based on the specific rendering system
+        // For now, it's a placeholder that would work with Processing
+        if (canvas instanceof processing.core.PGraphics) {
+            processing.core.PGraphics pg = (processing.core.PGraphics) canvas;
+
+            // Apply style
+            if (style.hasFill()) {
+                pg.fill(style.getFillColor().toProcessingColor());
+            } else {
+                pg.noFill();
+            }
+
+            if (style.hasStroke()) {
+                pg.stroke(style.getStrokeColor().toProcessingColor());
+                pg.strokeWeight(style.getStrokeWeight());
+            } else {
+                pg.noStroke();
+            }
+
+            // Draw rectangle
+            pg.rect(position.getX(), position.getY(), width, height);
+        }
+    }
+
+    // Check if this rectangle intersects with another rectangle
+    public boolean intersects(Rectangle other) {
+        return getBounds().overlaps(other.getBounds());
+    }
+
+    // Check if this rectangle contains another rectangle completely
+    public boolean contains(Rectangle other) {
+        return contains(other.getTopLeft()) && contains(other.getBottomRight());
+    }
+
+    // Get the closest point on the rectangle's perimeter to a given point
+    public Position getClosestPointOnPerimeter(Position point) {
+        float px = point.getX();
+        float py = point.getY();
+
+        // Clamp point to rectangle bounds
+        float clampedX = Math.max(position.getX(), Math.min(px, position.getX() + width));
+        float clampedY = Math.max(position.getY(), Math.min(py, position.getY() + height));
+
+        // If point is inside rectangle, find closest edge
+        if (contains(point)) {
+            float distToLeft = px - position.getX();
+            float distToRight = (position.getX() + width) - px;
+            float distToTop = py - position.getY();
+            float distToBottom = (position.getY() + height) - py;
+
+            float minDist =
+                    Math.min(Math.min(distToLeft, distToRight), Math.min(distToTop, distToBottom));
+
+            if (Float.compare(minDist, distToLeft) == 0) {
+                return new Position(position.getX(), py);
+            } else if (Float.compare(minDist, distToRight) == 0) {
+                return new Position(position.getX() + width, py);
+            } else if (Float.compare(minDist, distToTop) == 0) {
+                return new Position(px, position.getY());
+            } else {
+                return new Position(px, position.getY() + height);
+            }
+        }
+
+        return new Position(clampedX, clampedY);
+    }
+
+    // Scale rectangle from center
+    public Rectangle scale(float scaleX, float scaleY) {
+        Position center = getCenter();
+        float newWidth = width * Math.abs(scaleX);
+        float newHeight = height * Math.abs(scaleY);
+        Position newPosition =
+                new Position(center.getX() - newWidth / 2, center.getY() - newHeight / 2);
+        return new Rectangle(id, newPosition, newWidth, newHeight, style, visible, layerOrder);
+    }
+
+    public Rectangle scale(float scale) {
+        return scale(scale, scale);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof Rectangle)) {
+            return false;
+        }
+        if (!super.equals(obj)) {
+            return false;
+        }
+        Rectangle rectangle = (Rectangle) obj;
+        return Float.compare(rectangle.width, width) == 0
+                && Float.compare(rectangle.height, height) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), width, height);
+    }
+
+    @Override
+    public String toString() {
+        return String.format(
+                "Rectangle(id=%s, position=%s, size=%.2fx%.2f, visible=%s)",
+                id, position, width, height, visible);
+    }
+
+    // YAML Serialization
+    @Override
+    public Map<String, Object> toYamlMap() {
+        Map<String, Object> map =
+                com.example.domain.serialization.YamlUtils.createYamlMap(getYamlType());
+        map.put("id", id);
+        map.put("position", position.toYamlMap());
+        map.put("width", width);
+        map.put("height", height);
+        map.put("style", style.toYamlMap());
+        map.put("visible", visible);
+        map.put("layerOrder", layerOrder);
+        return map;
+    }
+
+    @Override
+    public String getYamlType() {
+        return "rectangle";
+    }
+
+    public static Rectangle fromYamlMap(Map<String, Object> yamlMap) {
+        com.example.domain.serialization.YamlUtils.validateYamlType(yamlMap, "rectangle");
+        com.example.domain.serialization.YamlUtils.validateRequiredFields(
+                yamlMap, "id", "position", "width", "height");
+
+        String id = com.example.domain.serialization.YamlUtils.getRequiredString(yamlMap, "id");
+        Position position =
+                Position.fromYamlMap(
+                        com.example.domain.serialization.YamlUtils.getRequiredMap(
+                                yamlMap, "position"));
+        float width = com.example.domain.serialization.YamlUtils.getRequiredFloat(yamlMap, "width");
+        float height =
+                com.example.domain.serialization.YamlUtils.getRequiredFloat(yamlMap, "height");
+        Style style =
+                com.example.domain.serialization.YamlUtils.getMap(yamlMap, "style", null) != null
+                        ? Style.fromYamlMap(
+                                com.example.domain.serialization.YamlUtils.getRequiredMap(
+                                        yamlMap, "style"))
+                        : Style.DEFAULT;
+        boolean visible =
+                com.example.domain.serialization.YamlUtils.getBoolean(yamlMap, "visible", true);
+        int layerOrder =
+                com.example.domain.serialization.YamlUtils.getInt(yamlMap, "layerOrder", 0);
+
+        return new Rectangle(id, position, width, height, style, visible, layerOrder);
+    }
 }
