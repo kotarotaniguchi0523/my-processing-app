@@ -30,3 +30,39 @@ node_modules/
 .cursor/
 .taskmaster/
 .mvn/
+.claude/
+.github/instructions/
+
+# Java / Maven / build
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+dependency-reduced-pom.xml
+release.properties
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# IntelliJ IDEA (already had .idea but keep workspace files ignored)
+*.iml
+*.iws
+
+# NetBeans
+nbproject/private/
+
+# Gradle
+.gradle/
+build/
+
+# VS Code
+.vscode/
+
+# Build output
+out/
+bin/
+

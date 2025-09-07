@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Error Prone plugin configuration for automatic code fixes -->
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-compiler-plugin</artifactId>
+  <version>3.11.0</version>
+  <configuration>
+    <release>17</release>
+    <encoding>UTF-8</encoding>
+    <compilerArgs>
+      <arg>-XDcompilePolicy=simple</arg>
+      <arg>-Xplugin:ErrorProne -XepPatchChecks:DeadException,DefaultCharset,MissingOverride,ReferenceEquality,StringSplitter,UnnecessaryParentheses,UnusedVariable -XepPatchLocation:IN_PLACE</arg>
+    </compilerArgs>
+    <annotationProcessorPaths>
+      <path>
+        <groupId>com.google.errorprone</groupId>
+        <artifactId>error_prone_core</artifactId>
+        <version>2.24.1</version>
+      </path>
+    </annotationProcessorPaths>
+  </configuration>
+</plugin>

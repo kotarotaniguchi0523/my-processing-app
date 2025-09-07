@@ -1,0 +1,327 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------< com.example:my-processing-app >--------------------
+[INFO] Building my-processing-app 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> pmd:3.25.0:check (default-cli) > :pmd @ my-processing-app >>>
+[INFO] 
+[INFO] --- pmd:3.25.0:pmd (pmd) @ my-processing-app ---
+[WARNING] Unable to locate Source XRef to link to - DISABLED
+[INFO] PMD version: 7.9.0
+[INFO] Rendering content with org.apache.maven.skins:maven-fluido-skin:jar:2.0.0-M9 skin
+[INFO] 
+[INFO] <<< pmd:3.25.0:check (default-cli) < :pmd @ my-processing-app <<<
+[INFO] 
+[INFO] 
+[INFO] --- pmd:3.25.0:check (default-cli) @ my-processing-app ---
+[WARNING] PMD Failure: com.example.App:11 Rule:MissingOverride Priority:3 The method 'settings()' is missing an @Override annotation..
+[WARNING] PMD Failure: com.example.App:15 Rule:MissingOverride Priority:3 The method 'setup()' is missing an @Override annotation..
+[WARNING] PMD Failure: com.example.App:21 Rule:MissingOverride Priority:3 The method 'draw()' is missing an @Override annotation..
+[WARNING] PMD Failure: com.example.SimpleSketch:16 Rule:UnusedPrivateField Priority:3 Avoid unused private fields such as 'STATUS_HEIGHT_RATIO'..
+[WARNING] PMD Failure: com.example.SimpleSketch:23 Rule:OneDeclarationPerLine Priority:4 Use one line for each declaration, it enhances code readability..
+[WARNING] PMD Failure: com.example.SimpleSketch:24 Rule:OneDeclarationPerLine Priority:4 Use one line for each declaration, it enhances code readability..
+[WARNING] PMD Failure: com.example.SimpleSketch:25 Rule:OneDeclarationPerLine Priority:4 Use one line for each declaration, it enhances code readability..
+[WARNING] PMD Failure: com.example.SimpleSketch:26 Rule:OneDeclarationPerLine Priority:4 Use one line for each declaration, it enhances code readability..
+[WARNING] PMD Failure: com.example.SimpleSketch:29 Rule:OneDeclarationPerLine Priority:4 Use one line for each declaration, it enhances code readability..
+[WARNING] PMD Failure: com.example.SimpleSketch:32 Rule:RedundantFieldInitializer Priority:3 Avoid using redundant field initializer for 'chatScrollOffset'.
+[WARNING] PMD Failure: com.example.SimpleSketch:34 Rule:RedundantFieldInitializer Priority:3 Avoid using redundant field initializer for 'inputFocused'.
+[WARNING] PMD Failure: com.example.SimpleSketch:37 Rule:RedundantFieldInitializer Priority:3 Avoid using redundant field initializer for 'isDrawing'.
+[WARNING] PMD Failure: com.example.DrawPoint:46 Rule:OneDeclarationPerLine Priority:4 Use one line for each declaration, it enhances code readability..
+[WARNING] PMD Failure: com.example.SimpleSketch:58 Rule:MissingOverride Priority:3 The method 'settings()' is missing an @Override annotation..
+[WARNING] PMD Failure: com.example.SimpleSketch:62 Rule:MissingOverride Priority:3 The method 'setup()' is missing an @Override annotation..
+[WARNING] PMD Failure: com.example.SimpleSketch:113 Rule:MissingOverride Priority:3 The method 'draw()' is missing an @Override annotation..
+[WARNING] PMD Failure: com.example.SimpleSketch:136 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.SimpleSketch:146 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.SimpleSketch:204 Rule:UnusedLocalVariable Priority:3 Avoid unused local variables such as 'startY'..
+[WARNING] PMD Failure: com.example.SimpleSketch:314 Rule:LiteralsFirstInComparisons Priority:3 Position literals first in String comparisons.
+[WARNING] PMD Failure: com.example.SimpleSketch:331 Rule:MissingOverride Priority:3 The method 'mousePressed()' is missing an @Override annotation..
+[WARNING] PMD Failure: com.example.SimpleSketch:345 Rule:MissingOverride Priority:3 The method 'mouseDragged()' is missing an @Override annotation..
+[WARNING] PMD Failure: com.example.SimpleSketch:351 Rule:MissingOverride Priority:3 The method 'mouseReleased()' is missing an @Override annotation..
+[WARNING] PMD Failure: com.example.SimpleSketch:354 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.SimpleSketch:362 Rule:MissingOverride Priority:3 The method 'keyPressed()' is missing an @Override annotation..
+[WARNING] PMD Failure: com.example.SimpleSketch:374 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.SimpleSketch:410 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.SimpleSketch:412 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.SimpleSketch:438 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.agent.DrawingAgent:139 Rule:ConstructorCallsOverridableMethod Priority:1 Overridable method called during object construction: DrawingAgent.initialize().
+[WARNING] PMD Failure: com.example.agent.DrawingAgent:152 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.agent.DrawingAgent:158 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.agent.DrawingAgent:181 Rule:UnusedFormalParameter Priority:3 Avoid unused method parameters such as 'instruction'..
+[WARNING] PMD Failure: com.example.agent.DrawingAgent:209 Rule:UnusedFormalParameter Priority:3 Avoid unused method parameters such as 'instruction'..
+[WARNING] PMD Failure: com.example.agent.DrawingAgent:309 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.agent.core.ToolExecution:215 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field critical has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.core.AgentResponse:248 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field success has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.core.Builder:43 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field currentState has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.core.Builder:44 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field stateHistory has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.core.Builder:45 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field session has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.core.Builder:46 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field sessionContext has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.core.Builder:47 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field variables has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.core.Builder:48 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field metadata has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:115 Rule:UnusedLocalVariable Priority:3 Avoid unused local variables such as 'analysisContext'..
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:177 Rule:UnusedAssignment Priority:3 The value assigned to field 'currentStepIndex' is never used (reassigned every iteration).
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:182 Rule:AvoidInstantiatingObjectsInLoops Priority:3 Avoid instantiating new objects inside loops.
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:203 Rule:AvoidInstantiatingObjectsInLoops Priority:3 Avoid instantiating new objects inside loops.
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:260 Rule:UnusedFormalParameter Priority:3 Avoid unused method parameters such as 'analysis'..
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:275 Rule:UnusedFormalParameter Priority:3 Avoid unused method parameters such as 'analysis'..
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:278 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:280 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:291 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:292 Rule:AvoidDuplicateLiterals Priority:3 The String literal "circle" appears 5 times in this file; the first occurrence is on line 292.
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:295 Rule:AvoidDuplicateLiterals Priority:3 The String literal "type" appears 5 times in this file; the first occurrence is on line 295.
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:300 Rule:AvoidDuplicateLiterals Priority:3 The String literal "rectangle" appears 5 times in this file; the first occurrence is on line 300.
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:318 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.agent.core.ThinkingLoop:343 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.agent.core.ThinkingResult:497 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field success has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.manager.ToolManager:54 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.agent.manager.ToolManager:186 Rule:ReturnEmptyCollectionRatherThanNull Priority:1 Return an empty collection rather than null..
+[WARNING] PMD Failure: com.example.agent.tools.AbstractTool:18 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field requiresApproval has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.tools.AbstractTool:19 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field isStateModifying has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.tools.AbstractTool:34 Rule:ConstructorCallsOverridableMethod Priority:1 Overridable method called during object construction: AbstractTool.defineParameters().
+[WARNING] PMD Failure: com.example.agent.tools.AbstractTool:91 Rule:UseStringBufferForStringAppends Priority:3 Prefer StringBuilder (non-synchronized) or StringBuffer (synchronized) over += for concatenating strings.
+[WARNING] PMD Failure: com.example.agent.tools.AbstractTool:94 Rule:UseStringBufferForStringAppends Priority:3 Prefer StringBuilder (non-synchronized) or StringBuffer (synchronized) over += for concatenating strings.
+[WARNING] PMD Failure: com.example.agent.tools.ToolExecutionException:4 Rule:MissingSerialVersionUID Priority:3 Classes implementing Serializable should set a serialVersionUID.
+[WARNING] PMD Failure: com.example.agent.tools.ToolExecutionException:120 Rule:AppendCharacterWithChar Priority:3 Avoid appending characters as strings in StringBuffer.append..
+[WARNING] PMD Failure: com.example.agent.tools.ToolExecutionException:120 Rule:AppendCharacterWithChar Priority:3 Avoid appending characters as strings in StringBuffer.append..
+[WARNING] PMD Failure: com.example.agent.tools.ToolExecutionException:124 Rule:AppendCharacterWithChar Priority:3 Avoid appending characters as strings in StringBuffer.append..
+[WARNING] PMD Failure: com.example.agent.tools.ToolExecutionException:124 Rule:AppendCharacterWithChar Priority:3 Avoid appending characters as strings in StringBuffer.append..
+[WARNING] PMD Failure: com.example.agent.tools.Builder:50 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field status has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.tools.Builder:51 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field message has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.tools.Builder:52 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field data has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.tools.Builder:53 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field newState has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.tools.Builder:54 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field errorType has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.tools.Builder:55 Rule:RedundantFieldInitializer Priority:3 Avoid using redundant field initializer for 'executionTime'.
+[WARNING] PMD Failure: com.example.agent.tools.Builder:55 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field executionTime has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.tools.Builder:56 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field toolName has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.tools.ToolValidationResult:13 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field valid has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.tools.Builder:24 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field valid has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.tools.Builder:25 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field errors has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.tools.Builder:26 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field warnings has the same name as a method.
+[WARNING] PMD Failure: com.example.agent.tools.ToolValidationResult:149 Rule:InsufficientStringBufferDeclaration Priority:3 StringBuilder has been initialized with size 37, but has at least 49 characters appended..
+[WARNING] PMD Failure: com.example.agent.tools.ToolValidationResult:160 Rule:AppendCharacterWithChar Priority:3 Avoid appending characters as strings in StringBuffer.append..
+[WARNING] PMD Failure: com.example.agent.tools.impl.ClearCanvasTool:40 Rule:AvoidDuplicateLiterals Priority:3 The String literal "backgroundColor" appears 5 times in this file; the first occurrence is on line 40.
+[WARNING] PMD Failure: com.example.agent.tools.impl.ClearCanvasTool:85 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.agent.tools.impl.ClearCanvasTool:94 Rule:PreserveStackTrace Priority:3 Thrown exception does not preserve the stack trace of exception 'e' on all code paths.
+[WARNING] PMD Failure: com.example.agent.tools.impl.DrawShapeTool:49 Rule:AvoidDuplicateLiterals Priority:3 The String literal "#000000" appears 4 times in this file; the first occurrence is on line 49.
+[WARNING] PMD Failure: com.example.agent.tools.impl.DrawShapeTool:80 Rule:AvoidReassigningParameters Priority:2 Avoid reassigning parameters such as 'id'.
+[WARNING] PMD Failure: com.example.agent.tools.impl.DrawShapeTool:111 Rule:AvoidReassigningParameters Priority:2 Avoid reassigning parameters such as 'id'.
+[WARNING] PMD Failure: com.example.agent.tools.impl.DrawShapeTool:136 Rule:AvoidReassigningParameters Priority:2 Avoid reassigning parameters such as 'id'.
+[WARNING] PMD Failure: com.example.agent.tools.impl.DrawShapeTool:146 Rule:UnusedFormalParameter Priority:3 Avoid unused method parameters such as 'visible'..
+[WARNING] PMD Failure: com.example.agent.tools.impl.DrawShapeTool:147 Rule:UnusedFormalParameter Priority:3 Avoid unused method parameters such as 'layerOrder'..
+[WARNING] PMD Failure: com.example.agent.tools.impl.DrawShapeTool:151 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.agent.tools.impl.DrawShapeTool:165 Rule:AvoidReassigningParameters Priority:2 Avoid reassigning parameters such as 'id'.
+[WARNING] PMD Failure: com.example.agent.tools.impl.DrawShapeTool:172 Rule:UnusedFormalParameter Priority:3 Avoid unused method parameters such as 'parameters'..
+[WARNING] PMD Failure: com.example.agent.tools.impl.DrawShapeTool:184 Rule:PreserveStackTrace Priority:3 Thrown exception does not preserve the stack trace of exception 'e' on all code paths.
+[WARNING] PMD Failure: com.example.agent.tools.impl.DrawShapeTool:194 Rule:UnusedLocalVariable Priority:3 Avoid unused local variables such as 'currentState'..
+[WARNING] PMD Failure: com.example.agent.tools.impl.DrawShapeTool:223 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.agent.tools.impl.DrawShapeTool:268 Rule:PreserveStackTrace Priority:3 Thrown exception does not preserve the stack trace of exception 'e' on all code paths.
+[WARNING] PMD Failure: com.example.agent.tools.impl.GetStateTool:73 Rule:AvoidDuplicateLiterals Priority:3 The String literal "width" appears 5 times in this file; the first occurrence is on line 73.
+[WARNING] PMD Failure: com.example.agent.tools.impl.GetStateTool:74 Rule:AvoidDuplicateLiterals Priority:3 The String literal "height" appears 5 times in this file; the first occurrence is on line 74.
+[WARNING] PMD Failure: com.example.agent.tools.impl.GetStateTool:175 Rule:NonExhaustiveSwitch Priority:3 Switch statements or expressions should be exhaustive, add a default case (or missing enum branches).
+[WARNING] PMD Failure: com.example.agent.tools.impl.GetStateTool:226 Rule:InsufficientStringBufferDeclaration Priority:3 StringBuilder has been initialized with size 16, but has at least 22 characters appended..
+[WARNING] PMD Failure: com.example.agent.tools.impl.GetStateTool:246 Rule:AppendCharacterWithChar Priority:3 Avoid appending characters as strings in StringBuffer.append..
+[WARNING] PMD Failure: com.example.agent.tools.impl.UndoRedoTool:49 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.agent.tools.impl.UndoRedoTool:55 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.agent.tools.impl.UndoRedoTool:115 Rule:UnusedLocalVariable Priority:3 Avoid unused local variables such as 'newContext'..
+[WARNING] PMD Failure: com.example.agent.tools.impl.UndoRedoTool:170 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.agent.tools.impl.UndoRedoTool:183 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.application.ApplicationController:37 Rule:UnusedPrivateField Priority:3 Avoid unused private fields such as 'agent'..
+[WARNING] PMD Failure: com.example.application.ApplicationController:128 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.application.ApplicationController:132 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.ApplicationController:154 Rule:UnusedFormalParameter Priority:3 Avoid unused method parameters such as 'event'..
+[WARNING] PMD Failure: com.example.application.ApplicationController:179 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.ApplicationController:184 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.ApplicationController:189 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.ApplicationController:194 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.ApplicationController:201 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.ApplicationController:211 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.ApplicationController:274 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.ApplicationController:294 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.ApplicationController:315 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.ApplicationController:368 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.application.ApplicationController:372 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.application.ApplicationController:379 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.ApplicationController:410 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.CommandParser:59 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.application.CommandParser:64 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.CommandParser:112 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.application.CommandParser:116 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.CommandParser:159 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.application.CommandParser:163 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.application.CommandParser:188 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.application.CommandParser:192 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.application.ParsedCommand:87 Rule:LiteralsFirstInComparisons Priority:3 Position literals first in String comparisons.
+[WARNING] PMD Failure: com.example.application.ParsedCommand:88 Rule:LiteralsFirstInComparisons Priority:3 Position literals first in String comparisons.
+[WARNING] PMD Failure: com.example.application.ParsedCommand:89 Rule:LiteralsFirstInComparisons Priority:3 Position literals first in String comparisons.
+[WARNING] PMD Failure: com.example.domain.model.DrawingSession:19 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field isDirty has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.models.Builder:33 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field settings has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.models.Builder:34 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field shapes has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.models.Builder:35 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field arrays has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.models.Builder:36 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field lists has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.models.DrawingState:99 Rule:AvoidInstantiatingObjectsInLoops Priority:3 Avoid instantiating new objects inside loops.
+[WARNING] PMD Failure: com.example.domain.models.DrawingState:107 Rule:AvoidInstantiatingObjectsInLoops Priority:3 Avoid instantiating new objects inside loops.
+[WARNING] PMD Failure: com.example.domain.models.Line:56 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.domain.models.Line:198 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.domain.models.Line:215 Rule:AvoidReassigningParameters Priority:2 Avoid reassigning parameters such as 't'.
+[WARNING] PMD Failure: com.example.domain.models.Line:224 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.domain.models.BoundingBox:170 Rule:OneDeclarationPerLine Priority:4 Use one line for each declaration, it enhances code readability..
+[WARNING] PMD Failure: com.example.domain.models.Text:81 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.domain.models.Text:284 Rule:TooFewBranchesForSwitch Priority:3 A switch with less than three branches is inefficient, use a if statement instead..
+[WARNING] PMD Failure: com.example.domain.models.Text:284 Rule:NonExhaustiveSwitch Priority:3 Switch statements or expressions should be exhaustive, add a default case (or missing enum branches).
+[WARNING] PMD Failure: com.example.domain.models.Text:294 Rule:TooFewBranchesForSwitch Priority:3 A switch with less than three branches is inefficient, use a if statement instead..
+[WARNING] PMD Failure: com.example.domain.models.Text:294 Rule:NonExhaustiveSwitch Priority:3 Switch statements or expressions should be exhaustive, add a default case (or missing enum branches).
+[WARNING] PMD Failure: com.example.domain.models.Text:335 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.domain.models.Text:340 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.domain.models.TextAlign:457 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.domain.serialization.YamlUtils:30 Rule:AvoidDuplicateLiterals Priority:3 The String literal "\' is missing or invalid" appears 6 times in this file; the first occurrence is on line 30.
+[WARNING] PMD Failure: com.example.domain.serialization.YamlUtils:93 Rule:AvoidDuplicateLiterals Priority:3 The String literal "unchecked" appears 8 times in this file; the first occurrence is on line 93.
+[WARNING] PMD Failure: com.example.domain.serialization.YamlUtils:149 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.domain.serialization.YamlUtils:196 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.domain.serialization.YamlUtils:207 Rule:UseLocaleWithCaseConversions Priority:3 When doing a String.toLowerCase()/toUpperCase() call, use a Locale.
+[WARNING] PMD Failure: com.example.domain.serialization.YamlUtils:209 Rule:PreserveStackTrace Priority:3 Thrown exception does not preserve the stack trace of exception 'e' on all code paths.
+[WARNING] PMD Failure: com.example.domain.serialization.YamlUtils:226 Rule:AvoidInstantiatingObjectsInLoops Priority:3 Avoid instantiating new objects inside loops.
+[WARNING] PMD Failure: com.example.domain.serialization.YamlUtils:256 Rule:AvoidInstantiatingObjectsInLoops Priority:3 Avoid instantiating new objects inside loops.
+[WARNING] PMD Failure: com.example.domain.services.CommandExecutor:33 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.domain.services.CommandExecutor:51 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.domain.services.CommandExecutor:54 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.domain.services.CommandExecutor:63 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.domain.services.CommandExecutor:70 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.domain.services.CommandExecutor:78 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.domain.services.CommandExecutor:82 Rule:UnusedFormalParameter Priority:3 Avoid unused method parameters such as 'command'..
+[WARNING] PMD Failure: com.example.domain.services.CommandExecutionException:124 Rule:MissingSerialVersionUID Priority:3 Classes implementing Serializable should set a serialVersionUID.
+[WARNING] PMD Failure: com.example.domain.services.StateService:36 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.domain.services.StateService:58 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.domain.services.StateService:69 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.domain.services.StateService:80 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.domain.services.StateService:91 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.domain.session.Builder:44 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field sessionId has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:45 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field userId has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:46 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field sessionName has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:47 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field startTime has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:48 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field lastActiveTime has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:49 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field status has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:50 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field metadata has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:51 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field settings has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.SessionContext:21 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field isDirty has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:42 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field autoSave has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:43 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field autoSaveIntervalMinutes has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:44 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field maxUndoHistory has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:45 Rule:RedundantFieldInitializer Priority:3 Avoid using redundant field initializer for 'enableGridSnap'.
+[WARNING] PMD Failure: com.example.domain.session.Builder:45 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field enableGridSnap has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:46 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field gridSize has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:47 Rule:RedundantFieldInitializer Priority:3 Avoid using redundant field initializer for 'showGrid'.
+[WARNING] PMD Failure: com.example.domain.session.Builder:47 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field showGrid has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:48 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field preferredCanvasSize has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.session.Builder:49 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field customSettings has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.values.Color:61 Rule:AvoidReassigningParameters Priority:2 Avoid reassigning parameters such as 'hex'.
+[WARNING] PMD Failure: com.example.domain.values.Color:64 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.domain.values.Color:67 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.domain.values.Color:80 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.domain.values.Color:142 Rule:EmptyCatchBlock Priority:3 Avoid empty catch blocks.
+[WARNING] PMD Failure: com.example.domain.values.Style:15 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field hasFill has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.values.Style:16 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field hasStroke has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.values.Builder:29 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field fillColor has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.values.Builder:30 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field strokeColor has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.values.Builder:31 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field strokeWeight has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.values.Builder:32 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field hasFill has the same name as a method.
+[WARNING] PMD Failure: com.example.domain.values.Builder:33 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field hasStroke has the same name as a method.
+[WARNING] PMD Failure: com.example.engine.DrawingEngine:23 Rule:UnusedPrivateField Priority:3 Avoid unused private fields such as 'sketch'..
+[WARNING] PMD Failure: com.example.engine.DrawingEngine:287 Rule:UnusedLocalVariable Priority:3 Avoid unused local variables such as 'width'..
+[WARNING] PMD Failure: com.example.engine.DrawingEngine:288 Rule:UnusedLocalVariable Priority:3 Avoid unused local variables such as 'height'..
+[WARNING] PMD Failure: com.example.engine.DrawingException:353 Rule:MissingSerialVersionUID Priority:3 Classes implementing Serializable should set a serialVersionUID.
+[WARNING] PMD Failure: com.example.engine.ValidationService:64 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.engine.ValidationService:71 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.engine.ValidationService:154 Rule:UnusedFormalParameter Priority:3 Avoid unused method parameters such as 'warnings'..
+[WARNING] PMD Failure: com.example.engine.ValidationService:223 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.engine.ValidationService:240 Rule:AvoidDuplicateLiterals Priority:3 The String literal "Shape " appears 7 times in this file; the first occurrence is on line 240.
+[WARNING] PMD Failure: com.example.engine.ValidationService:275 Rule:AvoidDuplicateLiterals Priority:3 The String literal "Shape type mismatch for " appears 4 times in this file; the first occurrence is on line 275.
+[WARNING] PMD Failure: com.example.engine.ValidationService:324 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.engine.ValidationService:365 Rule:UnusedFormalParameter Priority:3 Avoid unused method parameters such as 'errors'..
+[WARNING] PMD Failure: com.example.engine.ValidationService:370 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.engine.ValidationService:374 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.engine.YamlParser:62 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.engine.YamlParser:114 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.engine.YamlParseException:181 Rule:MissingSerialVersionUID Priority:3 Classes implementing Serializable should set a serialVersionUID.
+[WARNING] PMD Failure: com.example.engine.YamlRenderException:70 Rule:MissingSerialVersionUID Priority:3 Classes implementing Serializable should set a serialVersionUID.
+[WARNING] PMD Failure: com.example.engine.ValidationResult:87 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field valid has the same name as a method.
+[WARNING] PMD Failure: com.example.engine.YamlRendererImpl:101 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.engine.YamlRendererImpl:129 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.events.DomainEvent:108 Rule:InsufficientStringBufferDeclaration Priority:3 StringBuilder has been initialized with size 16, but has at least 19 characters appended..
+[WARNING] PMD Failure: com.example.events.DomainEvent:123 Rule:AppendCharacterWithChar Priority:3 Avoid appending characters as strings in StringBuffer.append..
+[WARNING] PMD Failure: com.example.events.Event:10 Rule:AbstractClassWithoutAbstractMethod Priority:3 This abstract class does not have any abstract methods.
+[WARNING] PMD Failure: com.example.events.EventBus:37 Rule:NullAssignment Priority:3 Assigning an Object to null is a code smell.  Consider refactoring..
+[WARNING] PMD Failure: com.example.events.EventBus:54 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventBus:67 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventBus:85 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventBus:89 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventBus:103 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventBus:105 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventBus:153 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventDispatcher:29 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventDispatcher:39 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventDispatcher:43 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventDispatcher:54 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventDispatcher:58 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventDispatcher:69 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventDispatcher:73 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventDispatcher:84 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventDispatcher:95 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventDispatcher:108 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventDispatcher:123 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventDispatcher:134 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.EventDispatcher:144 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.events.SystemEvent:136 Rule:AppendCharacterWithChar Priority:3 Avoid appending characters as strings in StringBuffer.append..
+[WARNING] PMD Failure: com.example.events.UIEvent:102 Rule:AppendCharacterWithChar Priority:3 Avoid appending characters as strings in StringBuffer.append..
+[WARNING] PMD Failure: com.example.services.FileStateRepository:98 Rule:AvoidDuplicateLiterals Priority:3 The String literal "unchecked" appears 5 times in this file; the first occurrence is on line 98.
+[WARNING] PMD Failure: com.example.services.FileStateRepository:177 Rule:EmptyCatchBlock Priority:3 Avoid empty catch blocks.
+[WARNING] PMD Failure: com.example.services.FileStateRepository:360 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.services.FileStateRepository:363 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.services.FileStateRepository:370 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.services.FileStateRepository:373 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.services.FileUtils:142 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.services.FileUtils:158 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.services.HistoryService:49 Rule:ConstructorCallsOverridableMethod Priority:1 Overridable method called during object construction: HistoryService.addState(DrawingState).
+[WARNING] PMD Failure: com.example.services.HistoryService:260 Rule:AvoidLiteralsInIfCondition Priority:3 Avoid using literals in if statements.
+[WARNING] PMD Failure: com.example.services.SessionManager:30 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field hasUnsavedChanges has the same name as a method.
+[WARNING] PMD Failure: com.example.services.SessionManager:87 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.services.SessionManager:98 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.services.SessionManager:99 Rule:AvoidDuplicateLiterals Priority:3 The String literal "Session name cannot be null or empty" appears 4 times in this file; the first occurrence is on line 99.
+[WARNING] PMD Failure: com.example.services.SessionManager:126 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.services.SessionManager:195 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.services.SessionManager:337 Rule:InefficientEmptyStringCheck Priority:3 String.trim().length() == 0 / String.trim().isEmpty() is an inefficient way to validate a blank String..
+[WARNING] PMD Failure: com.example.services.SessionManager:384 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.services.SessionManager:414 Rule:LiteralsFirstInComparisons Priority:3 Position literals first in String comparisons.
+[WARNING] PMD Failure: com.example.services.SessionManager:419 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.services.StateDiffService:67 Rule:InsufficientStringBufferDeclaration Priority:3 StringBuilder has been initialized with size 16, but has at least 57 characters appended..
+[WARNING] PMD Failure: com.example.services.StateDiffService:98 Rule:InsufficientStringBufferDeclaration Priority:3 StringBuilder has been initialized with size 16, but has at least 181 characters appended..
+[WARNING] PMD Failure: com.example.services.StateDiffService:101 Rule:ConsecutiveAppendsShouldReuse Priority:3 StringBuffer (or StringBuilder).append is called consecutively without reusing the target variable..
+[WARNING] PMD Failure: com.example.services.StateDiffService:101 Rule:ConsecutiveLiteralAppends Priority:3 StringBuffer (or StringBuilder).append is called 2 consecutive times with literals. Use a single append with a single combined String..
+[WARNING] PMD Failure: com.example.services.StateDiffService:120 Rule:AppendCharacterWithChar Priority:3 Avoid appending characters as strings in StringBuffer.append..
+[WARNING] PMD Failure: com.example.services.StateDiffService:128 Rule:AppendCharacterWithChar Priority:3 Avoid appending characters as strings in StringBuffer.append..
+[WARNING] PMD Failure: com.example.services.StateDiffService:136 Rule:AppendCharacterWithChar Priority:3 Avoid appending characters as strings in StringBuffer.append..
+[WARNING] PMD Failure: com.example.services.StateDiffService:144 Rule:AppendCharacterWithChar Priority:3 Avoid appending characters as strings in StringBuffer.append..
+[WARNING] PMD Failure: com.example.services.StateDiffService:174 Rule:AvoidInstantiatingObjectsInLoops Priority:3 Avoid instantiating new objects inside loops.
+[WARNING] PMD Failure: com.example.services.StateDiffService:194 Rule:AvoidInstantiatingObjectsInLoops Priority:3 Avoid instantiating new objects inside loops.
+[WARNING] PMD Failure: com.example.services.StateDiffService:200 Rule:AvoidInstantiatingObjectsInLoops Priority:3 Avoid instantiating new objects inside loops.
+[WARNING] PMD Failure: com.example.services.StateDiffService:205 Rule:AvoidInstantiatingObjectsInLoops Priority:3 Avoid instantiating new objects inside loops.
+[WARNING] PMD Failure: com.example.services.StateDiffService:240 Rule:AvoidInstantiatingObjectsInLoops Priority:3 Avoid instantiating new objects inside loops.
+[WARNING] PMD Failure: com.example.services.StateDiff:440 Rule:AvoidFieldNameMatchingMethodName Priority:3 Field isInitialState has the same name as a method.
+[WARNING] PMD Failure: com.example.services.Builder:505 Rule:RedundantFieldInitializer Priority:3 Avoid using redundant field initializer for 'isInitialState'.
+[WARNING] PMD Failure: com.example.services.StateManager:187 Rule:InsufficientStringBufferDeclaration Priority:3 StringBuilder has been initialized with size 16, but has at least 57 characters appended..
+[WARNING] PMD Failure: com.example.services.StateManager:230 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.services.StateManager:248 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[WARNING] PMD Failure: com.example.services.StateManager:265 Rule:GuardLogStatement Priority:2 Logger calls should be surrounded by log level guards..
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  10.734 s
+[INFO] Finished at: 2025-09-06T23:17:21+09:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-pmd-plugin:3.25.0:check (default-cli) on project my-processing-app: PMD 7.9.0 has found 296 violations. For more details see: C:\Users\r02ta\Desktop\processing-coding-agent\my-processing-app\target\pmd.xml -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
