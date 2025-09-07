@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 /**
  * Integrates the PromptBuilder with AI clients to facilitate tool-aware conversations.
@@ -135,34 +137,153 @@ public class AIPromptIntegrator {
     private List<AIResponse.ToolCall> extractToolCallsFromContent(String content) {
         List<AIResponse.ToolCall> toolCalls = new ArrayList<>();
         
+        if (content == null || content.trim().isEmpty()) {
+            return toolCalls;
+        }
+        
+        // Try multiple extraction strategies
+        toolCalls.addAll(extractFromJsonCodeBlocks(content));
+        toolCalls.addAll(extractFromInlineJson(content));
+        toolCalls.addAll(extractFromXmlTags(content));
+        
+        // Log extraction results
+        if (!toolCalls.isEmpty()) {
+            logger.info(String.format("Extracted %d tool calls from AI response", toolCalls.size()));
+        }
+        
+        return toolCalls;
+    }
+    
+    /**
+     * Extracts tool calls from JSON code blocks (```json ... ```)
+     */
+    private List<AIResponse.ToolCall> extractFromJsonCodeBlocks(String content) {
+        List<AIResponse.ToolCall> toolCalls = new ArrayList<>();
+        
         // Look for JSON blocks in the content
-        String jsonPattern = "```json\\s*([\\s\\S]*?)\\s*```";
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(jsonPattern);
-        java.util.regex.Matcher matcher = pattern.matcher(content);
+        String jsonPattern = "```(?:json)?\\s*([\\s\\S]*?)\\s*```";
+        Pattern pattern = Pattern.compile(jsonPattern, Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(content);
         
         while (matcher.find()) {
-            String jsonStr = matcher.group(1);
-            try {
-                JsonObject json = JsonParser.parseString(jsonStr).getAsJsonObject();
-                
-                // Check if it's a tool call format
-                if (json.has("tool") && json.has("parameters")) {
-                    String toolName = json.get("tool").getAsString();
-                    Map<String, Object> parameters = gson.fromJson(json.get("parameters"), Map.class);
-                    
-                    AIResponse.ToolCall toolCall = new AIResponse.ToolCall(
-                        generateToolCallId(),
-                        toolName,
-                        parameters
-                    );
-                    toolCalls.add(toolCall);
-                }
-            } catch (Exception e) {
-                logger.warning("Failed to parse potential tool call JSON: " + e.getMessage());
+            String jsonStr = matcher.group(1).trim();
+            AIResponse.ToolCall toolCall = parseToolCallJson(jsonStr);
+            if (toolCall != null) {
+                toolCalls.add(toolCall);
             }
         }
         
         return toolCalls;
+    }
+    
+    /**
+     * Extracts tool calls from inline JSON (looking for standalone JSON objects)
+     */
+    private List<AIResponse.ToolCall> extractFromInlineJson(String content) {
+        List<AIResponse.ToolCall> toolCalls = new ArrayList<>();
+        
+        // Look for JSON-like structures starting with { and containing "tool"
+        String jsonPattern = "\\{[^{}]*\"tool\"[^{}]*\\}";
+        Pattern pattern = Pattern.compile(jsonPattern);
+        Matcher matcher = pattern.matcher(content);
+        
+        while (matcher.find()) {
+            String jsonStr = matcher.group();
+            AIResponse.ToolCall toolCall = parseToolCallJson(jsonStr);
+            if (toolCall != null) {
+                toolCalls.add(toolCall);
+            }
+        }
+        
+        return toolCalls;
+    }
+    
+    /**
+     * Extracts tool calls from XML-style tags (some AIs use this format)
+     */
+    private List<AIResponse.ToolCall> extractFromXmlTags(String content) {
+        List<AIResponse.ToolCall> toolCalls = new ArrayList<>();
+        
+        // Look for <tool_call>...</tool_call> patterns
+        String xmlPattern = "<tool_call[^>]*>([\\s\\S]*?)</tool_call>";
+        Pattern pattern = Pattern.compile(xmlPattern, Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(content);
+        
+        while (matcher.find()) {
+            String xmlContent = matcher.group(1).trim();
+            AIResponse.ToolCall toolCall = parseToolCallJson(xmlContent);
+            if (toolCall != null) {
+                toolCalls.add(toolCall);
+            }
+        }
+        
+        return toolCalls;
+    }
+    
+    /**
+     * Parses a JSON string into a ToolCall object with robust error handling
+     */
+    private AIResponse.ToolCall parseToolCallJson(String jsonStr) {
+        if (jsonStr == null || jsonStr.trim().isEmpty()) {
+            return null;
+        }
+        
+        try {
+            JsonObject json = JsonParser.parseString(jsonStr).getAsJsonObject();
+            
+            // Check if it's a tool call format - support multiple field names
+            String toolName = null;
+            if (json.has("tool")) {
+                toolName = json.get("tool").getAsString();
+            } else if (json.has("name")) {
+                toolName = json.get("name").getAsString();
+            } else if (json.has("function")) {
+                toolName = json.get("function").getAsString();
+            }
+            
+            if (toolName == null || toolName.trim().isEmpty()) {
+                return null;
+            }
+            
+            // Extract parameters - support multiple field names
+            Map<String, Object> parameters = new java.util.HashMap<>();
+            if (json.has("parameters")) {
+                parameters = gson.fromJson(json.get("parameters"), Map.class);
+            } else if (json.has("args")) {
+                parameters = gson.fromJson(json.get("args"), Map.class);
+            } else if (json.has("arguments")) {
+                parameters = gson.fromJson(json.get("arguments"), Map.class);
+            }
+            
+            // Ensure parameters is not null
+            if (parameters == null) {
+                parameters = new java.util.HashMap<>();
+            }
+            
+            // Validate tool exists in registry
+            ToolRegistry toolRegistry = ToolRegistry.getInstance();
+            if (!toolRegistry.hasTool(toolName)) {
+                logger.warning("Tool '" + toolName + "' not found in registry, skipping");
+                return null;
+            }
+            
+            logger.info("Successfully parsed tool call: " + toolName + " with " + parameters.size() + " parameters");
+            
+            return new AIResponse.ToolCall(
+                generateToolCallId(),
+                toolName,
+                parameters
+            );
+            
+        } catch (com.google.gson.JsonSyntaxException e) {
+            logger.warning("Invalid JSON format in tool call: " + e.getMessage());
+        } catch (IllegalStateException e) {
+            logger.warning("JSON structure error in tool call: " + e.getMessage());
+        } catch (Exception e) {
+            logger.warning("Unexpected error parsing tool call JSON: " + e.getMessage());
+        }
+        
+        return null;
     }
     
     /**

@@ -15,7 +15,7 @@ import java.util.Set;
  * Service for calculating detailed differences between drawing states. Provides comprehensive state
  * comparison and diff reporting for approval workflows.
  */
-public class StateDiffService {
+public class StateDiffService implements DiffCalculator<StateDiffService.StateDiff> {
 
     /**
      * Calculates a detailed difference between two drawing states.

@@ -135,12 +135,12 @@ public class ToolInvoker {
     }
     
     /**
-     * Inner class for parameter validation
+     * Inner class for comprehensive parameter validation with JSON schema support
      */
     private static class ToolValidator {
         
         /**
-         * Validates parameters against a tool's schema
+         * Validates parameters against a tool's schema with comprehensive JSON schema validation
          * @param tool The tool to validate against
          * @param parameters The parameters to validate
          * @return Validation result
@@ -152,79 +152,339 @@ public class ToolInvoker {
                     return ValidationResult.valid();
                 }
                 
-                // Get required properties
-                Object propertiesObj = schema.get("properties");
-                if (!(propertiesObj instanceof Map)) {
-                    return ValidationResult.valid(); // No properties to validate
-                }
-                
-                Map<String, Object> properties = (Map<String, Object>) propertiesObj;
-                
-                // Check required fields
-                Object requiredObj = schema.get("required");
-                if (requiredObj instanceof java.util.List) {
-                    java.util.List<String> required = (java.util.List<String>) requiredObj;
-                    
-                    for (String field : required) {
-                        if (parameters == null || !parameters.containsKey(field)) {
-                            return ValidationResult.invalid("Missing required field: " + field);
-                        }
-                    }
-                }
-                
-                // Validate parameter types (basic validation)
-                if (parameters != null) {
-                    for (Map.Entry<String, Object> entry : parameters.entrySet()) {
-                        String key = entry.getKey();
-                        Object value = entry.getValue();
-                        
-                        if (properties.containsKey(key)) {
-                            Map<String, Object> propertySchema = (Map<String, Object>) properties.get(key);
-                            if (!validateType(value, propertySchema)) {
-                                return ValidationResult.invalid(
-                                    String.format("Invalid type for field '%s'", key));
-                            }
-                        }
-                    }
-                }
-                
-                return ValidationResult.valid();
+                return validateObject(parameters, schema, "");
                 
             } catch (Exception e) {
-                return ValidationResult.invalid("Validation error: " + e.getMessage());
+                return ValidationResult.invalid("Schema validation error: " + e.getMessage());
             }
         }
         
         /**
-         * Validates a value against a property schema
-         * @param value The value to validate
-         * @param propertySchema The property schema
-         * @return true if valid
+         * Validates an object value against an object schema
+         * @param value The value to validate (should be a Map for objects)
+         * @param schema The schema to validate against
+         * @param path The current validation path for error reporting
+         * @return Validation result
          */
-        private boolean validateType(Object value, Map<String, Object> propertySchema) {
-            Object typeObj = propertySchema.get("type");
+        private ValidationResult validateObject(Object value, Map<String, Object> schema, String path) {
+            // Handle null values
+            if (value == null) {
+                return ValidationResult.valid();
+            }
+            
+            // Check if the value is the expected type
+            if (!"object".equals(schema.get("type"))) {
+                return validateValue(value, schema, path);
+            }
+            
+            if (!(value instanceof Map)) {
+                return ValidationResult.invalid(buildPath(path) + "Expected object but got " + 
+                    (value != null ? value.getClass().getSimpleName() : "null"));
+            }
+            
+            Map<String, Object> objectValue = (Map<String, Object>) value;
+            
+            // Get properties schema
+            Object propertiesObj = schema.get("properties");
+            if (!(propertiesObj instanceof Map)) {
+                return ValidationResult.valid(); // No properties to validate
+            }
+            
+            Map<String, Object> properties = (Map<String, Object>) propertiesObj;
+            
+            // Check required fields
+            ValidationResult requiredValidation = validateRequiredFields(objectValue, schema, path);
+            if (!requiredValidation.isValid()) {
+                return requiredValidation;
+            }
+            
+            // Validate each property
+            for (Map.Entry<String, Object> entry : objectValue.entrySet()) {
+                String propertyName = entry.getKey();
+                Object propertyValue = entry.getValue();
+                String propertyPath = buildPath(path, propertyName);
+                
+                if (properties.containsKey(propertyName)) {
+                    Map<String, Object> propertySchema = (Map<String, Object>) properties.get(propertyName);
+                    ValidationResult propertyValidation = validateValue(propertyValue, propertySchema, propertyPath);
+                    if (!propertyValidation.isValid()) {
+                        return propertyValidation;
+                    }
+                } else {
+                    // Check if additionalProperties is allowed
+                    Object additionalProperties = schema.get("additionalProperties");
+                    if (Boolean.FALSE.equals(additionalProperties)) {
+                        return ValidationResult.invalid(propertyPath + "Additional property '" + 
+                            propertyName + "' is not allowed");
+                    }
+                }
+            }
+            
+            return ValidationResult.valid();
+        }
+        
+        /**
+         * Validates required fields according to the schema
+         * @param objectValue The object value to check
+         * @param schema The schema containing required field definitions
+         * @param path The current validation path
+         * @return Validation result
+         */
+        private ValidationResult validateRequiredFields(Map<String, Object> objectValue, 
+                                                       Map<String, Object> schema, String path) {
+            Object requiredObj = schema.get("required");
+            if (requiredObj instanceof java.util.List) {
+                java.util.List<String> required = (java.util.List<String>) requiredObj;
+                
+                for (String field : required) {
+                    if (!objectValue.containsKey(field)) {
+                        return ValidationResult.invalid(buildPath(path) + "Missing required field: " + field);
+                    }
+                }
+            }
+            return ValidationResult.valid();
+        }
+        
+        /**
+         * Validates a value against its schema with comprehensive type checking
+         * @param value The value to validate
+         * @param schema The schema to validate against
+         * @param path The current validation path for error reporting
+         * @return Validation result
+         */
+        private ValidationResult validateValue(Object value, Map<String, Object> schema, String path) {
+            if (value == null) {
+                return ValidationResult.valid(); // Null values are handled by required field validation
+            }
+            
+            Object typeObj = schema.get("type");
             if (!(typeObj instanceof String)) {
-                return true; // No type constraint
+                return ValidationResult.valid(); // No type constraint
             }
             
             String type = (String) typeObj;
             
             switch (type) {
                 case "string":
-                    return value instanceof String;
+                    return validateString(value, schema, path);
                 case "number":
-                    return value instanceof Number;
+                    return validateNumber(value, schema, path);
                 case "integer":
-                    return value instanceof Integer || value instanceof Long;
+                    return validateInteger(value, schema, path);
                 case "boolean":
-                    return value instanceof Boolean;
-                case "object":
-                    return value instanceof Map;
+                    return validateBoolean(value, path);
                 case "array":
-                    return value instanceof java.util.List;
+                    return validateArray(value, schema, path);
+                case "object":
+                    return validateObject(value, schema, path);
                 default:
-                    return true; // Unknown type, allow
+                    return ValidationResult.valid(); // Unknown type, allow
             }
+        }
+        
+        /**
+         * Validates a string value with additional string constraints
+         * @param value The value to validate
+         * @param schema The schema containing string constraints
+         * @param path The current validation path
+         * @return Validation result
+         */
+        private ValidationResult validateString(Object value, Map<String, Object> schema, String path) {
+            if (!(value instanceof String)) {
+                return ValidationResult.invalid(buildPath(path) + "Expected string but got " + 
+                    value.getClass().getSimpleName() + " (" + value + ")");
+            }
+            
+            String stringValue = (String) value;
+            
+            // Check enum values
+            Object enumObj = schema.get("enum");
+            if (enumObj instanceof java.util.List) {
+                java.util.List<String> enumValues = (java.util.List<String>) enumObj;
+                if (!enumValues.contains(stringValue)) {
+                    return ValidationResult.invalid(buildPath(path) + "Value '" + stringValue + 
+                        "' is not one of allowed values: " + enumValues);
+                }
+            }
+            
+            // Check minimum length
+            Object minLengthObj = schema.get("minLength");
+            if (minLengthObj instanceof Number) {
+                int minLength = ((Number) minLengthObj).intValue();
+                if (stringValue.length() < minLength) {
+                    return ValidationResult.invalid(buildPath(path) + "String length " + 
+                        stringValue.length() + " is less than minimum " + minLength);
+                }
+            }
+            
+            // Check maximum length
+            Object maxLengthObj = schema.get("maxLength");
+            if (maxLengthObj instanceof Number) {
+                int maxLength = ((Number) maxLengthObj).intValue();
+                if (stringValue.length() > maxLength) {
+                    return ValidationResult.invalid(buildPath(path) + "String length " + 
+                        stringValue.length() + " exceeds maximum " + maxLength);
+                }
+            }
+            
+            return ValidationResult.valid();
+        }
+        
+        /**
+         * Validates a number value with numerical constraints
+         * @param value The value to validate
+         * @param schema The schema containing number constraints
+         * @param path The current validation path
+         * @return Validation result
+         */
+        private ValidationResult validateNumber(Object value, Map<String, Object> schema, String path) {
+            if (!(value instanceof Number)) {
+                return ValidationResult.invalid(buildPath(path) + "Expected number but got " + 
+                    value.getClass().getSimpleName() + " (" + value + ")");
+            }
+            
+            double numberValue = ((Number) value).doubleValue();
+            
+            // Check minimum
+            Object minimumObj = schema.get("minimum");
+            if (minimumObj instanceof Number) {
+                double minimum = ((Number) minimumObj).doubleValue();
+                if (numberValue < minimum) {
+                    return ValidationResult.invalid(buildPath(path) + "Value " + numberValue + 
+                        " is less than minimum " + minimum);
+                }
+            }
+            
+            // Check maximum
+            Object maximumObj = schema.get("maximum");
+            if (maximumObj instanceof Number) {
+                double maximum = ((Number) maximumObj).doubleValue();
+                if (numberValue > maximum) {
+                    return ValidationResult.invalid(buildPath(path) + "Value " + numberValue + 
+                        " exceeds maximum " + maximum);
+                }
+            }
+            
+            return ValidationResult.valid();
+        }
+        
+        /**
+         * Validates an integer value with integer-specific constraints
+         * @param value The value to validate
+         * @param schema The schema containing integer constraints
+         * @param path The current validation path
+         * @return Validation result
+         */
+        private ValidationResult validateInteger(Object value, Map<String, Object> schema, String path) {
+            if (!(value instanceof Number)) {
+                return ValidationResult.invalid(buildPath(path) + "Expected integer but got " + 
+                    value.getClass().getSimpleName() + " (" + value + ")");
+            }
+            
+            Number numberValue = (Number) value;
+            
+            // Check if it's actually an integer (not floating point)
+            if (numberValue instanceof Float || numberValue instanceof Double) {
+                double doubleVal = numberValue.doubleValue();
+                if (doubleVal != Math.floor(doubleVal)) {
+                    return ValidationResult.invalid(buildPath(path) + "Expected integer but got " + 
+                        "floating point number " + doubleVal);
+                }
+            }
+            
+            // Apply number constraints
+            return validateNumber(value, schema, path);
+        }
+        
+        /**
+         * Validates a boolean value
+         * @param value The value to validate
+         * @param path The current validation path
+         * @return Validation result
+         */
+        private ValidationResult validateBoolean(Object value, String path) {
+            if (!(value instanceof Boolean)) {
+                return ValidationResult.invalid(buildPath(path) + "Expected boolean but got " + 
+                    value.getClass().getSimpleName() + " (" + value + ")");
+            }
+            return ValidationResult.valid();
+        }
+        
+        /**
+         * Validates an array value with item schema validation
+         * @param value The value to validate
+         * @param schema The schema containing array constraints
+         * @param path The current validation path
+         * @return Validation result
+         */
+        private ValidationResult validateArray(Object value, Map<String, Object> schema, String path) {
+            if (!(value instanceof java.util.List)) {
+                return ValidationResult.invalid(buildPath(path) + "Expected array but got " + 
+                    value.getClass().getSimpleName() + " (" + value + ")");
+            }
+            
+            java.util.List<?> arrayValue = (java.util.List<?>) value;
+            
+            // Check minimum items
+            Object minItemsObj = schema.get("minItems");
+            if (minItemsObj instanceof Number) {
+                int minItems = ((Number) minItemsObj).intValue();
+                if (arrayValue.size() < minItems) {
+                    return ValidationResult.invalid(buildPath(path) + "Array length " + 
+                        arrayValue.size() + " is less than minimum " + minItems);
+                }
+            }
+            
+            // Check maximum items
+            Object maxItemsObj = schema.get("maxItems");
+            if (maxItemsObj instanceof Number) {
+                int maxItems = ((Number) maxItemsObj).intValue();
+                if (arrayValue.size() > maxItems) {
+                    return ValidationResult.invalid(buildPath(path) + "Array length " + 
+                        arrayValue.size() + " exceeds maximum " + maxItems);
+                }
+            }
+            
+            // Validate array items
+            Object itemsObj = schema.get("items");
+            if (itemsObj instanceof Map) {
+                Map<String, Object> itemSchema = (Map<String, Object>) itemsObj;
+                for (int i = 0; i < arrayValue.size(); i++) {
+                    Object item = arrayValue.get(i);
+                    String itemPath = buildPath(path, "[" + i + "]");
+                    ValidationResult itemValidation = validateValue(item, itemSchema, itemPath);
+                    if (!itemValidation.isValid()) {
+                        return itemValidation;
+                    }
+                }
+            }
+            
+            return ValidationResult.valid();
+        }
+        
+        /**
+         * Builds a validation path for error reporting
+         * @param basePath The base path
+         * @param property The property name to append
+         * @return The complete path
+         */
+        private String buildPath(String basePath, String property) {
+            if (basePath == null || basePath.isEmpty()) {
+                return property.startsWith("[") ? property : property;
+            }
+            return basePath + (property.startsWith("[") ? property : "." + property);
+        }
+        
+        /**
+         * Builds a validation path with proper formatting
+         * @param path The path to format
+         * @return Formatted path for error messages
+         */
+        private String buildPath(String path) {
+            if (path == null || path.isEmpty()) {
+                return "";
+            }
+            return path + ": ";
         }
     }
     
