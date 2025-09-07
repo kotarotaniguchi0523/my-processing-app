@@ -246,10 +246,38 @@ public final class DrawingEngine {
     private void renderText(Text text) {
         applyStyle(text.getStyle());
 
-        // Use default text size for now since Style doesn't include text size
-        // Future enhancement: extend Style to include text properties
-        canvas.textSize(12); // Default text size
+        // Respect Text model font size and alignment
+        canvas.textSize(text.getFontSize());
 
+        int hAlign = processing.core.PConstants.LEFT;
+        switch (text.getHorizontalAlign()) {
+            case CENTER:
+                hAlign = processing.core.PConstants.CENTER;
+                break;
+            case RIGHT:
+                hAlign = processing.core.PConstants.RIGHT;
+                break;
+            case LEFT:
+            default:
+                hAlign = processing.core.PConstants.LEFT;
+                break;
+        }
+
+        int vAlign = processing.core.PConstants.TOP;
+        switch (text.getVerticalAlign()) {
+            case CENTER:
+                vAlign = processing.core.PConstants.CENTER;
+                break;
+            case BOTTOM:
+                vAlign = processing.core.PConstants.BOTTOM;
+                break;
+            case TOP:
+            default:
+                vAlign = processing.core.PConstants.TOP;
+                break;
+        }
+
+        canvas.textAlign(hAlign, vAlign);
         canvas.text(text.getContent(), text.getPosition().getX(), text.getPosition().getY());
     }
 

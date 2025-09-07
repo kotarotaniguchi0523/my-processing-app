@@ -22,279 +22,224 @@ import java.util.Map;
  */
 public class DrawShapeTool extends AbstractTool {
 
-    public DrawShapeTool() {
-        super(
-                "draw_shape",
-                "Add a new shape to the drawing canvas",
-                "drawing",
-                true, // requires
-                // approval
-                true); // state modifying
+  private static final String DEFAULT_HEX = "#000000";
+
+  public DrawShapeTool() {
+    super("draw_shape", "Add a new shape to the drawing canvas", "drawing", true, // requires
+        // approval
+        true); // state modifying
+  }
+
+  @Override
+  protected void defineParameters() {
+    addParameter("type", String.class, "Shape type (circle, rectangle, line, text)", true);
+    addParameter("x", Number.class, "X coordinate of the shape", true);
+    addParameter("y", Number.class, "Y coordinate of the shape", true);
+
+    // Shape-specific parameters
+    addParameter("width", Number.class, "Width (for rectangle)", false);
+    addParameter("height", Number.class, "Height (for rectangle)", false);
+    addParameter("radius", Number.class, "Radius (for circle)", false);
+    addParameter("x2", Number.class, "End X coordinate (for line)", false);
+    addParameter("y2", Number.class, "End Y coordinate (for line)", false);
+    addParameter("text", String.class, "Text content (for text shape)", false);
+
+    // Style parameters
+    addParameter("fillColor", String.class, "Fill color (hex format, e.g., #FF0000)", false,
+        DEFAULT_HEX);
+    addParameter("strokeColor", String.class, "Stroke color (hex format)", false, DEFAULT_HEX);
+    addParameter("strokeWidth", Number.class, "Stroke width", false, 1.0f);
+    addParameter("fontSize", Number.class, "Font size (for text)", false, 12);
+
+    // Optional parameters
+    addParameter("id", String.class, "Custom shape ID", false);
+    addParameter("visible", Boolean.class, "Shape visibility", false, true);
+    addParameter("layerOrder", Number.class, "Layer order (z-index)", false, 0);
+  }
+
+  private Circle createCircle(String id, Position position, Style style, boolean visible,
+      int layerOrder, Map<String, Object> parameters) throws ToolExecutionException {
+    Number radiusNum = (Number) parameters.get("radius");
+    if (radiusNum == null) {
+      throw ToolExecutionException.invalidParameters(getName(),
+          "Radius is required for circle shapes");
     }
 
-    @Override
-    protected void defineParameters() {
-        addParameter("type", String.class, "Shape type (circle, rectangle, line, text)", true);
-        addParameter("x", Number.class, "X coordinate of the shape", true);
-        addParameter("y", Number.class, "Y coordinate of the shape", true);
-
-        // Shape-specific parameters
-        addParameter("width", Number.class, "Width (for rectangle)", false);
-        addParameter("height", Number.class, "Height (for rectangle)", false);
-        addParameter("radius", Number.class, "Radius (for circle)", false);
-        addParameter("x2", Number.class, "End X coordinate (for line)", false);
-        addParameter("y2", Number.class, "End Y coordinate (for line)", false);
-        addParameter("text", String.class, "Text content (for text shape)", false);
-
-        // Style parameters
-        addParameter(
-                "fillColor",
-                String.class,
-                "Fill color (hex format, e.g., #FF0000)",
-                false,
-                "#000000");
-        addParameter("strokeColor", String.class, "Stroke color (hex format)", false, "#000000");
-        addParameter("strokeWidth", Number.class, "Stroke width", false, 1.0f);
-        addParameter("fontSize", Number.class, "Font size (for text)", false, 12);
-
-        // Optional parameters
-        addParameter("id", String.class, "Custom shape ID", false);
-        addParameter("visible", Boolean.class, "Shape visibility", false, true);
-        addParameter("layerOrder", Number.class, "Layer order (z-index)", false, 0);
+    float radius = radiusNum.floatValue();
+    if (radius <= 0) {
+      throw ToolExecutionException.invalidParameters(getName(), "Radius must be positive");
     }
 
-    private Circle createCircle(
-            String id,
-            Position position,
-            Style style,
-            boolean visible,
-            int layerOrder,
-            Map<String, Object> parameters)
-            throws ToolExecutionException {
-        Number radiusNum = (Number) parameters.get("radius");
-        if (radiusNum == null) {
-            throw ToolExecutionException.invalidParameters(
-                    getName(), "Radius is required for circle shapes");
-        }
+    final String shapeId =
+        id == null ? "circle_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000)
+            : id;
 
-        float radius = radiusNum.floatValue();
-        if (radius <= 0) {
-            throw ToolExecutionException.invalidParameters(getName(), "Radius must be positive");
-        }
+    return new Circle(shapeId, position, radius, style, visible, layerOrder);
+  }
 
-        if (id == null) {
-            id = "circle_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000);
-        }
+  private Rectangle createRectangle(String id, Position position, Style style, boolean visible,
+      int layerOrder, Map<String, Object> parameters) throws ToolExecutionException {
+    Number widthNum = (Number) parameters.get("width");
+    Number heightNum = (Number) parameters.get("height");
 
-        return new Circle(id, position, radius, style, visible, layerOrder);
+    if (widthNum == null || heightNum == null) {
+      throw ToolExecutionException.invalidParameters(getName(),
+          "Width and height are required for rectangle shapes");
     }
 
-    private Rectangle createRectangle(
-            String id,
-            Position position,
-            Style style,
-            boolean visible,
-            int layerOrder,
-            Map<String, Object> parameters)
-            throws ToolExecutionException {
-        Number widthNum = (Number) parameters.get("width");
-        Number heightNum = (Number) parameters.get("height");
+    float width = widthNum.floatValue();
+    float height = heightNum.floatValue();
 
-        if (widthNum == null || heightNum == null) {
-            throw ToolExecutionException.invalidParameters(
-                    getName(), "Width and height are required for rectangle shapes");
-        }
-
-        float width = widthNum.floatValue();
-        float height = heightNum.floatValue();
-
-        if (width <= 0 || height <= 0) {
-            throw ToolExecutionException.invalidParameters(
-                    getName(), "Width and height must be positive");
-        }
-
-        if (id == null) {
-            id = "rectangle_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000);
-        }
-
-        return new Rectangle(id, position, width, height, style, visible, layerOrder);
+    if (width <= 0 || height <= 0) {
+      throw ToolExecutionException.invalidParameters(getName(),
+          "Width and height must be positive");
     }
 
-    private Line createLine(
-            String id,
-            Position position,
-            Style style,
-            boolean visible,
-            int layerOrder,
-            Map<String, Object> parameters)
-            throws ToolExecutionException {
-        Number x2Num = (Number) parameters.get("x2");
-        Number y2Num = (Number) parameters.get("y2");
+    final String shapeId =
+        id == null ? "rectangle_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000)
+            : id;
 
-        if (x2Num == null || y2Num == null) {
-            throw ToolExecutionException.invalidParameters(
-                    getName(), "x2 and y2 coordinates are required for line shapes");
-        }
+    return new Rectangle(shapeId, position, width, height, style, visible, layerOrder);
+  }
 
-        Position endPosition = new Position(x2Num.floatValue(), y2Num.floatValue());
+  private Line createLine(String id, Position position, Style style, boolean visible,
+      int layerOrder, Map<String, Object> parameters) throws ToolExecutionException {
+    Number x2Num = (Number) parameters.get("x2");
+    Number y2Num = (Number) parameters.get("y2");
 
-        if (id == null) {
-            id = "line_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000);
-        }
-
-        return new Line(id, position, endPosition, style, visible, layerOrder);
+    if (x2Num == null || y2Num == null) {
+      throw ToolExecutionException.invalidParameters(getName(),
+          "x2 and y2 coordinates are required for line shapes");
     }
 
-    private Text createText(
-            String id,
-            Position position,
-            Style style,
-            boolean visible,
-            int layerOrder,
-            Map<String, Object> parameters)
-            throws ToolExecutionException {
-        String textContent = (String) parameters.get("text");
-        if (textContent == null || textContent.isBlank()) {
-            throw ToolExecutionException.invalidParameters(
-                    getName(), "Text content is required for text shapes");
-        }
+    Position endPosition = new Position(x2Num.floatValue(), y2Num.floatValue());
 
-        // Extract font size if provided
-        Number fontSizeNum = (Number) parameters.get("fontSize");
-        float fontSize = fontSizeNum != null ? fontSizeNum.floatValue() : 12.0f;
+    final String shapeId =
+        id == null ? "line_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000) : id;
 
-        if (fontSize <= 0) {
-            throw ToolExecutionException.invalidParameters(getName(), "Font size must be positive");
-        }
+    return new Line(shapeId, position, endPosition, style, visible, layerOrder);
+  }
 
-        if (id == null) {
-            id = "text_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000);
-        }
-
-        return new Text(id, position, textContent, "Arial", fontSize, style);
+  private Text createText(String id, Position position, Style style, boolean visible,
+      int layerOrder, Map<String, Object> parameters) throws ToolExecutionException {
+    String textContent = (String) parameters.get("text");
+    if (textContent == null || textContent.isBlank()) {
+      throw ToolExecutionException.invalidParameters(getName(),
+          "Text content is required for text shapes");
     }
 
-    private Style createStyle(
-            String fillColorHex,
-            String strokeColorHex,
-            float strokeWidth,
-            Map<String, Object> parameters)
-            throws ToolExecutionException {
-        try {
-            Color fillColor = Color.fromHex(fillColorHex);
-            Color strokeColor = Color.fromHex(strokeColorHex);
+    // Extract font size if provided
+    Number fontSizeNum = (Number) parameters.get("fontSize");
+    float fontSize = fontSizeNum != null ? fontSizeNum.floatValue() : 12.0f;
 
-            return Style.builder()
-                    .fillColor(fillColor)
-                    .strokeColor(strokeColor)
-                    .strokeWeight(strokeWidth)
-                    .build();
-        } catch (IllegalArgumentException e) {
-            throw ToolExecutionException.invalidParameters(
-                    getName(), "Invalid color format: " + e.getMessage());
-        }
+    if (fontSize <= 0) {
+      throw ToolExecutionException.invalidParameters(getName(), "Font size must be positive");
     }
 
-    @Override
-    protected ToolResult executeInternal(Map<String, Object> parameters, AgentContext context)
-            throws ToolExecutionException {
+    final String shapeId =
+        id == null ? "text_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000) : id;
 
-        // Validate that we have a current state to work with
-        DrawingState currentState = requireCurrentState(context);
+    return new Text(shapeId, position, textContent, "Arial", fontSize, style);
+  }
 
-        // Validate canvas bounds if available
-        int canvasWidth = context.getCanvasWidth();
-        int canvasHeight = context.getCanvasHeight();
+  private Style createStyle(String fillColorHex, String strokeColorHex, float strokeWidth,
+      Map<String, Object> parameters) throws ToolExecutionException {
+    try {
+      Color fillColor = Color.fromHex(fillColorHex);
+      Color strokeColor = Color.fromHex(strokeColorHex);
 
-        float x = getRequiredParameter(parameters, "x", Number.class).floatValue();
-        float y = getRequiredParameter(parameters, "y", Number.class).floatValue();
+      return Style.builder().fillColor(fillColor).strokeColor(strokeColor).strokeWeight(strokeWidth)
+          .build();
+    } catch (IllegalArgumentException e) {
+      throw ToolExecutionException.systemError(getName(), "Invalid color format: " + e.getMessage(),
+          e);
+    }
+  }
 
-        if (x < 0 || x > canvasWidth || y < 0 || y > canvasHeight) {
-            return ToolResult.builder()
-                    .status(ToolResult.Status.ERROR)
-                    .message(
-                            String.format(
-                                    "Position (%.1f, %.1f) is outside canvas bounds (0, 0, %d, %d)",
-                                    x, y, canvasWidth, canvasHeight))
-                    .errorType("BOUNDS_ERROR")
-                    .build();
-        }
+  @Override
+  protected ToolResult executeInternal(Map<String, Object> parameters, AgentContext context)
+      throws ToolExecutionException {
 
-        return executeInternalImpl(parameters, context);
+    // Validate that we have a current state to work with
+    requireCurrentState(context);
+
+    // Validate canvas bounds if available
+    int canvasWidth = context.getCanvasWidth();
+    int canvasHeight = context.getCanvasHeight();
+
+    float x = getRequiredParameter(parameters, "x", Number.class).floatValue();
+    float y = getRequiredParameter(parameters, "y", Number.class).floatValue();
+
+    if (x < 0 || x > canvasWidth || y < 0 || y > canvasHeight) {
+      return ToolResult.builder().status(ToolResult.Status.ERROR)
+          .message(String.format("Position (%.1f, %.1f) is outside canvas bounds (0, 0, %d, %d)", x,
+              y, canvasWidth, canvasHeight))
+          .errorType("BOUNDS_ERROR").build();
     }
 
-    private ToolResult executeInternalImpl(Map<String, Object> parameters, AgentContext context)
-            throws ToolExecutionException {
+    return executeInternalImpl(parameters, context);
+  }
 
-        DrawingState currentState = requireCurrentState(context);
+  private ToolResult executeInternalImpl(Map<String, Object> parameters, AgentContext context)
+      throws ToolExecutionException {
 
-        // Extract basic parameters
-        String shapeType =
-                getRequiredParameter(parameters, "type", String.class)
-                        .toLowerCase(java.util.Locale.ROOT);
-        float x = getRequiredParameter(parameters, "x", Number.class).floatValue();
-        float y = getRequiredParameter(parameters, "y", Number.class).floatValue();
+    DrawingState currentState = requireCurrentState(context);
 
-        // Extract style parameters
-        String fillColorHex =
-                getOptionalParameter(parameters, "fillColor", String.class, "#000000");
-        String strokeColorHex =
-                getOptionalParameter(parameters, "strokeColor", String.class, "#000000");
-        float strokeWidth =
-                getOptionalParameter(parameters, "strokeWidth", Number.class, 1.0f).floatValue();
+    // Extract basic parameters
+    String shapeType =
+        getRequiredParameter(parameters, "type", String.class).toLowerCase(java.util.Locale.ROOT);
+    float x = getRequiredParameter(parameters, "x", Number.class).floatValue();
+    float y = getRequiredParameter(parameters, "y", Number.class).floatValue();
 
-        // Extract optional parameters
-        String customId = getOptionalParameter(parameters, "id", String.class, null);
-        boolean visible = getOptionalParameter(parameters, "visible", Boolean.class, true);
-        int layerOrder = getOptionalParameter(parameters, "layerOrder", Number.class, 0).intValue();
+    // Extract style parameters
+    String fillColorHex = getOptionalParameter(parameters, "fillColor", String.class, DEFAULT_HEX);
+    String strokeColorHex =
+        getOptionalParameter(parameters, "strokeColor", String.class, DEFAULT_HEX);
+    float strokeWidth =
+        getOptionalParameter(parameters, "strokeWidth", Number.class, 1.0f).floatValue();
 
-        // Create style
-        Style style = createStyle(fillColorHex, strokeColorHex, strokeWidth, parameters);
-        Position position = new Position(x, y);
+    // Extract optional parameters
+    String customId = getOptionalParameter(parameters, "id", String.class, null);
+    boolean visible = getOptionalParameter(parameters, "visible", Boolean.class, true);
+    int layerOrder = getOptionalParameter(parameters, "layerOrder", Number.class, 0).intValue();
 
-        // Create the shape based on type
-        Shape shape;
-        try {
-            switch (shapeType) {
-                case "circle":
-                    shape =
-                            createCircle(
-                                    customId, position, style, visible, layerOrder, parameters);
-                    break;
-                case "rectangle":
-                case "rect":
-                    shape =
-                            createRectangle(
-                                    customId, position, style, visible, layerOrder, parameters);
-                    break;
-                case "line":
-                    shape = createLine(customId, position, style, visible, layerOrder, parameters);
-                    break;
-                case "text":
-                    shape = createText(customId, position, style, visible, layerOrder, parameters);
-                    break;
-                default:
-                    throw ToolExecutionException.invalidParameters(
-                            getName(),
-                            "Unsupported shape type: "
-                                    + shapeType
-                                    + ". Supported types: circle, rectangle, line, text");
-            }
-        } catch (IllegalArgumentException e) {
-            throw ToolExecutionException.invalidParameters(
-                    getName(), "Invalid parameters for " + shapeType + ": " + e.getMessage());
-        }
+    // Create style
+    Style style = createStyle(fillColorHex, strokeColorHex, strokeWidth, parameters);
+    Position position = new Position(x, y);
 
-        // Add the shape to the current state
-        DrawingState newState = currentState.withAddedShape(shape);
-
-        return ToolResult.success(
-                        String.format(
-                                "Added %s shape '%s' at position (%.1f, %.1f)",
-                                shapeType, shape.getId(), x, y),
-                        newState)
-                .withData("shapeId", shape.getId())
-                .withData("shapeType", shapeType)
-                .withData("position", String.format("(%.1f, %.1f)", x, y));
+    // Create the shape based on type
+    Shape shape;
+    try {
+      switch (shapeType) {
+        case "circle":
+          shape = createCircle(customId, position, style, visible, layerOrder, parameters);
+          break;
+        case "rectangle":
+        case "rect":
+          shape = createRectangle(customId, position, style, visible, layerOrder, parameters);
+          break;
+        case "line":
+          shape = createLine(customId, position, style, visible, layerOrder, parameters);
+          break;
+        case "text":
+          shape = createText(customId, position, style, visible, layerOrder, parameters);
+          break;
+        default:
+          throw ToolExecutionException.invalidParameters(getName(), "Unsupported shape type: "
+              + shapeType + ". Supported types: circle, rectangle, line, text");
+      }
+    } catch (IllegalArgumentException e) {
+      throw ToolExecutionException.systemError(getName(),
+          "Invalid parameters for " + shapeType + ": " + e.getMessage(), e);
     }
+
+    // Add the shape to the current state
+    DrawingState newState = currentState.withAddedShape(shape);
+
+    return ToolResult
+        .success(String.format("Added %s shape '%s' at position (%.1f, %.1f)", shapeType,
+            shape.getId(), x, y), newState)
+        .withData("shapeId", shape.getId()).withData("shapeType", shapeType)
+        .withData("position", String.format("(%.1f, %.1f)", x, y));
+  }
 }
