@@ -4,10 +4,8 @@ import com.example.agent.core.Agent;
 import com.example.agent.core.AgentContext;
 import com.example.agent.manager.ToolManager;
 import com.example.agent.tools.ToolResult;
-import com.example.agent.tools.impl.ClearCanvasTool;
-import com.example.agent.tools.impl.DrawShapeTool;
-import com.example.agent.tools.impl.GetStateTool;
-import com.example.agent.tools.impl.UndoRedoTool;
+import com.example.domain.tools.IToolRegistry;
+import com.example.domain.tools.ToolRegistry;
 import com.example.domain.models.DrawingState;
 import com.example.domain.models.StateHistory;
 import com.example.domain.session.Session;
@@ -27,13 +25,13 @@ public final class AgentSystemFactory {
         // Utility class
     }
 
-    /** Create a standard tool manager with all basic tools registered */
+    /** Create a standard tool manager with all basic tools registered (domain registry unified) */
     public static ToolManager createStandardToolManager() {
         ToolManager toolManager = new ToolManager();
 
-        // Register all standard tools
-        toolManager.registerTools(
-                new DrawShapeTool(), new ClearCanvasTool(), new GetStateTool(), new UndoRedoTool());
+        // Register tools from domain registry via adapter to avoid abstraction duplication
+        IToolRegistry registry = ToolRegistry.getInstance();
+        toolManager.registerFromRegistry(registry, true);
 
         return toolManager;
     }

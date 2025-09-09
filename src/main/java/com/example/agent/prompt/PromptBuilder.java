@@ -1,6 +1,7 @@
 package com.example.agent.prompt;
 
 import com.example.domain.tools.IAgentTool;
+import com.example.domain.tools.IToolRegistry;
 import com.example.domain.tools.ToolRegistry;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -37,7 +38,7 @@ public class PromptBuilder {
         - 説明やエラーメッセージは通常のテキストで応答してください / Respond with plain text for explanations or error messages
         """;
     
-    private final ToolRegistry toolRegistry;
+    private final IToolRegistry toolRegistry;
     private final ConversationHistory conversationHistory;
     private final Gson gson;
     private String customSystemPrompt;
@@ -46,10 +47,14 @@ public class PromptBuilder {
         this(ToolRegistry.getInstance());
     }
     
-    public PromptBuilder(ToolRegistry toolRegistry) {
+    public PromptBuilder(IToolRegistry toolRegistry) {
         this.toolRegistry = toolRegistry;
         this.conversationHistory = new ConversationHistory();
         this.gson = new GsonBuilder().setPrettyPrinting().create();
+    }
+
+    public IToolRegistry getToolRegistry() {
+        return toolRegistry;
     }
     
     /**

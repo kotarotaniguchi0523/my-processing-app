@@ -1,10 +1,13 @@
 package com.example.agent.manager;
 
+import com.example.agent.adapter.IAgentToolAdapter;
 import com.example.agent.core.AgentContext;
 import com.example.agent.tools.Tool;
 import com.example.agent.tools.ToolExecutionException;
 import com.example.agent.tools.ToolResult;
 import com.example.agent.tools.ToolValidationResult;
+import com.example.domain.tools.IAgentTool;
+import com.example.domain.tools.IToolRegistry;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -118,6 +121,25 @@ public final class ToolManager {
 
   public boolean isToolRegistered(String toolName) {
     return tools.containsKey(toolName);
+  }
+
+  // M1/M2統一: domain側のレジストリから一括登録（アダプタ経由）
+  public int registerFromRegistry(IToolRegistry registry) {
+    return registerFromRegistry(registry, false);
+  }
+
+  public int registerFromRegistry(IToolRegistry registry, boolean overwrite) {
+    Objects.requireNonNull(registry, "registry cannot be null");
+    int added = 0;
+    for (IAgentTool domainTool : registry.getAllTools()) {
+      Tool adapter = new IAgentToolAdapter(domainTool);
+      String name = adapter.getName();
+      if (overwrite || !isToolRegistered(name)) {
+        registerTool(adapter);
+        added++;
+      }
+    }
+    return added;
   }
 
   // Tool execution

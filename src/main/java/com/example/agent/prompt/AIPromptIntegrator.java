@@ -1,7 +1,7 @@
 package com.example.agent.prompt;
 
 import com.example.infrastructure.ai.*;
-import com.example.domain.tools.ToolRegistry;
+import com.example.domain.tools.IToolRegistry;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -24,15 +24,17 @@ public class AIPromptIntegrator {
     
     private final AIClient aiClient;
     private final PromptBuilder promptBuilder;
+    private final IToolRegistry toolRegistry;
     private final Gson gson;
     
     public AIPromptIntegrator(AIClient aiClient) {
         this(aiClient, new PromptBuilder());
     }
-    
+
     public AIPromptIntegrator(AIClient aiClient, PromptBuilder promptBuilder) {
         this.aiClient = aiClient;
         this.promptBuilder = promptBuilder;
+        this.toolRegistry = promptBuilder.getToolRegistry();
         this.gson = new Gson();
     }
     
@@ -261,7 +263,6 @@ public class AIPromptIntegrator {
             }
             
             // Validate tool exists in registry
-            ToolRegistry toolRegistry = ToolRegistry.getInstance();
             if (!toolRegistry.hasTool(toolName)) {
                 logger.warning("Tool '" + toolName + "' not found in registry, skipping");
                 return null;

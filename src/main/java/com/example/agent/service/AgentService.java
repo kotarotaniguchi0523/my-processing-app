@@ -4,6 +4,7 @@ import com.example.agent.prompt.AIPromptIntegrator;
 import com.example.agent.prompt.PromptBuilder;
 import com.example.domain.models.DrawingState;
 import com.example.domain.tools.IAgentTool;
+import com.example.domain.tools.IToolRegistry;
 import com.example.domain.tools.ToolRegistry;
 import com.example.infrastructure.ai.*;
 import com.google.gson.Gson;
@@ -30,7 +31,7 @@ public class AgentService {
     private final AIClient aiClient;
     private final AIPromptIntegrator promptIntegrator;
     private final ToolInvoker toolInvoker;
-    private final ToolRegistry toolRegistry;
+    private final IToolRegistry toolRegistry;
     private final Gson gson;
     private DrawingState currentState;
     private final List<PendingAction> pendingActions;
@@ -40,11 +41,18 @@ public class AgentService {
      * @param aiClient The AI client to use for communication
      */
     public AgentService(AIClient aiClient) {
+        this(aiClient, new ToolInvoker(), ToolRegistry.getInstance(), new Gson());
+    }
+
+    /**
+     * 依存を注入可能な拡張コンストラクタ（DIP対応）。
+     */
+    public AgentService(AIClient aiClient, ToolInvoker toolInvoker, IToolRegistry toolRegistry, Gson gson) {
         this.aiClient = aiClient;
-        this.promptIntegrator = new AIPromptIntegrator(aiClient);
-        this.toolInvoker = new ToolInvoker();
-        this.toolRegistry = ToolRegistry.getInstance();
-        this.gson = new Gson();
+        this.toolInvoker = toolInvoker;
+        this.toolRegistry = toolRegistry;
+        this.promptIntegrator = new AIPromptIntegrator(aiClient, new PromptBuilder(toolRegistry));
+        this.gson = gson;
         this.currentState = DrawingState.empty();
         this.pendingActions = new ArrayList<>();
     }

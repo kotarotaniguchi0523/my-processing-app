@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * ensure consistent tool registration across the application. Thread-safe implementation supports
  * concurrent access.
  */
-public final class ToolRegistry {
+public final class ToolRegistry implements IToolRegistry {
 
     private static volatile ToolRegistry instance;
     private final Map<String, IAgentTool> tools = new ConcurrentHashMap<>();
@@ -93,6 +93,7 @@ public final class ToolRegistry {
      * @param name the tool name
      * @return the tool if found, null otherwise
      */
+    @Override
     public IAgentTool getTool(String name) {
         return tools.get(name);
     }
@@ -103,6 +104,7 @@ public final class ToolRegistry {
      * @param name the tool name
      * @return true if the tool is registered, false otherwise
      */
+    @Override
     public boolean hasTool(String name) {
         return tools.containsKey(name);
     }
@@ -112,6 +114,7 @@ public final class ToolRegistry {
      *
      * @return a set of all registered tool names
      */
+    @Override
     public Set<String> getToolNames() {
         return new HashSet<>(tools.keySet());
     }
@@ -121,6 +124,7 @@ public final class ToolRegistry {
      *
      * @return a list of all registered tools
      */
+    @Override
     public List<IAgentTool> getAllTools() {
         return new ArrayList<>(tools.values());
     }
@@ -155,6 +159,7 @@ public final class ToolRegistry {
      *
      * @return a list of tool schemas in OpenAI functions format
      */
+    @Override
     public List<Map<String, Object>> generateToolSchemas() {
         return tools.values().stream()
                 .map(this::convertToOpenAISchema)
