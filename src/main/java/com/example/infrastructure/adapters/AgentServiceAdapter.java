@@ -133,6 +133,9 @@ public class AgentServiceAdapter implements IAgentService {
    * Create a default agent service
    */
   private static AgentService createDefaultAgentService() {
+    // Initialize tools before creating AgentService
+    com.example.application.tools.ToolInitializer.initialize();
+    
     try {
       AIClient aiClient = AIClientFactory.createApplicationClient();
       return new AgentService(aiClient);

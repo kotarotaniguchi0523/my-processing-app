@@ -1,20 +1,13 @@
 package com.example.infrastructure.agent.ai;
 
 import com.example.infrastructure.ai.*;
-import com.example.domain.tools.IToolRegistry;
 import com.example.infrastructure.agent.conversation.ConversationHistory;
 import com.example.infrastructure.agent.conversation.ConversationMessage;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Logger;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
+
 
 /**
  * Integrates the PromptBuilder with AI clients to facilitate tool-aware conversations. Handles the
@@ -22,12 +15,9 @@ import java.util.regex.Matcher;
  */
 public class AIPromptIntegrator {
 
-  private static final Logger logger = Logger.getLogger(AIPromptIntegrator.class.getName());
 
   private final AIClient aiClient;
   private final PromptBuilder promptBuilder;
-  private final IToolRegistry toolRegistry;
-  private final Gson gson;
 
   public AIPromptIntegrator(AIClient aiClient) {
     this(aiClient, new PromptBuilder());
@@ -36,8 +26,6 @@ public class AIPromptIntegrator {
   public AIPromptIntegrator(AIClient aiClient, PromptBuilder promptBuilder) {
     this.aiClient = aiClient;
     this.promptBuilder = promptBuilder;
-    this.toolRegistry = promptBuilder.getToolRegistry();
-    this.gson = new Gson();
   }
 
   /**
@@ -89,10 +77,20 @@ public class AIPromptIntegrator {
 
     // Build simple system prompt (tools will be handled separately)
     String systemPrompt =
-        "You are a helpful AI assistant that can create and manipulate shapes on a drawing canvas. "
-            + "Use the provided tools to perform drawing operations. "
-            + "When the user asks you to draw something, use the appropriate tool functions. "
-            + "Always use tools instead of providing YAML or JSON directly.";
+        "You are a drawing AI that creates visual compositions using tool calls.\n"
+            + "\nCanvas dimensions: 980x335 pixels (center at x=490, y=167)\n"
+            + "\nYour task: Interpret user requests and create drawings using ONLY tool calls.\n"
+            + "\nAvailable tool: createShape\n" + "Parameters:\n"
+            + "- type: 'circle', 'rectangle', 'triangle', 'line', or 'text'\n"
+            + "- position: {x: number, y: number}\n"
+            + "- size: {width: number, height: number} for rect/triangle, {radius: number} for circle\n"
+            + "- color: color name ('red', 'blue', etc.) or hex code\n"
+            + "\nExample: To draw a red circle at center:\n"
+            + "Use createShape with: type='circle', position={x:490, y:167}, size={radius:50}, color='red'\n"
+            + "\nRules:\n" + "1. ALWAYS use tool calls, never plain text responses\n"
+            + "2. Break complex objects into multiple simple shapes\n"
+            + "3. Calculate positions to arrange shapes properly\n"
+            + "4. Use multiple tool calls for composite drawings";
     requestBuilder.addSystemMessage(systemPrompt);
 
     // Add conversation history
@@ -133,44 +131,18 @@ public class AIPromptIntegrator {
    * @param requestBuilder The request builder to add tools to
    */
   private void addToolDefinitions(ChatRequest.Builder requestBuilder) {
-    // Note: Tool definitions need to be handled at the AIClient level
-    // The ChatRequest doesn't directly support tools - this needs to be
+    // Note: Tool definitions are handled at the AIClient level
+    // The ChatRequest doesn't directly support tools - this is
     // implemented in OptimizedGeminiClient using the ToolFunctionAdapter
 
-    // For now, we'll add a system message describing the available tools
-    StringBuilder toolDescriptions = new StringBuilder("\n\nAvailable tools:\n");
-    for (com.example.domain.tools.IAgentTool tool : toolRegistry.getAllTools()) {
-      toolDescriptions.append("- ").append(tool.name()).append(": ")
-          .append(getToolDescription(tool.name())).append("\n");
-    }
-
-    // Add tool descriptions to system message
-    requestBuilder.addSystemMessage(toolDescriptions.toString());
+    // We don't need to add tool descriptions as they're already in the system prompt
+    // The actual tool definitions are handled by OptimizedGeminiClient
   }
 
   /**
    * Get description for a tool
    */
-  private String getToolDescription(String toolName) {
-    switch (toolName) {
-      case "createShape":
-        return "Create a new shape (circle, rectangle, triangle, or line) at specified position";
-      case "modifyShape":
-        return "Modify properties of an existing shape by ID";
-      case "deleteShape":
-        return "Delete a shape by its ID";
-      case "clearCanvas":
-        return "Clear all shapes from the canvas";
-      case "undoAction":
-        return "Undo the last action";
-      case "redoAction":
-        return "Redo the previously undone action";
-      case "getState":
-        return "Get the current drawing state";
-      default:
-        return "Tool for drawing operations";
-    }
-  }
+
 
   /**
    * Processes an AI response to extract tool calls
@@ -186,9 +158,8 @@ public class AIPromptIntegrator {
       // Handle explicit tool calls from AI
       processed.setToolCalls(response.getToolCalls());
     } else if (response.getContent() != null) {
-      // Try to extract tool calls from content
-      List<AIResponse.ToolCall> extractedCalls = extractToolCallsFromContent(response.getContent());
-      processed.setToolCalls(extractedCalls);
+      // Don't try to extract tool calls from content - Gemini already handles this
+      // Just set the text response
       processed.setTextResponse(response.getContent());
     }
 
@@ -201,178 +172,16 @@ public class AIPromptIntegrator {
    * @param content The response content
    * @return List of extracted tool calls
    */
-  private List<AIResponse.ToolCall> extractToolCallsFromContent(String content) {
-    List<AIResponse.ToolCall> toolCalls = new ArrayList<>();
 
-    if (content == null || content.trim().isEmpty()) {
-      return toolCalls;
-    }
-
-    // Try multiple extraction strategies
-    toolCalls.addAll(extractFromJsonCodeBlocks(content));
-    toolCalls.addAll(extractFromInlineJson(content));
-    toolCalls.addAll(extractFromXmlTags(content));
-
-    // Log extraction results
-    if (!toolCalls.isEmpty()) {
-      logger.info(String.format("Extracted %d tool calls from AI response", toolCalls.size()));
-    }
-
-    return toolCalls;
-  }
 
   /**
    * Extracts tool calls from JSON code blocks (```json ... ```)
    */
-  private List<AIResponse.ToolCall> extractFromJsonCodeBlocks(String content) {
-    List<AIResponse.ToolCall> toolCalls = new ArrayList<>();
 
-    // Look for JSON blocks in the content
-    String jsonPattern = "```(?:json)?\\s*([\\s\\S]*?)\\s*```";
-    Pattern pattern = Pattern.compile(jsonPattern, Pattern.CASE_INSENSITIVE);
-    Matcher matcher = pattern.matcher(content);
-
-    while (matcher.find()) {
-      String jsonStr = matcher.group(1).trim();
-      toolCalls.addAll(parseToolCallsFromJson(jsonStr));
-    }
-
-    return toolCalls;
-  }
-
-  /**
-   * Extracts tool calls from inline JSON (looking for standalone JSON objects)
-   */
-  private List<AIResponse.ToolCall> extractFromInlineJson(String content) {
-    List<AIResponse.ToolCall> toolCalls = new ArrayList<>();
-
-    // Look for JSON-like structures starting with { and containing "tool"
-    String jsonPattern = "\\{[^{}]*\"tool\"[^{}]*\\}";
-    Pattern pattern = Pattern.compile(jsonPattern);
-    Matcher matcher = pattern.matcher(content);
-
-    while (matcher.find()) {
-      String jsonStr = matcher.group();
-      // Reuse common JSON parser that supports object/array
-      List<AIResponse.ToolCall> parsed = parseToolCallsFromJson(jsonStr);
-      if (parsed != null && !parsed.isEmpty()) {
-        toolCalls.addAll(parsed);
-      }
-    }
-
-    return toolCalls;
-  }
-
-  /**
-   * Extracts tool calls from XML-style tags (some AIs use this format)
-   */
-  private List<AIResponse.ToolCall> extractFromXmlTags(String content) {
-    List<AIResponse.ToolCall> toolCalls = new ArrayList<>();
-
-    // Look for <tool_call>...</tool_call> patterns
-    String xmlPattern = "<tool_call[^>]*>([\\s\\S]*?)</tool_call>";
-    Pattern pattern = Pattern.compile(xmlPattern, Pattern.CASE_INSENSITIVE);
-    Matcher matcher = pattern.matcher(content);
-
-    while (matcher.find()) {
-      String xmlContent = matcher.group(1).trim();
-      toolCalls.addAll(parseToolCallsFromJson(xmlContent));
-    }
-
-    return toolCalls;
-  }
-
-  /**
-   * Parses a JSON string (object or array) into ToolCall objects
-   */
-  private List<AIResponse.ToolCall> parseToolCallsFromJson(String jsonStr) {
-    List<AIResponse.ToolCall> calls = new ArrayList<>();
-    if (jsonStr == null || jsonStr.trim().isEmpty()) {
-      return calls;
-    }
-
-    try {
-      var parsed = JsonParser.parseString(jsonStr);
-      if (parsed.isJsonArray()) {
-        var arr = parsed.getAsJsonArray();
-        for (var el : arr) {
-          if (el.isJsonObject()) {
-            AIResponse.ToolCall call = parseToolCallObject(el.getAsJsonObject());
-            if (call != null) {
-              calls.add(call);
-            }
-          }
-        }
-      } else if (parsed.isJsonObject()) {
-        AIResponse.ToolCall call = parseToolCallObject(parsed.getAsJsonObject());
-        if (call != null) {
-          calls.add(call);
-        }
-      }
-    } catch (Exception e) {
-      logger.warning("Failed to parse tool calls JSON: " + e.getMessage());
-    }
-    return calls;
-  }
 
   /** Parses a single tool call object */
-  private AIResponse.ToolCall parseToolCallObject(JsonObject json) {
-    try {
-      // Check if it's a tool call format - support multiple field names
-      String toolName = null;
-      if (json.has("tool")) {
-        toolName = json.get("tool").getAsString();
-      } else if (json.has("name")) {
-        toolName = json.get("name").getAsString();
-      } else if (json.has("function")) {
-        toolName = json.get("function").getAsString();
-      }
 
-      if (toolName == null || toolName.trim().isEmpty()) {
-        return null;
-      }
 
-      // Extract parameters - support multiple field names
-      Map<String, Object> parameters = new java.util.HashMap<>();
-      if (json.has("parameters")) {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> params = gson.fromJson(json.get("parameters"), Map.class);
-        parameters = params;
-      } else if (json.has("args")) {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> params = gson.fromJson(json.get("args"), Map.class);
-        parameters = params;
-      } else if (json.has("arguments")) {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> params = gson.fromJson(json.get("arguments"), Map.class);
-        parameters = params;
-      }
-
-      if (parameters == null) {
-        parameters = new java.util.HashMap<>();
-      }
-
-      if (!toolRegistry.hasTool(toolName)) {
-        logger.warning("Tool '" + toolName + "' not found in registry, skipping");
-        return null;
-      }
-
-      return new AIResponse.ToolCall(generateToolCallId(), toolName, parameters);
-    } catch (Exception e) {
-      logger.warning("Error parsing tool call object: " + e.getMessage());
-      return null;
-    }
-  }
-
-  /**
-   * Generates a unique tool call ID
-   *
-   * @return A unique ID string
-   */
-  private String generateToolCallId() {
-    return "tool_call_" + System.currentTimeMillis() + "_"
-        + Integer.toHexString((int) (Math.random() * 0xFFFF));
-  }
 
   /**
    * Adds a tool execution result to the conversation

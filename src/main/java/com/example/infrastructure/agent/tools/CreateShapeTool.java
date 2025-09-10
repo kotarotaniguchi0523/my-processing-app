@@ -6,6 +6,7 @@ import com.example.domain.models.Line;
 import com.example.domain.models.Rectangle;
 import com.example.domain.models.Shape;
 import com.example.domain.models.Text;
+import com.example.domain.models.Triangle;
 import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Color;
 import com.example.domain.values.Position;
@@ -19,7 +20,7 @@ import java.util.Set;
 
 /**
  * CreateShapeTool enables the creation of new shapes and adds them to the drawing state. Supports
- * creating circles, rectangles, lines, and text with customizable properties.
+ * creating circles, rectangles, lines, triangles, and text with customizable properties.
  */
 public class CreateShapeTool implements IAgentTool {
 
@@ -40,7 +41,7 @@ public class CreateShapeTool implements IAgentTool {
     Map<String, Object> typeProperty = new HashMap<>();
     typeProperty.put("type", "string");
     typeProperty.put("description", "The type of shape to create");
-    typeProperty.put("enum", Arrays.asList("circle", "rectangle", "line", "text"));
+    typeProperty.put("enum", Arrays.asList("circle", "rectangle", "line", "text", "triangle"));
     properties.put("type", typeProperty);
 
     // Position
@@ -86,6 +87,28 @@ public class CreateShapeTool implements IAgentTool {
     shapeProps.put("text", createStringProperty("Text content for text shapes"));
     shapeProps.put("fontSize", createNumberProperty("Font size for text shapes"));
 
+    // For triangle
+    Map<String, Object> p1Property = new HashMap<>();
+    p1Property.put("type", "object");
+    p1Property.put("description", "First vertex for triangle shapes");
+    p1Property.put("properties", positionProps);
+    p1Property.put("required", Arrays.asList("x", "y"));
+    shapeProps.put("p1", p1Property);
+    
+    Map<String, Object> p2Property = new HashMap<>();
+    p2Property.put("type", "object");
+    p2Property.put("description", "Second vertex for triangle shapes");
+    p2Property.put("properties", positionProps);
+    p2Property.put("required", Arrays.asList("x", "y"));
+    shapeProps.put("p2", p2Property);
+    
+    Map<String, Object> p3Property = new HashMap<>();
+    p3Property.put("type", "object");
+    p3Property.put("description", "Third vertex for triangle shapes");
+    p3Property.put("properties", positionProps);
+    p3Property.put("required", Arrays.asList("x", "y"));
+    shapeProps.put("p3", p3Property);
+
     propertiesProperty.put("properties", shapeProps);
     properties.put("properties", propertiesProperty);
 
@@ -125,9 +148,10 @@ public class CreateShapeTool implements IAgentTool {
     // Provide default position at center of canvas area if not specified
     if (positionData == null || positionData.isEmpty()) {
       positionData = new HashMap<>();
-      // Default to center of canvas area (1000x700 window, canvas 60% height)
-      positionData.put("x", 500.0);
-      positionData.put("y", 211.0);
+      // Default to center of visible canvas area (980x335)
+      // Canvas center: x=490, y=167.5
+      positionData.put("x", 490.0);
+      positionData.put("y", 167.5);
     }
 
     // Handle both "properties" and direct size parameters from AI
@@ -183,12 +207,12 @@ public class CreateShapeTool implements IAgentTool {
 
     switch (type.toLowerCase(Locale.ROOT)) {
       case "circle":
-        float radius = getFloat(properties, "radius", 50.0f);
+        float radius = getFloat(properties, "radius", 60.0f);
         return new Circle(id, position, radius, style, visible, layerOrder);
 
       case "rectangle":
-        float width = getFloat(properties, "width", 100.0f);
-        float height = getFloat(properties, "height", 100.0f);
+        float width = getFloat(properties, "width", 300.0f);
+        float height = getFloat(properties, "height", 200.0f);
         return new Rectangle(id, position, width, height, style, visible, layerOrder);
 
       case "line":
@@ -208,6 +232,32 @@ public class CreateShapeTool implements IAgentTool {
         String fontFamily = (String) properties.getOrDefault("fontFamily", "Arial");
         return new Text(id, position, text, fontFamily, fontSize, Text.TextAlign.LEFT,
             Text.TextAlign.TOP, style, visible, layerOrder);
+
+      case "triangle":
+        // Handle both explicit vertex points and width/height format
+        Map<String, Object> p1Data = getMap(properties, "p1");
+        Map<String, Object> p2Data = getMap(properties, "p2");
+        Map<String, Object> p3Data = getMap(properties, "p3");
+        
+        if (p1Data != null && p2Data != null && p3Data != null) {
+          // Explicit three points
+          Position p1 = parsePosition(p1Data);
+          Position p2 = parsePosition(p2Data);
+          Position p3 = parsePosition(p3Data);
+          return new Triangle(id, position, p1, p2, p3, style, visible, layerOrder);
+        } else {
+          // Use width/height format (creates an isosceles triangle)
+          float triWidth = getFloat(properties, "width", 100.0f);
+          float triHeight = getFloat(properties, "height", 80.0f);
+          
+          // Calculate vertices centered around the position
+          // The position is the center bottom of the triangle
+          Position p1 = new Position(position.getX() - triWidth/2, position.getY());
+          Position p2 = new Position(position.getX() + triWidth/2, position.getY());
+          Position p3 = new Position(position.getX(), position.getY() - triHeight);
+          
+          return new Triangle(id, position, p1, p2, p3, style, visible, layerOrder);
+        }
 
       default:
         throw new IllegalArgumentException("Unsupported shape type: " + type);
@@ -371,7 +421,7 @@ public class CreateShapeTool implements IAgentTool {
     }
 
     String type = (String) parameters.get("type");
-    Set<String> validTypes = Set.of("circle", "rectangle", "line", "text");
+    Set<String> validTypes = Set.of("circle", "rectangle", "line", "text", "triangle");
     if (!validTypes.contains(type.toLowerCase(Locale.ROOT))) {
       throw new IllegalArgumentException(
           "Invalid shape type: " + type + ". Valid types: " + validTypes);

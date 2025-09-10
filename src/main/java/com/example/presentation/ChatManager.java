@@ -46,8 +46,26 @@ public class ChatManager {
                 LOGGER.fine("Sending message to ApplicationController: " + userInput);
             }
 
-            // Process user input through use case facade
-            useCaseFacade.processUserInput(userInput);
+            // Add user message to chat
+            addMessage("User: " + userInput);
+
+            // Process user input through use case facade and handle the result
+            useCaseFacade.processUserInput(userInput)
+                .thenAccept(result -> {
+                    // Log result for debugging
+                    if (result != null) {
+                        LOGGER.info("Process result: success=" + result.success + 
+                                   ", requiresApproval=" + result.requiresApproval +
+                                   ", message=" + result.message);
+                    }
+                    // Note: Approval and messages are handled via callbacks
+                })
+                .exceptionally(throwable -> {
+                    LOGGER.log(Level.WARNING, "Error processing user input", throwable);
+                    addMessage("Error: Failed to process input - " + 
+                              (throwable.getMessage() != null ? throwable.getMessage() : "Unknown error"));
+                    return null;
+                });
 
             currentInput = "";
         }

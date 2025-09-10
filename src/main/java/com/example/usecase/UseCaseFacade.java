@@ -26,7 +26,7 @@ public class UseCaseFacade {
     public interface Callback {
         void onStatusUpdate(String status);
         void onChatMessage(String message);
-        void onApprovalRequired(String summary, String diff);
+        void onApprovalRequired(String summary, String diff, DrawingState pendingState);
         void onStateChanged(DrawingState newState);
         void onError(String error);
         void onMessage(String message);
@@ -103,8 +103,8 @@ public class UseCaseFacade {
             }
             
             @Override
-            public void onApprovalRequired(String summary, String diff) {
-                if (callback != null) callback.onApprovalRequired(summary, diff);
+            public void onApprovalRequired(String summary, String diff, DrawingState pendingState) {
+                if (callback != null) callback.onApprovalRequired(summary, diff, pendingState);
             }
             
             @Override

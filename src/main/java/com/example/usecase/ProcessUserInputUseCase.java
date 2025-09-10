@@ -29,7 +29,7 @@ public class ProcessUserInputUseCase {
     public interface Callback {
         void onStatusUpdate(String status);
         void onChatMessage(String message);
-        void onApprovalRequired(String summary, String diff);
+        void onApprovalRequired(String summary, String diff, DrawingState pendingState);
         void onStateChanged(DrawingState newState);
         void onError(String error);
     }
@@ -194,7 +194,7 @@ public class ProcessUserInputUseCase {
     private void prepareApproval(DrawingState current, DrawingState proposed) {
         var diffResult = diffService.generateDiff(current, proposed);
         if (callback != null) {
-            callback.onApprovalRequired(diffResult.summary, diffResult.unifiedDiff);
+            callback.onApprovalRequired(diffResult.summary, diffResult.unifiedDiff, proposed);
         }
     }
     

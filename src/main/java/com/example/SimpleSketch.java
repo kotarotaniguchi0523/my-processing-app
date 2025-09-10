@@ -7,10 +7,8 @@ import com.example.presentation.*;
 import processing.core.PApplet;
 import processing.core.PFont;
 
-import java.util.logging.Logger;
 
 public class SimpleSketch extends PApplet {
-  private static final Logger LOGGER = Logger.getLogger(SimpleSketch.class.getName());
 
   // Application Integration
   private UseCaseFacade useCaseFacade;
@@ -88,6 +86,47 @@ public class SimpleSketch extends PApplet {
     // Configure UI renderer
     uiRenderer.setFonts(font, smallFont);
     uiRenderer.calculateLayout();
+    
+    // CRITICAL: Setup callbacks for UseCaseFacade to connect business logic to UI
+    setupUseCaseFacadeCallback();
+  }
+  
+  private void setupUseCaseFacadeCallback() {
+    useCaseFacade.setCallback(new UseCaseFacade.Callback() {
+      @Override
+      public void onStatusUpdate(String status) {
+        println("Status: " + status);
+      }
+      
+      @Override
+      public void onChatMessage(String message) {
+        chatManager.addMessage(message);
+      }
+      
+      @Override
+      public void onApprovalRequired(String summary, String diff, com.example.domain.models.DrawingState pendingState) {
+        // Show the approval UI with the pending state
+        approvalManager.showApproval(summary, diff, pendingState);
+        println("Approval required: " + summary);
+      }
+      
+      @Override
+      public void onStateChanged(com.example.domain.models.DrawingState newState) {
+        // State change is handled by the drawing engine
+        println("State changed");
+      }
+      
+      @Override
+      public void onError(String error) {
+        chatManager.addMessage("Error: " + error);
+        println("Error: " + error);
+      }
+      
+      @Override
+      public void onMessage(String message) {
+        chatManager.addMessage("System: " + message);
+      }
+    });
   }
 
   // Try creating the first available font from candidates

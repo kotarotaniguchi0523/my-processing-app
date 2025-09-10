@@ -6,6 +6,7 @@ import com.example.domain.models.Line;
 import com.example.domain.models.Rectangle;
 import com.example.domain.models.Shape;
 import com.example.domain.models.Text;
+import com.example.domain.models.Triangle;
 import com.example.domain.values.Color;
 
 import processing.core.PApplet;
@@ -188,6 +189,16 @@ public final class DrawingEngine {
                 }
                 break;
 
+            case TRIANGLE:
+                if (shape instanceof Triangle) {
+                    renderTriangle((Triangle) shape);
+                } else {
+                    throw new DrawingException(
+                            "Shape type mismatch: expected Triangle but got "
+                                    + shape.getClass().getSimpleName());
+                }
+                break;
+
             default:
                 throw new DrawingException("Unsupported shape type: " + shape.getType());
         }
@@ -279,6 +290,23 @@ public final class DrawingEngine {
 
         canvas.textAlign(hAlign, vAlign);
         canvas.text(text.getContent(), text.getPosition().getX(), text.getPosition().getY());
+    }
+
+    /**
+     * Renders a triangle shape
+     *
+     * @param triangle the triangle to render
+     */
+    private void renderTriangle(Triangle triangle) {
+        applyStyle(triangle.getStyle());
+
+        canvas.triangle(
+                triangle.getP1().getX(),
+                triangle.getP1().getY(),
+                triangle.getP2().getX(),
+                triangle.getP2().getY(),
+                triangle.getP3().getX(),
+                triangle.getP3().getY());
     }
 
     /**

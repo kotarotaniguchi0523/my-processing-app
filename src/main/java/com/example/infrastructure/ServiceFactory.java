@@ -117,7 +117,6 @@ public class ServiceFactory {
     /**
      * Creates or returns cached IAgentService implementation
      */
-    @SuppressWarnings("unchecked")
     public IAgentService createAgentService() {
         return (IAgentService) singletonCache.computeIfAbsent(IAgentService.class, k -> {
             String type = config.getProperty(ConfigKeys.AGENT_SERVICE_TYPE, Defaults.AGENT_SERVICE_TYPE);
@@ -138,6 +137,9 @@ public class ServiceFactory {
      * Creates AgentService with all dependencies injected
      */
     private AgentService createAgentServiceWithDependencies(AIClient aiClient) {
+        // Initialize tools before creating AgentService
+        com.example.application.tools.ToolInitializer.initialize();
+        
         // We'll use the existing constructor that accepts dependencies
         // This avoids the AgentService creating its own dependencies
         return new AgentService(aiClient);
@@ -146,7 +148,6 @@ public class ServiceFactory {
     /**
      * Creates or returns cached IDiffService implementation
      */
-    @SuppressWarnings("unchecked")
     public IDiffService createDiffService() {
         return (IDiffService) singletonCache.computeIfAbsent(IDiffService.class, k -> {
             String type = config.getProperty(ConfigKeys.DIFF_SERVICE_TYPE, Defaults.DIFF_SERVICE_TYPE);
@@ -162,7 +163,6 @@ public class ServiceFactory {
     /**
      * Creates or returns cached IStateService implementation
      */
-    @SuppressWarnings("unchecked")
     public IStateService createStateService() {
         return (IStateService) singletonCache.computeIfAbsent(IStateService.class, k -> {
             String type = config.getProperty(ConfigKeys.STATE_SERVICE_TYPE, Defaults.STATE_SERVICE_TYPE);
@@ -178,7 +178,6 @@ public class ServiceFactory {
     /**
      * Creates or returns cached ICommandExecutor implementation
      */
-    @SuppressWarnings("unchecked")
     public ICommandExecutor createCommandExecutor() {
         return (ICommandExecutor) singletonCache.computeIfAbsent(ICommandExecutor.class, k -> {
             String type = config.getProperty(ConfigKeys.COMMAND_EXECUTOR_TYPE, Defaults.COMMAND_EXECUTOR_TYPE);
@@ -194,7 +193,6 @@ public class ServiceFactory {
     /**
      * Creates or returns cached ICommandParser implementation
      */
-    @SuppressWarnings("unchecked")
     public ICommandParser createCommandParser() {
         return (ICommandParser) singletonCache.computeIfAbsent(ICommandParser.class, k -> {
             String type = config.getProperty(ConfigKeys.COMMAND_PARSER_TYPE, Defaults.COMMAND_PARSER_TYPE);
@@ -210,7 +208,6 @@ public class ServiceFactory {
     /**
      * Creates or returns cached ISessionManager implementation
      */
-    @SuppressWarnings("unchecked")
     public ISessionManager createSessionManager() {
         return (ISessionManager) singletonCache.computeIfAbsent(ISessionManager.class, k -> {
             String type = config.getProperty(ConfigKeys.SESSION_MANAGER_TYPE, Defaults.SESSION_MANAGER_TYPE);
@@ -226,7 +223,6 @@ public class ServiceFactory {
     /**
      * Creates or returns cached IStateManager implementation
      */
-    @SuppressWarnings("unchecked")
     public IStateManager createStateManager() {
         return (IStateManager) singletonCache.computeIfAbsent(IStateManager.class, k -> {
             String type = config.getProperty(ConfigKeys.STATE_MANAGER_TYPE, Defaults.STATE_MANAGER_TYPE);
@@ -242,7 +238,6 @@ public class ServiceFactory {
     /**
      * Creates or returns cached IHistoryService implementation
      */
-    @SuppressWarnings("unchecked")
     public IHistoryService createHistoryService() {
         return (IHistoryService) singletonCache.computeIfAbsent(IHistoryService.class, k -> {
             String type = config.getProperty(ConfigKeys.HISTORY_SERVICE_TYPE, Defaults.HISTORY_SERVICE_TYPE);

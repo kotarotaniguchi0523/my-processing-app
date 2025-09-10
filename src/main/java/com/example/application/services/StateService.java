@@ -62,11 +62,20 @@ public class StateService {
 
   /** Get the current drawing state. */
   public DrawingState getCurrentState() {
+    // Ensure we have a session
+    if (currentSession == null) {
+      initializeDefaultSession();
+    }
     return currentSession != null ? currentSession.getCurrentState() : DrawingState.defaultState();
   }
 
   /** Update the current state. */
   public void updateState(DrawingState newState) {
+    // Ensure we have a session
+    if (currentSession == null) {
+      initializeDefaultSession();
+    }
+    
     if (currentSession != null) {
       // Validate new state before applying
       boolean valid = stateManager.validateState(newState);
@@ -83,6 +92,15 @@ public class StateService {
       if (LOGGER.isLoggable(java.util.logging.Level.FINE)) {
         LOGGER.fine("State updated for session: " + currentSession.getSessionId());
       }
+    }
+  }
+  
+  /** Initialize a default session if none exists. */
+  private void initializeDefaultSession() {
+    if (currentSession == null && stateManager != null) {
+      DrawingSession defaultSession = new DrawingSession();
+      initializeSession(defaultSession);
+      LOGGER.info("Initialized default drawing session");
     }
   }
 

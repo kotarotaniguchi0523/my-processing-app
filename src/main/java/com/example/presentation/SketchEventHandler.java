@@ -18,7 +18,6 @@ public class SketchEventHandler {
     private static final int MIN_EXTENDED_CODEPOINT = 128;
     private static final int MAX_MESSAGE_LENGTH = 500;
     private static final int CHAT_SCROLL_SPEED = 20;
-    private static final int LINE_HEIGHT = 20;
     private static final int MARGIN = 10;
     private static final int INNER_GAP_SMALL = 5;
 
@@ -187,9 +186,9 @@ public class SketchEventHandler {
         // Clear canvas using use case
         var result = useCaseFacade.clearCanvas();
         if (result.success) {
-            sketch.println("Canvas cleared");
+            PApplet.println("Canvas cleared");
         } else {
-            sketch.println("Clear failed: " + result.message);
+            PApplet.println("Clear failed: " + result.message);
         }
     }
 
@@ -206,18 +205,18 @@ public class SketchEventHandler {
     private void handleUndo() {
         var result = useCaseFacade.undo();
         if (result.success) {
-            sketch.println("Undo performed");
+            PApplet.println("Undo performed");
         } else {
-            sketch.println("Undo failed: " + result.message);
+            PApplet.println("Undo failed: " + result.message);
         }
     }
 
     private void handleRedo() {
         var result = useCaseFacade.redo();
         if (result.success) {
-            sketch.println("Redo performed");
+            PApplet.println("Redo performed");
         } else {
-            sketch.println("Redo failed: " + result.message);
+            PApplet.println("Redo failed: " + result.message);
         }
     }
 
