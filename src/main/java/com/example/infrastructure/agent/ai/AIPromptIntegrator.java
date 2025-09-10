@@ -133,10 +133,10 @@ public class AIPromptIntegrator {
   private void addToolDefinitions(ChatRequest.Builder requestBuilder) {
     // Note: Tool definitions are handled at the AIClient level
     // The ChatRequest doesn't directly support tools - this is
-    // implemented in OptimizedGeminiClient using the ToolFunctionAdapter
+    // implemented in the AI client
 
     // We don't need to add tool descriptions as they're already in the system prompt
-    // The actual tool definitions are handled by OptimizedGeminiClient
+    // The actual tool definitions are handled by the AI client
   }
 
   /**

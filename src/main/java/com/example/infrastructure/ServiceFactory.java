@@ -269,29 +269,4 @@ public class ServiceFactory {
                 return AIClientFactory.createApplicationClient();
         }
     }
-    
-    /**
-     * Clears the singleton cache (useful for testing)
-     */
-    public void clearCache() {
-        singletonCache.clear();
-        LOGGER.info("ServiceFactory cache cleared");
-    }
-    
-    /**
-     * Gets current configuration properties (read-only)
-     */
-    public Properties getConfiguration() {
-        return new Properties(config);
-    }
-    
-    /**
-     * Updates configuration at runtime (for testing purposes)
-     */
-    public void updateConfiguration(String key, String value) {
-        config.setProperty(key, value);
-        // Clear cache to force recreation of services with new config
-        clearCache();
-        LOGGER.info("Configuration updated: " + key + " = " + value);
-    }
 }

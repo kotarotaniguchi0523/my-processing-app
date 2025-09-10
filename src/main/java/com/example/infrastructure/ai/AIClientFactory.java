@@ -61,22 +61,19 @@ public class AIClientFactory {
     }
     
     /**
-     * Creates an AI client with the first available provider
+     * Creates a pre-configured client optimized for this application
      * @return The configured AI client
-     * @throws IllegalStateException if no providers have API keys configured
      */
-    public static AIClient createDefaultClient() {
-        return createDefaultClient(AIClientConfig.defaultConfig());
-    }
-    
-    /**
-     * Creates an AI client with the first available provider and custom configuration
-     * @param config Custom configuration
-     * @return The configured AI client
-     * @throws IllegalStateException if no providers have API keys configured
-     */
-    public static AIClient createDefaultClient(AIClientConfig config) {
-        // Try providers in preference order (Claude disabled)
+    public static AIClient createApplicationClient() {
+        AIClientConfig config = AIClientConfig.builder()
+            .timeout(Duration.ofSeconds(60))
+            .maxRetries(3)
+            .retryDelay(Duration.ofSeconds(2))
+            .enableLogging(true)
+            .enableStreaming(false)  // Can be enabled later if needed
+            .build();
+        
+        // Try providers in preference order
         APIKeyManager.Provider[] providers = {
             APIKeyManager.Provider.GEMINI,
             APIKeyManager.Provider.OPENAI
@@ -97,21 +94,5 @@ public class AIClientFactory {
         throw new IllegalStateException(
             "No AI provider API keys found. Please configure at least one API key in environment variables or .env file"
         );
-    }
-    
-    /**
-     * Creates a pre-configured client optimized for this application
-     * @return The configured AI client
-     */
-    public static AIClient createApplicationClient() {
-        AIClientConfig config = AIClientConfig.builder()
-            .timeout(Duration.ofSeconds(60))
-            .maxRetries(3)
-            .retryDelay(Duration.ofSeconds(2))
-            .enableLogging(true)
-            .enableStreaming(false)  // Can be enabled later if needed
-            .build();
-        
-        return createDefaultClient(config);
     }
 }
