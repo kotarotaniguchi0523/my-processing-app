@@ -44,8 +44,6 @@ public class SketchUIRenderer {
   private int canvasAreaHeight;
   private int chatAreaY;
   private int chatAreaHeight;
-  private int statusAreaY;
-  private int statusAreaHeight;
   private int chatInputY;
   private int chatLogY;
   private int chatLogHeight;
@@ -69,13 +67,10 @@ public class SketchUIRenderer {
 
   public void calculateLayout() {
     canvasAreaY = MARGIN;
-    canvasAreaHeight = (int) ((sketch.height - MARGIN * 3) * 50 / 100.0); // 50% for canvas
+    canvasAreaHeight = (int) ((sketch.height - MARGIN * 2) * 55 / 100.0); // 55% for canvas
 
     chatAreaY = canvasAreaY + canvasAreaHeight + MARGIN;
-    chatAreaHeight = (int) ((sketch.height - MARGIN * 3) * 40 / 100.0); // 40% for chat
-
-    statusAreaY = chatAreaY + chatAreaHeight + MARGIN;
-    statusAreaHeight = sketch.height - statusAreaY - MARGIN;
+    chatAreaHeight = sketch.height - chatAreaY - MARGIN; // Rest for chat
 
     chatInputY = chatAreaY + chatAreaHeight - INPUT_HEIGHT - MARGIN;
     chatLogY = chatAreaY + MARGIN;
@@ -258,32 +253,6 @@ public class SketchUIRenderer {
     }
   }
 
-  public void drawStatusArea() {
-    String agentStatus = "Ready"; // This could be passed from a status manager
-    sketch.pushStyle();
-    try {
-      // Status area background
-      sketch.fill(240);
-      sketch.stroke(200);
-      sketch.strokeWeight(1);
-      sketch.rect(MARGIN, statusAreaY, sketch.width - MARGIN * 2, statusAreaHeight);
-
-      // Agent status
-      sketch.fill(100);
-      if (smallFont != null) {
-        sketch.textFont(smallFont);
-      }
-      sketch.textAlign(PApplet.LEFT, PApplet.CENTER);
-      sketch.text("Agent Status: " + agentStatus, MARGIN + 10, statusAreaY + statusAreaHeight / 2);
-
-      // Connection indicator
-      sketch
-          .fill("Ready".equals(agentStatus) ? sketch.color(0, 150, 0) : sketch.color(200, 150, 0));
-      sketch.ellipse(sketch.width - MARGIN - 20, statusAreaY + statusAreaHeight / 2, 8, 8);
-    } finally {
-      sketch.popStyle();
-    }
-  }
 
   public void drawUIBorders() {
     // Draw separator lines
@@ -292,103 +261,8 @@ public class SketchUIRenderer {
 
     // Between canvas and chat
     sketch.line(MARGIN, chatAreaY - MARGIN / 2, sketch.width - MARGIN, chatAreaY - MARGIN / 2);
-
-    // Between chat and status
-    sketch.line(MARGIN, statusAreaY - MARGIN / 2, sketch.width - MARGIN, statusAreaY - MARGIN / 2);
   }
 
-  public void drawApprovalOverlay(ApprovalUIManager approvalManager) {
-    sketch.pushStyle();
-    try {
-      // Dim background
-      sketch.fill(0, 0, 0, 150);
-      sketch.noStroke();
-      sketch.rect(0, 0, sketch.width, sketch.height);
-
-      // Panel
-      int panelW = (int) (sketch.width * 0.8f);
-      int panelH = (int) (sketch.height * 0.7f);
-      int panelX = (sketch.width - panelW) / 2;
-      int panelY = (sketch.height - panelH) / 2;
-
-      sketch.fill(255);
-      sketch.stroke(50);
-      sketch.strokeWeight(2);
-      sketch.rect(panelX, panelY, panelW, panelH);
-
-      int contentX = panelX + 20;
-      int contentY = panelY + 20;
-      int contentW = panelW - 40;
-      int contentH = panelH - 80;
-
-      // Title
-      sketch.fill(0);
-      if (font != null) {
-        sketch.textFont(font);
-      }
-      sketch.textAlign(PApplet.LEFT, PApplet.TOP);
-      sketch.text("変更の承認", contentX, contentY);
-
-      // Summary
-      int summaryY = contentY + 30;
-      if (smallFont != null) {
-        sketch.textFont(smallFont);
-      }
-      sketch.text(approvalManager.getApprovalSummary(), contentX, summaryY);
-
-      // Diff area (scrollable)
-      int diffY = summaryY + 20;
-      int diffH = contentH - 60;
-      // Mask diff area
-      sketch.clip(contentX, diffY, contentW, diffH);
-      int lineY = diffY - approvalManager.getApprovalScrollOffset();
-      String[] lines = approvalManager.getApprovalDiff().split("\n");
-      for (String line : lines) {
-        // Color lines by prefix
-        if (line.startsWith("+++") || line.startsWith("---") || line.startsWith("@@")) {
-          sketch.fill(60);
-        } else if (line.startsWith("+")) {
-          sketch.fill(0, 120, 0);
-        } else if (line.startsWith("-")) {
-          sketch.fill(180, 0, 0);
-        } else {
-          sketch.fill(0);
-        }
-        sketch.text(line, contentX, lineY);
-        lineY += 14;
-      }
-      sketch.noClip();
-
-      // Buttons
-      int approveBtnX = contentX + contentW - 100 - 110;
-      int approveBtnY = panelY + panelH - 45;
-      int rejectBtnX = contentX + contentW - 100;
-      int rejectBtnY = panelY + panelH - 45;
-      int buttonW = 100;
-      int buttonH = 30;
-
-      // Update button positions in approval manager
-      approvalManager.setButtonPositions(approveBtnX, approveBtnY, rejectBtnX, rejectBtnY, buttonW,
-          buttonH);
-
-      // Approve
-      sketch.fill(80, 170, 80);
-      sketch.stroke(40, 120, 40);
-      sketch.rect(approveBtnX, approveBtnY, buttonW, buttonH);
-      sketch.fill(255);
-      sketch.textAlign(PApplet.CENTER, PApplet.CENTER);
-      sketch.text("承認 (Y)", approveBtnX + buttonW / 2, approveBtnY + buttonH / 2);
-
-      // Reject
-      sketch.fill(200, 80, 80);
-      sketch.stroke(150, 40, 40);
-      sketch.rect(rejectBtnX, rejectBtnY, buttonW, buttonH);
-      sketch.fill(255);
-      sketch.text("拒否 (N)", rejectBtnX + buttonW / 2, rejectBtnY + buttonH / 2);
-    } finally {
-      sketch.popStyle();
-    }
-  }
 
   private void renderDomainShapesInCanvasArea() {
     try {
@@ -403,10 +277,9 @@ public class SketchUIRenderer {
 
       List<Shape> shapes = currentState.getShapes();
 
-      // Always log shape count for debugging
-      PApplet.println("Rendering shapes: " + shapes.size() + " total");
+      // Log shape count for debugging (only at FINE level)
       if (LOGGER.isLoggable(Level.FINE)) {
-        LOGGER.fine("Domain shapes count: " + shapes.size());
+        LOGGER.fine("Rendering shapes: " + shapes.size() + " total");
       }
 
       // Clip to the canvas viewport and render all shapes

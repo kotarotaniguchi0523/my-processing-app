@@ -2,7 +2,10 @@ package com.example;
 
 import com.example.usecase.UseCaseFacade;
 import com.example.infrastructure.rendering.DrawingEngine;
-import com.example.presentation.*;
+import com.example.presentation.SketchUIRenderer;
+import com.example.presentation.SketchEventHandler;
+import com.example.presentation.ChatManager;
+import com.example.presentation.InputManager;
 
 import processing.core.PApplet;
 import processing.core.PFont;
@@ -18,7 +21,6 @@ public class SimpleSketch extends PApplet {
   private SketchUIRenderer uiRenderer;
   private SketchEventHandler eventHandler;
   private ChatManager chatManager;
-  private ApprovalUIManager approvalManager;
   private InputManager inputManager;
 
   // UI Components
@@ -78,10 +80,9 @@ public class SimpleSketch extends PApplet {
   private void initializeUIComponents() {
     // Initialize managers in order of dependency
     chatManager = new ChatManager(this, useCaseFacade);
-    approvalManager = new ApprovalUIManager(useCaseFacade);
     inputManager = new InputManager(this, chatManager);
     uiRenderer = new SketchUIRenderer(this, chatManager, drawingEngine, useCaseFacade);
-    eventHandler = new SketchEventHandler(this, uiRenderer, chatManager, approvalManager, inputManager, useCaseFacade);
+    eventHandler = new SketchEventHandler(this, uiRenderer, chatManager, inputManager, useCaseFacade);
 
     // Configure UI renderer
     uiRenderer.setFonts(font, smallFont);
@@ -105,9 +106,8 @@ public class SimpleSketch extends PApplet {
       
       @Override
       public void onApprovalRequired(String summary, String diff, com.example.domain.models.DrawingState pendingState) {
-        // Show the approval UI with the pending state
-        approvalManager.showApproval(summary, diff, pendingState);
-        println("Approval required: " + summary);
+        // Approval functionality removed
+        println("Approval required (disabled): " + summary);
       }
       
       @Override
@@ -156,15 +156,16 @@ public class SimpleSketch extends PApplet {
     // Draw UI areas through renderer
     uiRenderer.drawCanvasArea();
     uiRenderer.drawChatArea();
-    uiRenderer.drawStatusArea();
+    // drawStatusArea() disabled - AI status display removed
+    // uiRenderer.drawStatusArea();
 
     // Draw UI borders for clarity
     uiRenderer.drawUIBorders();
 
-    // Draw approval overlay last (modal)
-    if (approvalManager.isApprovalPending()) {
-      uiRenderer.drawApprovalOverlay(approvalManager);
-    }
+    // Approval overlay disabled - approval functionality removed
+    // if (approvalManager.isApprovalPending()) {
+    //   uiRenderer.drawApprovalOverlay(approvalManager);
+    // }
   }
 
   // Event handlers - delegate to EventHandler
@@ -173,15 +174,6 @@ public class SimpleSketch extends PApplet {
     eventHandler.handleMousePressed();
   }
 
-  @Override
-  public void mouseDragged() {
-    eventHandler.handleMouseDragged();
-  }
-
-  @Override
-  public void mouseReleased() {
-    eventHandler.handleMouseReleased();
-  }
 
   @Override
   public void keyPressed() {

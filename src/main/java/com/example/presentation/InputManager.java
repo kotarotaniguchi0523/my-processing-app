@@ -52,9 +52,8 @@ public class InputManager {
                     public void actionPerformed(ActionEvent e) {
                         String text = japaneseInputField.getText();
                         if (!text.isBlank()) {
-                            // Transfer text to currentInput and send
-                            chatManager.setCurrentInput(text);
-                            chatManager.sendMessage();
+                            // Send functionality disabled - just add to chat
+                            chatManager.addMessage("User: " + text);
                             japaneseInputField.setText("");
                             chatManager.setCurrentInput("");
                         }
@@ -67,7 +66,6 @@ public class InputManager {
                     public void focusGained(FocusEvent e) {
                         chatManager.setInputFocused(true);
                         useJapaneseInput = true;
-                        chatManager.setUsingJapaneseInput(true);
                     }
 
                     @Override
@@ -76,7 +74,6 @@ public class InputManager {
                         SwingUtilities.invokeLater(() -> {
                             if (!japaneseInputField.hasFocus()) {
                                 useJapaneseInput = false;
-                                chatManager.setUsingJapaneseInput(false);
                                 chatManager.setInputFocused(false);
                             }
                         });
@@ -181,7 +178,4 @@ public class InputManager {
         return japaneseInputField != null && japaneseInputField.isVisible();
     }
 
-    public JTextField getJapaneseInputField() {
-        return japaneseInputField;
-    }
 }

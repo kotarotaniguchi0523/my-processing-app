@@ -1,6 +1,5 @@
 package com.example.domain.models;
 
-import com.example.domain.serialization.YamlSerializable;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
 
@@ -10,7 +9,7 @@ import java.util.Objects;
  * Abstract base class for all shapes in the drawing system Provides common properties and behaviors
  * for geometric shapes
  */
-public abstract class Shape implements YamlSerializable {
+public abstract class Shape {
     protected final String id;
     protected final Position position;
     protected final Style style;

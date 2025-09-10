@@ -1,6 +1,5 @@
 package com.example.domain.values;
 
-import com.example.domain.serialization.YamlSerializable;
 import com.example.domain.serialization.YamlUtils;
 
 import java.util.Map;
@@ -9,7 +8,7 @@ import java.util.Map;
  * Position value object representing x, y coordinates Immutable value object for position
  * information
  */
-public final class Position implements YamlSerializable {
+public final class Position {
     private final float x;
     private final float y;
 

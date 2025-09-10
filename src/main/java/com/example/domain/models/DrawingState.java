@@ -1,6 +1,5 @@
 package com.example.domain.models;
 
-import com.example.domain.serialization.YamlSerializable;
 import com.example.domain.serialization.YamlUtils;
 import com.example.domain.values.Color;
 
@@ -14,7 +13,7 @@ import java.util.Objects;
  * DrawingState represents the complete state of the drawing canvas This is an immutable object that
  * captures all drawing elements and settings
  */
-public final class DrawingState implements YamlSerializable {
+public final class DrawingState {
     private final Map<String, Object> settings;
     private final List<Shape> shapes;
     private final Map<String, List<Object>> arrays;

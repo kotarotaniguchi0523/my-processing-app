@@ -39,37 +39,6 @@ public class ChatManager {
         chatMessages.add(message);
     }
 
-    public void sendMessage() {
-        if (!currentInput.isBlank()) {
-            String userInput = currentInput.trim();
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.fine("Sending message to ApplicationController: " + userInput);
-            }
-
-            // Add user message to chat
-            addMessage("User: " + userInput);
-
-            // Process user input through use case facade and handle the result
-            useCaseFacade.processUserInput(userInput)
-                .thenAccept(result -> {
-                    // Log result for debugging
-                    if (result != null) {
-                        LOGGER.info("Process result: success=" + result.success + 
-                                   ", requiresApproval=" + result.requiresApproval +
-                                   ", message=" + result.message);
-                    }
-                    // Note: Approval and messages are handled via callbacks
-                })
-                .exceptionally(throwable -> {
-                    LOGGER.log(Level.WARNING, "Error processing user input", throwable);
-                    addMessage("Error: Failed to process input - " + 
-                              (throwable.getMessage() != null ? throwable.getMessage() : "Unknown error"));
-                    return null;
-                });
-
-            currentInput = "";
-        }
-    }
 
     public List<String> getWrappedMessageLines(float maxWidth) {
         List<String> allLines = new ArrayList<>();
@@ -189,13 +158,6 @@ public class ChatManager {
         this.inputFocused = focused;
     }
 
-    public int getChatScrollOffset() {
-        return chatScrollOffset;
-    }
-
-    public void setChatScrollOffset(int offset) {
-        this.chatScrollOffset = offset;
-    }
 
     // Japanese input integration
     private boolean useJapaneseInput = false;
@@ -205,9 +167,6 @@ public class ChatManager {
         return useJapaneseInput;
     }
 
-    public void setUsingJapaneseInput(boolean using) {
-        this.useJapaneseInput = using;
-    }
 
     public boolean isJapaneseInputVisible() {
         return japaneseInputVisible;
@@ -215,14 +174,5 @@ public class ChatManager {
 
     public void setJapaneseInputVisible(boolean visible) {
         this.japaneseInputVisible = visible;
-    }
-
-    // Message access
-    public List<String> getChatMessages() {
-        return new ArrayList<>(chatMessages); // Return defensive copy
-    }
-
-    public void clearMessages() {
-        chatMessages.clear();
     }
 }

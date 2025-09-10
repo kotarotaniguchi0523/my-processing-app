@@ -9,7 +9,6 @@ import com.example.domain.services.ICommandExecutor;
 public class CommandExecutorAdapter implements ICommandExecutor {
     
     private final com.example.application.services.CommandExecutor commandExecutor;
-    private final com.example.application.CommandFactory commandFactory;
     
     /**
      * デフォルトコンストラクタ
@@ -17,7 +16,6 @@ public class CommandExecutorAdapter implements ICommandExecutor {
      */
     public CommandExecutorAdapter() {
         this.commandExecutor = com.example.application.services.CommandExecutor.getInstance();
-        this.commandFactory = new com.example.application.CommandFactory();
     }
     
     /**
@@ -26,7 +24,6 @@ public class CommandExecutorAdapter implements ICommandExecutor {
      */
     public CommandExecutorAdapter(com.example.application.services.CommandExecutor commandExecutor) {
         this.commandExecutor = commandExecutor;
-        this.commandFactory = new com.example.application.CommandFactory();
     }
     
     @Override
@@ -63,58 +60,8 @@ public class CommandExecutorAdapter implements ICommandExecutor {
     
     @Override
     public com.example.domain.commands.DrawCommand createCommand(com.example.domain.commands.ParsedCommand parsedCommand) {
-        if (parsedCommand == null) {
-            return null;
-        }
-        
-        // Use CommandFactory to create the appropriate command
-        return commandFactory.createCommandFromParsed(parsedCommand);
+        // Not implemented - CommandFactory was deleted
+        return null;
     }
     
-    /**
-     * コマンド文字列を実行 (backward compatibility)
-     * @param command コマンド文字列
-     * @return 実行結果
-     */
-    public boolean execute(String command) {
-        try {
-            // Parse the command string first
-            com.example.application.CommandParser parser = new com.example.application.CommandParser();
-            com.example.domain.commands.ParsedCommand parsed = parser.parse(command);
-            if (parsed != null) {
-                com.example.domain.commands.DrawCommand drawCommand = createCommand(parsed);
-                if (drawCommand != null) {
-                    execute(drawCommand);
-                    return true;
-                }
-            }
-            return false;
-        } catch (Exception e) {
-            System.err.println("Error executing command: " + e.getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * パース済みコマンドを実行 (backward compatibility)
-     * @param command パース済みコマンド
-     * @return 実行結果
-     */
-    public boolean execute(com.example.domain.commands.ParsedCommand command) {
-        if (command == null) {
-            return false;
-        }
-        
-        try {
-            com.example.domain.commands.DrawCommand drawCommand = createCommand(command);
-            if (drawCommand != null) {
-                execute(drawCommand);
-                return true;
-            }
-            return false;
-        } catch (Exception e) {
-            System.err.println("Error executing parsed command: " + e.getMessage());
-            return false;
-        }
-    }
 }

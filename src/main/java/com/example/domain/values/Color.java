@@ -1,6 +1,5 @@
 package com.example.domain.values;
 
-import com.example.domain.serialization.YamlSerializable;
 import com.example.domain.serialization.YamlUtils;
 
 import java.util.Map;
@@ -8,7 +7,7 @@ import java.util.Map;
 /**
  * Color value object representing RGBA color values Immutable value object for color information
  */
-public final class Color implements YamlSerializable {
+public final class Color {
     private final int red;
     private final int green;
     private final int blue;

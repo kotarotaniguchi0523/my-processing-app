@@ -24,7 +24,6 @@ public class SketchEventHandler {
     private final PApplet sketch;
     private final SketchUIRenderer uiRenderer;
     private final ChatManager chatManager;
-    private final ApprovalUIManager approvalManager;
     private final InputManager inputManager;
     private final UseCaseFacade useCaseFacade;
 
@@ -32,49 +31,34 @@ public class SketchEventHandler {
     private boolean shiftDown;
 
     public SketchEventHandler(PApplet sketch, SketchUIRenderer uiRenderer, ChatManager chatManager,
-                             ApprovalUIManager approvalManager, InputManager inputManager,
-                             UseCaseFacade useCaseFacade) {
+                             InputManager inputManager, UseCaseFacade useCaseFacade) {
         this.sketch = sketch;
         this.uiRenderer = uiRenderer;
         this.chatManager = chatManager;
-        this.approvalManager = approvalManager;
         this.inputManager = inputManager;
         this.useCaseFacade = useCaseFacade;
     }
 
     public void handleMousePressed() {
-        if (approvalManager.isApprovalPending()) {
-            handleApprovalMousePressed();
-            return; // block other interactions
-        }
-
         if (uiRenderer.isInChatInputArea(sketch.mouseX, sketch.mouseY)) {
             chatManager.setInputFocused(true);
             inputManager.showJapaneseInput();
         } else if (uiRenderer.isInSendButtonArea(sketch.mouseX, sketch.mouseY)) {
-            chatManager.sendMessage();
+            // Send functionality disabled - just add to chat
+            if (!chatManager.getCurrentInput().isBlank()) {
+                chatManager.addMessage("User: " + chatManager.getCurrentInput());
+                chatManager.setCurrentInput("");
+            }
         } else {
             chatManager.setInputFocused(false);
             inputManager.hideJapaneseInput();
         }
     }
 
-    public void handleMouseDragged() {
-        // No freehand drawing; if approval shown, ignore interactions
-    }
-
-    public void handleMouseReleased() {
-        // No freehand drawing
-    }
 
     public void handleKeyPressed() {
         if (sketch.keyCode == PConstants.SHIFT) {
             shiftDown = true;
-            return;
-        }
-
-        if (approvalManager.isApprovalPending()) {
-            handleApprovalKeyPressed();
             return;
         }
 
@@ -99,31 +83,7 @@ public class SketchEventHandler {
         }
     }
 
-    private void handleApprovalMousePressed() {
-        if (approvalManager.isInApproveButton(sketch.mouseX, sketch.mouseY)) {
-            approvalManager.approve();
-        } else if (approvalManager.isInRejectButton(sketch.mouseX, sketch.mouseY)) {
-            approvalManager.reject();
-        }
-    }
-
-    private void handleApprovalKeyPressed() {
-        // simple scroll with arrow keys
-        if (sketch.keyCode == KeyEvent.VK_UP) {
-            approvalManager.scrollUp();
-        } else if (sketch.keyCode == KeyEvent.VK_DOWN) {
-            approvalManager.scrollDown();
-        } else if (sketch.key == 'y' || sketch.key == 'Y') {
-            approvalManager.approve();
-        } else if (sketch.key == 'n' || sketch.key == 'N') {
-            approvalManager.reject();
-        }
-    }
-
     private void handleTextInput() {
-        if (approvalManager.isApprovalPending()) {
-            return; // disable chat while awaiting approval
-        }
         if (!chatManager.isInputFocused()) {
             return;
         }
@@ -151,9 +111,11 @@ public class SketchEventHandler {
                 chatManager.addToCurrentInput('\n');
             }
         } else {
-            // Send message with just Enter (no Shift)
+            // Send message functionality is disabled (implementation removed)
+            // Clear input on Enter press
             if (!chatManager.getCurrentInput().isBlank()) {
-                chatManager.sendMessage();
+                chatManager.addMessage("User: " + chatManager.getCurrentInput());
+                chatManager.setCurrentInput("");
             }
         }
     }
@@ -220,8 +182,4 @@ public class SketchEventHandler {
         }
     }
 
-    // Getters for state
-    public boolean isShiftDown() {
-        return shiftDown;
-    }
 }

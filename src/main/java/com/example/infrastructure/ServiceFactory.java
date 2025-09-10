@@ -1,11 +1,7 @@
 package com.example.infrastructure;
 
 import com.example.domain.services.*;
-import com.example.domain.parsers.ICommandParser;
 import com.example.infrastructure.adapters.*;
-import com.example.infrastructure.ai.AIClient;
-import com.example.infrastructure.ai.AIClientFactory;
-import com.example.application.agent.AgentService;
 
 import java.util.Properties;
 import java.util.logging.Logger;
@@ -35,7 +31,6 @@ public class ServiceFactory {
      */
     public static class ConfigKeys {
         public static final String AI_CLIENT_TYPE = "ai.client.type";
-        public static final String AGENT_SERVICE_TYPE = "agent.service.type";
         public static final String DIFF_SERVICE_TYPE = "diff.service.type";
         public static final String STATE_SERVICE_TYPE = "state.service.type";
         public static final String COMMAND_EXECUTOR_TYPE = "command.executor.type";
@@ -50,7 +45,6 @@ public class ServiceFactory {
      */
     public static class Defaults {
         public static final String AI_CLIENT_TYPE = "gemini";
-        public static final String AGENT_SERVICE_TYPE = "default";
         public static final String DIFF_SERVICE_TYPE = "default";
         public static final String STATE_SERVICE_TYPE = "default";
         public static final String COMMAND_EXECUTOR_TYPE = "default";
@@ -90,7 +84,6 @@ public class ServiceFactory {
         
         // Set default values
         props.setProperty(ConfigKeys.AI_CLIENT_TYPE, Defaults.AI_CLIENT_TYPE);
-        props.setProperty(ConfigKeys.AGENT_SERVICE_TYPE, Defaults.AGENT_SERVICE_TYPE);
         props.setProperty(ConfigKeys.DIFF_SERVICE_TYPE, Defaults.DIFF_SERVICE_TYPE);
         props.setProperty(ConfigKeys.STATE_SERVICE_TYPE, Defaults.STATE_SERVICE_TYPE);
         props.setProperty(ConfigKeys.COMMAND_EXECUTOR_TYPE, Defaults.COMMAND_EXECUTOR_TYPE);
@@ -115,52 +108,6 @@ public class ServiceFactory {
     }
     
     /**
-     * Creates or returns cached IAgentService implementation
-     */
-    public IAgentService createAgentService() {
-        return (IAgentService) singletonCache.computeIfAbsent(IAgentService.class, k -> {
-            String type = config.getProperty(ConfigKeys.AGENT_SERVICE_TYPE, Defaults.AGENT_SERVICE_TYPE);
-            
-            switch (type.toLowerCase()) {
-                case "adapter":
-                    return new AgentServiceAdapter();
-                case "default":
-                default:
-                    // Create AgentService with fully injected dependencies
-                    AIClient aiClient = createAIClient();
-                    return createAgentServiceWithDependencies(aiClient);
-            }
-        });
-    }
-    
-    /**
-     * Creates AgentService with all dependencies injected
-     */
-    private AgentService createAgentServiceWithDependencies(AIClient aiClient) {
-        // Initialize tools before creating AgentService
-        com.example.application.tools.ToolInitializer.initialize();
-        
-        // We'll use the existing constructor that accepts dependencies
-        // This avoids the AgentService creating its own dependencies
-        return new AgentService(aiClient);
-    }
-    
-    /**
-     * Creates or returns cached IDiffService implementation
-     */
-    public IDiffService createDiffService() {
-        return (IDiffService) singletonCache.computeIfAbsent(IDiffService.class, k -> {
-            String type = config.getProperty(ConfigKeys.DIFF_SERVICE_TYPE, Defaults.DIFF_SERVICE_TYPE);
-            
-            switch (type.toLowerCase()) {
-                case "default":
-                default:
-                    return new DiffServiceAdapter();
-            }
-        });
-    }
-    
-    /**
      * Creates or returns cached IStateService implementation
      */
     public IStateService createStateService() {
@@ -170,7 +117,7 @@ public class ServiceFactory {
             switch (type.toLowerCase()) {
                 case "default":
                 default:
-                    return new StateServiceAdapter();
+                    throw new UnsupportedOperationException("StateServiceAdapter was deleted as unused");
             }
         });
     }
@@ -191,21 +138,6 @@ public class ServiceFactory {
     }
     
     /**
-     * Creates or returns cached ICommandParser implementation
-     */
-    public ICommandParser createCommandParser() {
-        return (ICommandParser) singletonCache.computeIfAbsent(ICommandParser.class, k -> {
-            String type = config.getProperty(ConfigKeys.COMMAND_PARSER_TYPE, Defaults.COMMAND_PARSER_TYPE);
-            
-            switch (type.toLowerCase()) {
-                case "default":
-                default:
-                    return new CommandParserAdapter();
-            }
-        });
-    }
-    
-    /**
      * Creates or returns cached ISessionManager implementation
      */
     public ISessionManager createSessionManager() {
@@ -215,58 +147,8 @@ public class ServiceFactory {
             switch (type.toLowerCase()) {
                 case "default":
                 default:
-                    return new SessionManagerAdapter();
+                    throw new UnsupportedOperationException("SessionManagerAdapter was deleted as unused");
             }
         });
-    }
-    
-    /**
-     * Creates or returns cached IStateManager implementation
-     */
-    public IStateManager createStateManager() {
-        return (IStateManager) singletonCache.computeIfAbsent(IStateManager.class, k -> {
-            String type = config.getProperty(ConfigKeys.STATE_MANAGER_TYPE, Defaults.STATE_MANAGER_TYPE);
-            
-            switch (type.toLowerCase()) {
-                case "default":
-                default:
-                    return new StateManagerAdapter();
-            }
-        });
-    }
-    
-    /**
-     * Creates or returns cached IHistoryService implementation
-     */
-    public IHistoryService createHistoryService() {
-        return (IHistoryService) singletonCache.computeIfAbsent(IHistoryService.class, k -> {
-            String type = config.getProperty(ConfigKeys.HISTORY_SERVICE_TYPE, Defaults.HISTORY_SERVICE_TYPE);
-            
-            switch (type.toLowerCase()) {
-                case "default":
-                default:
-                    // Create StateManager for HistoryServiceAdapter
-                    com.example.infrastructure.services.StateManager stateManager = 
-                        new com.example.infrastructure.services.StateManager();
-                    return new HistoryServiceAdapter(stateManager);
-            }
-        });
-    }
-    
-    /**
-     * Creates AIClient based on configuration
-     */
-    private AIClient createAIClient() {
-        String type = config.getProperty(ConfigKeys.AI_CLIENT_TYPE, Defaults.AI_CLIENT_TYPE);
-        
-        switch (type.toLowerCase()) {
-            case "gemini":
-                return AIClientFactory.createApplicationClient();
-            case "openai":
-            case "claude":
-            default:
-                // For now, default to the factory's default client
-                return AIClientFactory.createApplicationClient();
-        }
     }
 }

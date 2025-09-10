@@ -1,6 +1,5 @@
 package com.example.domain.values;
 
-import com.example.domain.serialization.YamlSerializable;
 import com.example.domain.serialization.YamlUtils;
 
 import java.util.Map;
@@ -9,7 +8,7 @@ import java.util.Map;
  * Style value object representing visual styling properties Immutable value object for styling
  * information
  */
-public final class Style implements YamlSerializable {
+public final class Style {
     private final Color fillColor;
     private final Color strokeColor;
     private final float strokeWeight;
