@@ -1,8 +1,12 @@
 package com.example.application;
 
+import com.example.agent.service.AgentService;
+import com.example.agent.service.ServiceResponse;
+import com.example.agent.service.ToolExecutionResult;
 import com.example.domain.commands.ClearCanvasCommand;
 import com.example.domain.commands.DrawCommand;
 import com.example.domain.model.DrawingSession;
+import com.example.domain.models.DrawingState;
 import com.example.domain.services.CommandExecutor;
 import com.example.domain.services.StateService;
 import com.example.domain.tools.ToolInitializer;
@@ -38,6 +42,11 @@ public class ApplicationController {
   private final CommandParser commandParser;
   private final CommandFactory commandFactory;
   private final SessionManager sessionManager;
+  private AgentService agentService; // M2: AI integration
+  // M3: Approval workflow state
+  private DrawingState pendingApprovalState;
+  private String pendingApprovalSummary;
+  private String pendingApprovalDiff;
 
   // UI Callback interface for updating the UI
   public interface UIUpdateCallback {
@@ -48,6 +57,11 @@ public class ApplicationController {
     void refreshCanvas();
 
     void showError(String error);
+
+    // M3: Approval overlay controls
+    void showApproval(String summary, String diffText);
+
+    void clearApproval();
   }
 
   private UIUpdateCallback uiCallback;
@@ -75,6 +89,20 @@ public class ApplicationController {
     if (LOGGER.isLoggable(Level.INFO)) {
       LOGGER.info(
           "Domain tools initialized with " + ToolInitializer.getRegisteredToolCount() + " tools");
+    }
+
+    // Initialize AgentService (if API keys configured)
+    try {
+      this.agentService = new AgentService();
+      if (LOGGER.isLoggable(Level.INFO)) {
+        LOGGER.info("AgentService initialized (AI client available)");
+      }
+    } catch (Exception e) {
+      // AI unavailable is OK for offline use; fall back to parser/commands only
+      this.agentService = null;
+      if (LOGGER.isLoggable(Level.WARNING)) {
+        LOGGER.log(Level.WARNING, "AgentService initialization failed (AI disabled): " + e.getMessage());
+      }
     }
 
     // Set up event handlers
@@ -107,6 +135,16 @@ public class ApplicationController {
     DrawingSession session = new DrawingSession();
     stateService.initializeSession(session);
 
+    // Enable auto-save per M4 (5 minutes)
+    try {
+      sessionManager.setAutoSaveInterval(300);
+      sessionManager.setAutoSaveEnabled(true);
+    } catch (Exception e) {
+      if (LOGGER.isLoggable(Level.WARNING)) {
+        LOGGER.log(Level.WARNING, "Failed to enable auto-save: " + e.getMessage(), e);
+      }
+    }
+
     // Update UI status
     updateUIStatus(READY);
     if (LOGGER.isLoggable(Level.INFO)) {
@@ -133,6 +171,9 @@ public class ApplicationController {
     eventDispatcher.subscribe(EventType.UI_MOUSE_PRESSED, this::handleMousePressed);
     eventDispatcher.subscribe(EventType.UI_MOUSE_RELEASED, this::handleMouseReleased);
     eventDispatcher.subscribe(EventType.UI_MOUSE_DRAGGED, this::handleMouseDragged);
+    // Approval UI events (M3)
+    eventDispatcher.subscribe(EventType.UI_APPROVAL_ACCEPTED, this::handleApprovalAccepted);
+    eventDispatcher.subscribe(EventType.UI_APPROVAL_REJECTED, this::handleApprovalRejected);
 
     // Domain Event Handlers
     eventDispatcher.subscribe(EventType.DOMAIN_STATE_CHANGED, this::handleStateChanged);
@@ -167,7 +208,7 @@ public class ApplicationController {
         // Execute the parsed command
         executeCommand(parsedCommand);
       } else {
-        // Send to AI agent for processing
+        // Send to AI agent for processing (M2)
         processWithAgent(inputText);
       }
 
@@ -298,26 +339,157 @@ public class ApplicationController {
 
   /** Process input with the AI agent. */
   private void processWithAgent(String input) {
-    // Run agent processing asynchronously to avoid blocking UI
-    CompletableFuture.runAsync(() -> {
-      try {
-        updateUIStatus("AI processing...");
+    try {
+      updateUIStatus("AI processing...");
 
-        // This is a placeholder for actual agent processing
-        // In the real implementation, this would call the agent system
-        String response =
-            "AI: I received your message: \"" + input + "\". I'm ready to help with drawing!";
-
-        addChatMessage(response);
-        updateUIStatus("Ready");
-
-      } catch (Exception e) {
-        if (LOGGER.isLoggable(Level.WARNING)) {
-          LOGGER.log(Level.WARNING, "Error processing with agent", e);
-        }
-        handleError("AI processing error: " + e.getMessage());
+      if (agentService == null) {
+        // Fallback: AI unavailable, guide user
+        addChatMessage("AI: 現在AI連携は無効です。.envにAPIキーを設定してください。");
+        updateUIStatus(READY);
+        return;
       }
-    });
+
+      // Keep agent's working state in sync with domain
+      agentService.setCurrentState(stateService.getCurrentState());
+
+      agentService
+          .processInstruction(input)
+          .thenAccept(this::handleAgentResponse)
+          .exceptionally(
+              e -> {
+                if (LOGGER.isLoggable(Level.WARNING)) {
+                  LOGGER.log(Level.WARNING, "Error processing with agent", e);
+                }
+                handleError("AI processing error: " + e.getMessage());
+                return null;
+              });
+
+    } catch (Exception e) {
+      if (LOGGER.isLoggable(Level.WARNING)) {
+        LOGGER.log(Level.WARNING, "Error starting agent processing", e);
+      }
+      handleError("AI start error: " + e.getMessage());
+    }
+  }
+
+  // Apply AgentService response to domain/UI (M2)
+  private void handleAgentResponse(ServiceResponse response) {
+    try {
+      if (response == null) {
+        handleError("Empty response from agent");
+        return;
+      }
+
+      // Text feedback from AI
+      if (response.hasTextResponse()) {
+        addChatMessage("AI: " + response.getTextResponse());
+      }
+
+      // Apply tool results to domain state
+      if (response.hasToolExecutionResults()) {
+        DrawingState lastApplied = null;
+        for (ToolExecutionResult result : response.getToolExecutionResults()) {
+          if (result.isSuccess() && result.hasResultState()) {
+            lastApplied = result.getResultState();
+          } else if (result.hasErrorMessage()) {
+            addChatMessage("System: Tool '" + result.getToolName() + "' failed - " + result.getErrorMessage());
+          }
+        }
+        if (lastApplied != null) {
+          if (response.requiresApproval()) {
+            // Prepare approval request (M3)
+            prepareApproval(stateService.getCurrentState(), lastApplied);
+          } else {
+            // Immediate apply
+            stateService.updateState(lastApplied);
+            if (agentService != null) {
+              agentService.setCurrentState(lastApplied);
+            }
+            refreshUI();
+            addChatMessage("System: Applied AI tool results");
+          }
+        }
+      }
+
+      updateUIStatus(READY);
+
+    } catch (Exception e) {
+      if (LOGGER.isLoggable(Level.WARNING)) {
+        LOGGER.log(Level.WARNING, "Error handling agent response", e);
+      }
+      handleError("AI response handling error: " + e.getMessage());
+    }
+  }
+
+  // M3: Build diff and show approval overlay
+  private void prepareApproval(DrawingState current, DrawingState proposed) {
+    try {
+      com.example.agent.diff.DiffService diffService = new com.example.agent.diff.DiffService();
+      var diff = diffService.diff(current, proposed);
+
+      this.pendingApprovalState = proposed;
+      this.pendingApprovalSummary = diff.summary;
+      this.pendingApprovalDiff = diff.unifiedDiff;
+
+      updateUIStatus("Approval required");
+      if (uiCallback != null) {
+        uiCallback.showApproval(pendingApprovalSummary, pendingApprovalDiff);
+      }
+      addChatMessage("System: Approval required - " + pendingApprovalSummary);
+
+      // Await user approval asynchronously (M3)
+      if (agentService != null) {
+        agentService
+            .awaitApproval()
+            .orTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .thenAccept(approved -> {
+              if (approved) {
+                try {
+                  stateService.updateState(pendingApprovalState);
+                  agentService.setCurrentState(pendingApprovalState);
+                  refreshUI();
+                  addChatMessage("System: Changes approved and applied");
+                } catch (Exception e) {
+                  handleError("Failed to apply approved changes: " + e.getMessage());
+                }
+              } else {
+                addChatMessage("System: Changes rejected");
+              }
+              clearApprovalState();
+            })
+            .exceptionally(e -> {
+              addChatMessage("System: Approval timed out - changes discarded");
+              clearApprovalState();
+              return null;
+            });
+      }
+    } catch (Exception e) {
+      handleError("Failed to prepare approval: " + e.getMessage());
+    }
+  }
+
+  // M3: Handle approval accept
+  private void handleApprovalAccepted(UIEvent event) {
+    if (agentService != null) {
+      agentService.completeApproval(true);
+    }
+  }
+
+  // M3: Handle approval reject
+  private void handleApprovalRejected(UIEvent event) {
+    if (agentService != null) {
+      agentService.completeApproval(false);
+    }
+  }
+
+  private void clearApprovalState() {
+    this.pendingApprovalState = null;
+    this.pendingApprovalSummary = null;
+    this.pendingApprovalDiff = null;
+    updateUIStatus(READY);
+    if (uiCallback != null) {
+      uiCallback.clearApproval();
+    }
   }
 
   

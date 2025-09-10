@@ -30,12 +30,26 @@ public class AIClientFactory {
         
         switch (provider) {
             case CLAUDE:
-                logger.info("Creating Claude client");
-                return new ClaudeClient(apiKey, config);
-                
+                logger.info("Claude support is disabled - using Gemini instead");
+                // Fall through to Gemini
             case GEMINI:
-                logger.info("Creating Gemini client");
-                return new GeminiClient(apiKey, config);
+                
+                logger.info("Creating optimized Gemini 2.5 client with java-genai SDK");
+                // Always use optimized client for Gemini 2.5
+                AIClientConfig geminiConfig = config;
+                if (config.getModelName() == null) {
+                    // Set default to Gemini 2.5
+                    geminiConfig = AIClientConfig.builder()
+                        .timeout(config.getTimeout())
+                        .maxRetries(config.getMaxRetries())
+                        .retryDelay(config.getRetryDelay())
+                        .enableLogging(config.isLoggingEnabled())
+                        .enableStreaming(config.isStreamingEnabled())
+                        .baseUrl(config.getBaseUrl())
+                        .modelName("gemini-2.5-flash")
+                        .build();
+                }
+                return new OptimizedGeminiClient(apiKey, geminiConfig);
                 
             case OPENAI:
                 logger.info("Creating OpenAI client");
@@ -63,9 +77,8 @@ public class AIClientFactory {
      * @throws IllegalStateException if no providers have API keys configured
      */
     public static AIClient createDefaultClient(AIClientConfig config) {
-        // Try providers in preference order
+        // Try providers in preference order (Claude disabled)
         APIKeyManager.Provider[] providers = {
-            APIKeyManager.Provider.CLAUDE,
             APIKeyManager.Provider.GEMINI,
             APIKeyManager.Provider.OPENAI
         };

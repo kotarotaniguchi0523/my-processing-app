@@ -33,6 +33,10 @@ public final class AgentSystemFactory {
         IToolRegistry registry = ToolRegistry.getInstance();
         toolManager.registerFromRegistry(registry, true);
 
+        // Register bridge tools for state querying and undo/redo
+        toolManager.registerTool(new com.example.agent.tools.impl.GetStateTool());
+        toolManager.registerTool(new com.example.agent.tools.impl.UndoRedoTool());
+
         return toolManager;
     }
 
@@ -183,20 +187,26 @@ public final class AgentSystemFactory {
 
         private AgentResponse drawCircle(String instruction) {
             try {
-                Map<String, Object> params =
-                        Map.of(
-                                "type",
-                                "circle",
-                                "x",
-                                200,
-                                "y",
-                                200,
-                                "radius",
-                                50,
-                                "fillColor",
-                                getStringConfiguration("defaultColor", "#000000"));
+                // Align to domain tool 'createShape' schema
+                Map<String, Object> position = new java.util.HashMap<>();
+                position.put("x", 200);
+                position.put("y", 200);
 
-                ToolResult result = executeTool("draw_shape", params);
+                Map<String, Object> properties = new java.util.HashMap<>();
+                properties.put("radius", 50);
+
+                Map<String, Object> style = new java.util.HashMap<>();
+                Map<String, Object> fillColor = new java.util.HashMap<>();
+                fillColor.put("hex", getStringConfiguration("defaultColor", "#000000"));
+                style.put("fillColor", fillColor);
+
+                Map<String, Object> params = new java.util.HashMap<>();
+                params.put("type", "circle");
+                params.put("position", position);
+                params.put("properties", properties);
+                params.put("style", style);
+
+                ToolResult result = executeTool("createShape", params);
 
                 if (result.isSuccess()) {
                     // Update context with new state
@@ -216,22 +226,26 @@ public final class AgentSystemFactory {
 
         private AgentResponse drawRectangle(String instruction) {
             try {
-                Map<String, Object> params =
-                        Map.of(
-                                "type",
-                                "rectangle",
-                                "x",
-                                150,
-                                "y",
-                                150,
-                                "width",
-                                100,
-                                "height",
-                                80,
-                                "fillColor",
-                                getStringConfiguration("defaultColor", "#000000"));
+                Map<String, Object> position = new java.util.HashMap<>();
+                position.put("x", 150);
+                position.put("y", 150);
 
-                ToolResult result = executeTool("draw_shape", params);
+                Map<String, Object> properties = new java.util.HashMap<>();
+                properties.put("width", 100);
+                properties.put("height", 80);
+
+                Map<String, Object> style = new java.util.HashMap<>();
+                Map<String, Object> fillColor = new java.util.HashMap<>();
+                fillColor.put("hex", getStringConfiguration("defaultColor", "#000000"));
+                style.put("fillColor", fillColor);
+
+                Map<String, Object> params = new java.util.HashMap<>();
+                params.put("type", "rectangle");
+                params.put("position", position);
+                params.put("properties", properties);
+                params.put("style", style);
+
+                ToolResult result = executeTool("createShape", params);
 
                 if (result.isSuccess()) {
                     if (result.hasNewState()) {
@@ -250,8 +264,9 @@ public final class AgentSystemFactory {
 
         private AgentResponse clearCanvas() {
             try {
-                Map<String, Object> params = Map.of("preserveSettings", true);
-                ToolResult result = executeTool("clear_canvas", params);
+                // Domain tool name: clearCanvas, no parameters required
+                Map<String, Object> params = new java.util.HashMap<>();
+                ToolResult result = executeTool("clearCanvas", params);
 
                 if (result.isSuccess()) {
                     if (result.hasNewState()) {
@@ -270,9 +285,11 @@ public final class AgentSystemFactory {
 
         private AgentResponse getState() {
             try {
-                Map<String, Object> params =
-                        Map.of("includeShapes", true, "includeSettings", true, "summary", false);
-
+                Map<String, Object> params = new java.util.HashMap<>();
+                params.put("includeShapes", true);
+                params.put("includeSettings", true);
+                params.put("summary", false);
+                params.put("includeYaml", false);
                 ToolResult result = executeTool("get_state", params);
                 return AgentResponse.success(result.getMessage(), List.of(result));
 

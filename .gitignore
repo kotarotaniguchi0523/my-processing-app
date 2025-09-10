@@ -65,4 +65,5 @@ build/
 # Build output
 out/
 bin/
-
+.jdks/
+.mcp.json

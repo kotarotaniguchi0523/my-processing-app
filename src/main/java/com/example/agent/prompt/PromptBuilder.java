@@ -34,8 +34,12 @@ public class PromptBuilder {
         4. エラーが発生した場合は、ユーザーに説明してください / If an error occurs, explain it to the user
         
         レスポンス形式 / Response Format:
-        - ツールを呼び出す場合は、JSON形式で応答してください / When calling tools, respond in JSON format
-        - 説明やエラーメッセージは通常のテキストで応答してください / Respond with plain text for explanations or error messages
+        - ツールを呼び出す場合は、以下の JSON オブジェクトのみを返してください（余計な文章やコードブロックは不要）
+          {"tool": "<toolName>", "parameters": { ... }}
+          When calling tools, return ONLY a single JSON object: {"tool": "<toolName>", "parameters": { ... }}
+        - 複数ツールが必要な場合は、配列で返してください: [{...}, {...}]
+        - YAMLは生成しないでください / Do not generate YAML
+        - 説明やエラーメッセージは通常のテキストで返して構いません
         """;
     
     private final IToolRegistry toolRegistry;
@@ -201,70 +205,4 @@ public class PromptBuilder {
         return conversationHistory.size();
     }
     
-    /**
-     * Builds a prompt for tool execution confirmation
-     * @param toolName The tool to be executed
-     * @param parameters The tool parameters
-     * @return Confirmation prompt
-     */
-    public String buildToolConfirmationPrompt(String toolName, Map<String, Object> parameters) {
-        return String.format("""
-            ツール実行の確認 / Tool Execution Confirmation:
-            
-            実行するツール / Tool to execute: %s
-            パラメータ / Parameters:
-            %s
-            
-            このツールを実行してもよろしいですか？
-            Would you like to execute this tool?
-            """, toolName, gson.toJson(parameters));
-    }
-    
-    /**
-     * Builds an error prompt for tool execution failures
-     * @param toolName The tool that failed
-     * @param error The error message
-     * @return Error prompt
-     */
-    public String buildToolErrorPrompt(String toolName, String error) {
-        return String.format("""
-            ツール実行エラー / Tool Execution Error:
-            
-            ツール / Tool: %s
-            エラー / Error: %s
-            
-            別の方法を試すか、パラメータを修正してください。
-            Please try a different approach or correct the parameters.
-            """, toolName, error);
-    }
-    
-    /**
-     * Validates that all required tools are available
-     * @param requiredToolNames List of required tool names
-     * @return true if all tools are available
-     */
-    public boolean validateRequiredTools(List<String> requiredToolNames) {
-        for (String toolName : requiredToolNames) {
-            if (!toolRegistry.hasTool(toolName)) {
-                return false;
-            }
-        }
-        return true;
-    }
-    
-    /**
-     * Gets a summary of available tools
-     * @return Summary string of available tools
-     */
-    public String getToolsSummary() {
-        List<IAgentTool> tools = toolRegistry.getAllTools();
-        if (tools.isEmpty()) {
-            return "No tools available / 利用可能なツールがありません";
-        }
-        
-        return tools.stream()
-            .map(tool -> String.format("- %s", tool.name()))
-            .collect(Collectors.joining("\n", 
-                "Available tools / 利用可能なツール:\n", ""));
-    }
 }

@@ -124,6 +124,21 @@ public class ToolInvoker {
         ValidationResult validation = validator.validateParameters(tool, parameters);
         return validation.isValid();
     }
+
+    /**
+     * Validates parameters against a tool schema and returns detailed result
+     * @param toolName tool name
+     * @param parameters parameter map (may be null)
+     * @return ValidationResult with error message if invalid
+     */
+    public ValidationResult validateToolParameters(String toolName, Map<String, Object> parameters) {
+        if (!toolRegistry.hasTool(toolName)) {
+            return ValidationResult.invalid("Tool not found: " + toolName);
+        }
+
+        IAgentTool tool = toolRegistry.getTool(toolName);
+        return validator.validateParameters(tool, parameters);
+    }
     
     /**
      * Gets the schema for a tool

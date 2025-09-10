@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class GeminiClientTest {
 
     private MockWebServer mockServer;
-    private GeminiClient client;
+    private OptimizedGeminiClient client;
     private AIClientConfig config;
 
     @BeforeEach
@@ -39,7 +39,7 @@ class GeminiClientTest {
             .build();
         
         // Create client
-        client = new GeminiClient("test-api-key", config);
+        client = new OptimizedGeminiClient("test-api-key", config);
     }
 
     @AfterEach
@@ -52,13 +52,13 @@ class GeminiClientTest {
         // Verify client was created successfully
         assertNotNull(client);
         assertEquals(config, client.getConfig());
-        assertEquals("Gemini (Google)", client.getProviderName());
+        assertEquals("Optimized Gemini (Google GenAI)", client.getProviderName());
     }
 
     @Test
     void constructor_DefaultConfig_ShouldUseDefaults() {
         // Execute
-        GeminiClient defaultClient = new GeminiClient("test-key");
+        OptimizedGeminiClient defaultClient = new OptimizedGeminiClient("test-key");
         
         // Verify
         assertNotNull(defaultClient.getConfig());

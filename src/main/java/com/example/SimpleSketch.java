@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
@@ -27,14 +29,13 @@ public class SimpleSketch extends PApplet {
   private static final Logger LOGGER = Logger.getLogger(SimpleSketch.class.getName());
 
   // UI Layout constants
-  private static final int CANVAS_HEIGHT_RATIO = 60; // 60% for canvas
-  private static final int CHAT_HEIGHT_RATIO = 35; // 35% for chat
+  private static final int CANVAS_HEIGHT_RATIO = 50; // 50% for canvas (PRD)
+  private static final int CHAT_HEIGHT_RATIO = 40; // 40% for chat (PRD)
   private static final int MARGIN = 10;
   private static final int INPUT_HEIGHT = 30;
   private static final int MAX_CHAT_MESSAGES = 100;
   private static final int MAX_MESSAGE_LENGTH = 500;
   private static final int MIN_POINTS_IN_STROKE = 2;
-  private static final int STROKE_HISTORY_LIMIT = 50;
   private static final String ELLIPSIS = "...";
   private static final int CTRL_Z = 26;
   private static final int CTRL_Y = 25;
@@ -74,11 +75,16 @@ public class SimpleSketch extends PApplet {
   private int chatScrollOffset;
   private String agentStatus = "Ready";
   private boolean inputFocused;
+  private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
+  // M3: Approval overlay state
+  private boolean approvalPending;
+  private String approvalSummary = "";
+  private String approvalDiff = "";
+  private int approvalScrollOffset;
+  private int approveBtnX, approveBtnY, approveBtnW = 100, approveBtnH = 30;
+  private int rejectBtnX, rejectBtnY, rejectBtnW = 100, rejectBtnH = 30;
 
-  // Drawing Canvas State
-  private boolean isDrawing;
-  private List<DrawPoint> currentStroke;
-  private List<List<DrawPoint>> allStrokes;
+  // Drawing Canvas State (manual drawing removed per PRD)
   private boolean shiftDown;
 
     // Application Integration
@@ -89,16 +95,7 @@ public class SimpleSketch extends PApplet {
   private JTextField japaneseInputField;
   private boolean useJapaneseInput;
 
-  // Simple drawing point class
-  class DrawPoint {
-    float x;
-    float y;
-
-    DrawPoint(float x, float y) {
-      this.x = x;
-      this.y = y;
-    }
-  }
+  // Simple drawing point class (removed: no freehand drawing)
 
   public static void main(String[] args) {
     PApplet.main("com.example.SimpleSketch");
@@ -112,6 +109,14 @@ public class SimpleSketch extends PApplet {
   @Override
   public void setup() {
     background(240);
+    // Allow window resize per PRD
+    try {
+      if (getSurface() != null) {
+        getSurface().setResizable(true);
+      }
+    } catch (Exception ignored) {
+      // safe to ignore if surface not available
+    }
 
     // Initialize fonts
     try {
@@ -125,10 +130,6 @@ public class SimpleSketch extends PApplet {
     // Initialize chat system
     chatMessages = new ArrayList<>();
     chatMessages.add("System: AI Agent ready for instructions");
-
-    // Initialize drawing system
-    allStrokes = new ArrayList<>();
-    currentStroke = new ArrayList<>();
 
         // Initialize application controller
         appController = new ApplicationController();
@@ -277,6 +278,11 @@ public class SimpleSketch extends PApplet {
 
     // Draw UI borders for clarity
     drawUIBorders();
+
+    // M3: Draw approval overlay last (modal)
+    if (approvalPending) {
+      drawApprovalOverlay();
+    }
   }
 
   private void drawCanvasArea() {
@@ -286,27 +292,8 @@ public class SimpleSketch extends PApplet {
     strokeWeight(1);
     rect(MARGIN, canvasAreaY, width - MARGIN * 2, canvasAreaHeight);
 
-    // Draw all completed strokes
-    stroke(0);
-    strokeWeight(2);
-    for (List<DrawPoint> stroke : allStrokes) {
-      if (stroke.size() >= MIN_POINTS_IN_STROKE) {
-        for (int i = 1; i < stroke.size(); i++) {
-          DrawPoint p1 = stroke.get(i - 1);
-          DrawPoint p2 = stroke.get(i);
-          line(p1.x, p1.y, p2.x, p2.y);
-        }
-      }
-    }
-
-    // Draw current stroke
-    if (currentStroke.size() >= MIN_POINTS_IN_STROKE) {
-      for (int i = 1; i < currentStroke.size(); i++) {
-        DrawPoint p1 = currentStroke.get(i - 1);
-        DrawPoint p2 = currentStroke.get(i);
-        line(p1.x, p1.y, p2.x, p2.y);
-      }
-    }
+    // Render domain shapes (AI/state-driven), no manual strokes
+    renderDomainShapesInCanvasArea();
 
     // Canvas title
     fill(100);
@@ -518,11 +505,25 @@ public class SimpleSketch extends PApplet {
   // Input handling
   @Override
   public void mousePressed() {
-    if (isInCanvasArea(mouseX, mouseY)) {
-      isDrawing = true;
-      currentStroke = new ArrayList<>();
-      currentStroke.add(new DrawPoint(mouseX, mouseY));
-    } else if (isInChatInputArea(mouseX, mouseY)) {
+    if (approvalPending) {
+      // Check overlay buttons
+      if (isInRect(mouseX, mouseY, approveBtnX, approveBtnY, approveBtnW, approveBtnH)) {
+        // Approve
+        UIEvent approve = new UIEvent(EventType.UI_APPROVAL_ACCEPTED, "approval");
+        if (appController != null) {
+          appController.getEventDispatcher().dispatchUIEvent(approve);
+        }
+      } else if (isInRect(mouseX, mouseY, rejectBtnX, rejectBtnY, rejectBtnW, rejectBtnH)) {
+        // Reject
+        UIEvent reject = new UIEvent(EventType.UI_APPROVAL_REJECTED, "approval");
+        if (appController != null) {
+          appController.getEventDispatcher().dispatchUIEvent(reject);
+        }
+      }
+      return; // block other interactions
+    }
+
+    if (isInChatInputArea(mouseX, mouseY)) {
       inputFocused = true;
       // Show Japanese input field when clicking on chat input area
       if (japaneseInputField != null) {
@@ -545,22 +546,12 @@ public class SimpleSketch extends PApplet {
 
   @Override
   public void mouseDragged() {
-    if (isDrawing && isInCanvasArea(mouseX, mouseY)) {
-      currentStroke.add(new DrawPoint(mouseX, mouseY));
-    }
+    // No freehand drawing; if approval shown, ignore interactions
   }
 
   @Override
   public void mouseReleased() {
-    if (isDrawing && currentStroke.size() >= MIN_POINTS_IN_STROKE) {
-      allStrokes.add(new ArrayList<>(currentStroke));
-      if (allStrokes.size() > STROKE_HISTORY_LIMIT) {
-        // Limit number of strokes
-        allStrokes.remove(0);
-      }
-    }
-    isDrawing = false;
-    currentStroke.clear();
+    // No freehand drawing
   }
 
   @Override
@@ -569,12 +560,34 @@ public class SimpleSketch extends PApplet {
       shiftDown = true;
       return;
     }
+    if (approvalPending) {
+      // simple scroll with arrow keys
+      if (keyCode == java.awt.event.KeyEvent.VK_UP) {
+        approvalScrollOffset = Math.max(0, approvalScrollOffset - 20);
+      } else if (keyCode == java.awt.event.KeyEvent.VK_DOWN) {
+        approvalScrollOffset += 20;
+      } else if (key == 'y' || key == 'Y') {
+        UIEvent approve = new UIEvent(EventType.UI_APPROVAL_ACCEPTED, "approval");
+        if (appController != null) {
+          appController.getEventDispatcher().dispatchUIEvent(approve);
+        }
+      } else if (key == 'n' || key == 'N') {
+        UIEvent reject = new UIEvent(EventType.UI_APPROVAL_REJECTED, "approval");
+        if (appController != null) {
+          appController.getEventDispatcher().dispatchUIEvent(reject);
+        }
+      }
+      return;
+    }
     handleTextInput();
     handleGlobalShortcuts();
     handleUndoRedoShortcuts();
   }
 
   private void handleTextInput() {
+    if (approvalPending) {
+      return; // disable chat while awaiting approval
+    }
     if (!inputFocused) {
       return;
     }
@@ -629,8 +642,6 @@ public class SimpleSketch extends PApplet {
     if (appController != null) {
       appController.getEventDispatcher().dispatchUIEvent(clearEvent);
     }
-    // Also clear strokes for immediate feedback
-    allStrokes.clear();
     println("Canvas clear requested");
   }
 
@@ -664,6 +675,17 @@ public class SimpleSketch extends PApplet {
         println("Redo performed");
         updateCanvasFromState();
       }
+    }
+  }
+
+  // Trigger a refresh after undo/redo. The draw loop already renders from current state,
+  // so this method can remain lightweight.
+  private void updateCanvasFromState() {
+    // Force a redraw; rendering pulls shapes from current session each frame
+    try {
+      redraw();
+    } catch (Exception ignored) {
+      // safe no-op for environments where redraw isn't available
     }
   }
 
@@ -724,6 +746,88 @@ public class SimpleSketch extends PApplet {
         && y <= chatInputY + INPUT_HEIGHT;
   }
 
+  private boolean isInRect(int x, int y, int rx, int ry, int rw, int rh) {
+    return x >= rx && x <= rx + rw && y >= ry && y <= ry + rh;
+  }
+
+  private void drawApprovalOverlay() {
+    // Dim background
+    fill(0, 0, 0, 150);
+    noStroke();
+    rect(0, 0, width, height);
+
+    // Panel
+    int panelW = (int) (width * 0.8f);
+    int panelH = (int) (height * 0.7f);
+    int panelX = (width - panelW) / 2;
+    int panelY = (height - panelH) / 2;
+
+    fill(255);
+    stroke(50);
+    strokeWeight(2);
+    rect(panelX, panelY, panelW, panelH);
+
+    int contentX = panelX + 20;
+    int contentY = panelY + 20;
+    int contentW = panelW - 40;
+    int contentH = panelH - 80;
+
+    // Title
+    fill(0);
+    if (font != null) textFont(font);
+    textAlign(LEFT, TOP);
+    text("変更の承認", contentX, contentY);
+
+    // Summary
+    int summaryY = contentY + 30;
+    if (smallFont != null) textFont(smallFont);
+    text(approvalSummary, contentX, summaryY);
+
+    // Diff area (scrollable)
+    int diffY = summaryY + 20;
+    int diffH = contentH - 60;
+    // Mask diff area
+    clip(contentX, diffY, contentW, diffH);
+    int lineY = diffY - approvalScrollOffset;
+    String[] lines = approvalDiff.split("\n");
+    for (String line : lines) {
+      // Color lines by prefix
+      if (line.startsWith("+++") || line.startsWith("---") || line.startsWith("@@")) {
+        fill(60);
+      } else if (line.startsWith("+")) {
+        fill(0, 120, 0);
+      } else if (line.startsWith("-")) {
+        fill(180, 0, 0);
+      } else {
+        fill(0);
+      }
+      text(line, contentX, lineY);
+      lineY += 14;
+    }
+    noClip();
+
+    // Buttons
+    approveBtnX = contentX + contentW - approveBtnW - 110;
+    approveBtnY = panelY + panelH - 45;
+    rejectBtnX = contentX + contentW - rejectBtnW;
+    rejectBtnY = panelY + panelH - 45;
+
+    // Approve
+    fill(80, 170, 80);
+    stroke(40, 120, 40);
+    rect(approveBtnX, approveBtnY, approveBtnW, approveBtnH);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    text("承認 (Y)", approveBtnX + approveBtnW / 2, approveBtnY + approveBtnH / 2);
+
+    // Reject
+    fill(200, 80, 80);
+    stroke(150, 40, 40);
+    rect(rejectBtnX, rejectBtnY, rejectBtnW, rejectBtnH);
+    fill(255);
+    text("拒否 (N)", rejectBtnX + rejectBtnW / 2, rejectBtnY + rejectBtnH / 2);
+  }
+
   // UI Callback implementation for ApplicationController integration
   private class UICallbackImpl implements ApplicationController.UIUpdateCallback {
     @Override
@@ -733,7 +837,9 @@ public class SimpleSketch extends PApplet {
 
     @Override
     public void addChatMessage(String message) {
-      chatMessages.add(message);
+      // Append timestamp per PRD requirement
+      String ts = LocalTime.now().format(TIME_FMT);
+      chatMessages.add("[" + ts + "] " + message);
       // Maintain message limit
       while (chatMessages.size() > MAX_CHAT_MESSAGES) {
         chatMessages.remove(0);
@@ -742,73 +848,66 @@ public class SimpleSketch extends PApplet {
 
     @Override
     public void refreshCanvas() {
-      // Fetch shapes from the application controller and render them
-      updateCanvasFromState();
+      // Trigger redraw via draw loop (drawCanvasArea calls renderer each frame)
+      // No manual action required here.
     }
 
     @Override
     public void showError(String error) {
       chatMessages.add("ERROR: " + error);
     }
+
+    @Override
+    public void showApproval(String summary, String diffText) {
+      approvalPending = true;
+      approvalSummary = summary != null ? summary : "";
+      approvalDiff = diffText != null ? diffText : "";
+      approvalScrollOffset = 0;
+    }
+
+    @Override
+    public void clearApproval() {
+      approvalPending = false;
+      approvalSummary = "";
+      approvalDiff = "";
+      approvalScrollOffset = 0;
+    }
   }
 
     // Update canvas to reflect current domain state
-    private void updateCanvasFromState() {
+    private void renderDomainShapesInCanvasArea() {
         try {
-            if (appController != null && appController.getCurrentSession() != null) {
+            if (appController != null && appController.getCurrentSession() != null && drawingEngine != null) {
                 List<Shape> shapes = appController.getCurrentSession().getAllShapes();
-
-                // Clear the canvas area first (keep UI intact)
-                fill(255);
-                stroke(200);
-                strokeWeight(1);
-                rect(MARGIN, canvasAreaY, width - MARGIN * 2, canvasAreaHeight);
 
                 if (LOGGER.isLoggable(Level.FINE)) {
                     LOGGER.fine("Domain shapes count: " + shapes.size());
                 }
 
-                // Draw domain shapes via DrawingEngine, limited to the canvas viewport
-                if (drawingEngine != null) {
-                    List<Shape> shapesInView = new ArrayList<>();
-                    Shape.BoundingBox viewport =
-                            new Shape.BoundingBox(
-                                    MARGIN, canvasAreaY, width - MARGIN * 2, canvasAreaHeight);
-                    for (Shape shape : shapes) {
-                        if (shape != null && shape.isVisible()) {
-                            try {
-                                if (shape.getBounds().overlaps(viewport)) {
-                                    shapesInView.add(shape);
-                                }
-                            } catch (Exception e) {
-                                // If bounds are unavailable, draw it anyway to avoid missing shapes
+                // Filter to canvas viewport
+                List<Shape> shapesInView = new ArrayList<>();
+                Shape.BoundingBox viewport = new Shape.BoundingBox(
+                        MARGIN, canvasAreaY, width - MARGIN * 2, canvasAreaHeight);
+                for (Shape shape : shapes) {
+                    if (shape != null && shape.isVisible()) {
+                        try {
+                            if (shape.getBounds().overlaps(viewport)) {
                                 shapesInView.add(shape);
                             }
+                        } catch (Exception e) {
+                            // If bounds unavailable, draw it anyway to avoid missing shapes
+                            shapesInView.add(shape);
                         }
                     }
-                    drawingEngine.renderShapes(shapesInView);
                 }
-
-                // Also redraw existing strokes from manual drawing
-                stroke(0);
-                strokeWeight(2);
-                noFill();
-        for (List<DrawPoint> stroke : allStrokes) {
-          if (stroke.size() >= MIN_POINTS_IN_STROKE) {
-            for (int i = 1; i < stroke.size(); i++) {
-              DrawPoint p1 = stroke.get(i - 1);
-              DrawPoint p2 = stroke.get(i);
-              line(p1.x, p1.y, p2.x, p2.y);
+                drawingEngine.renderShapes(shapesInView);
             }
-          }
+        } catch (Exception e) {
+            if (LOGGER.isLoggable(Level.SEVERE)) {
+                LOGGER.log(Level.SEVERE, "Error rendering domain shapes: " + e.getMessage(), e);
+            }
         }
-      }
-    } catch (Exception e) {
-      if (LOGGER.isLoggable(Level.SEVERE)) {
-        LOGGER.log(Level.SEVERE, "Error updating canvas from state: " + e.getMessage(), e);
-      }
     }
-  }
 
   
 }

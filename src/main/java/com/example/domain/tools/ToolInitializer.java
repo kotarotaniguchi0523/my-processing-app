@@ -1,6 +1,7 @@
 package com.example.domain.tools;
 
 import com.example.domain.tools.impl.CreateShapeTool;
+import com.example.domain.tools.impl.ClearCanvasTool;
 import com.example.domain.tools.impl.DeleteShapeTool;
 import com.example.domain.tools.impl.ModifyShapeTool;
 
@@ -34,6 +35,7 @@ public class ToolInitializer {
       registry.registerTool(new CreateShapeTool());
       registry.registerTool(new ModifyShapeTool());
       registry.registerTool(new DeleteShapeTool());
+      registry.registerTool(new ClearCanvasTool());
 
       if (LOGGER.isLoggable(java.util.logging.Level.INFO)) {
         LOGGER.info("Successfully registered " + registry.getToolCount() + " domain tools");
@@ -104,7 +106,7 @@ public class ToolInitializer {
     ToolRegistry registry = ToolRegistry.getInstance();
 
     // Check that expected tools are registered
-    String[] expectedTools = {"createShape", "modifyShape", "deleteShape"};
+    String[] expectedTools = {"createShape", "modifyShape", "deleteShape", "clearCanvas"};
 
     for (String expectedTool : expectedTools) {
       if (!registry.hasTool(expectedTool)) {

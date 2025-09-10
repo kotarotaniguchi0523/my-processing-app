@@ -35,6 +35,8 @@ public class AgentService {
     private final Gson gson;
     private DrawingState currentState;
     private final List<PendingAction> pendingActions;
+    // M3 approval wait
+    private final java.util.concurrent.atomic.AtomicReference<java.util.concurrent.CompletableFuture<Boolean>> approvalFutureRef = new java.util.concurrent.atomic.AtomicReference<>();
     
     /**
      * Creates a new AgentService with the specified AI client
@@ -89,6 +91,30 @@ public class AgentService {
             return handleError(e);
         }
     }
+
+    // M3: Await user approval (single pending at a time)
+    public CompletableFuture<Boolean> awaitApproval() {
+        CompletableFuture<Boolean> fut = new CompletableFuture<>();
+        if (!approvalFutureRef.compareAndSet(null, fut)) {
+            // Already pending; complete exceptionally
+            CompletableFuture<Boolean> existing = approvalFutureRef.get();
+            fut.completeExceptionally(new IllegalStateException("Approval already pending"));
+            return fut;
+        }
+        return fut;
+    }
+
+    // M3: Complete approval from UI events
+    public void completeApproval(boolean approved) {
+        CompletableFuture<Boolean> fut = approvalFutureRef.getAndSet(null);
+        if (fut != null) {
+            fut.complete(approved);
+        }
+    }
+
+    public boolean hasPendingApproval() {
+        return approvalFutureRef.get() != null;
+    }
     
     /**
      * Handles the AI response and processes any tool calls
@@ -126,58 +152,42 @@ public class AgentService {
                 }
             }
             
-            // Process valid tool calls
-            List<CompletableFuture<ToolExecutionResult>> futures = new ArrayList<>();
-            
-            for (AIResponse.ToolCall toolCall : validToolCalls) {
-                futures.add(executeToolAsync(toolCall));
-            }
-            
-            // Wait for all tool executions to complete
-            return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                .thenApply(v -> {
-                    List<ToolExecutionResult> results = new ArrayList<>();
-                    for (CompletableFuture<ToolExecutionResult> future : futures) {
-                        try {
-                            results.add(future.join());
-                        } catch (CompletionException e) {
-                            logger.log(Level.WARNING, "Tool execution failed", e);
-                            String toolName = extractToolNameFromException(e);
-                            results.add(ToolExecutionResult.error(toolName, e.getCause().getMessage()));
-                        } catch (Exception e) {
-                            logger.log(Level.SEVERE, "Unexpected error during tool execution", e);
-                            results.add(ToolExecutionResult.error("Unknown", "Unexpected error: " + e.getMessage()));
+            // Process valid tool calls SEQUENTIALLY to ensure state is updated step-by-step
+            return CompletableFuture.supplyAsync(() -> {
+                List<ToolExecutionResult> results = new ArrayList<>();
+                DrawingState workingState = this.currentState;
+
+                for (AIResponse.ToolCall toolCall : validToolCalls) {
+                    try {
+                        ToolExecutionResult result = toolInvoker.invokeTool(
+                            toolCall.getName(), toolCall.getParameters(), workingState);
+                        results.add(result);
+                        if (result.isSuccess() && result.getResultState() != null) {
+                            workingState = result.getResultState(); // chain state
                         }
+                    } catch (Exception e) {
+                        logger.log(Level.WARNING, "Tool execution failed: " + toolCall.getName(), e);
+                        results.add(ToolExecutionResult.error(toolCall.getName(), e.getMessage()));
                     }
-                    
-                    serviceResponse.setToolExecutionResults(results);
-                    serviceResponse.setRequiresApproval(checkIfApprovalRequired(results));
-                    
-                    // Check if any tools succeeded
-                    boolean hasSuccess = results.stream().anyMatch(ToolExecutionResult::isSuccess);
-                    serviceResponse.setSuccess(hasSuccess);
-                    
-                    // Include text response if available and some tools failed
-                    if (response.hasTextResponse() && !hasSuccess) {
-                        serviceResponse.setTextResponse(
-                            "Tool execution failed. AI response: " + response.getTextResponse());
-                    }
-                    
-                    // Add tool results to conversation with better formatting
-                    addToolResultsToConversation(results);
-                    
-                    return serviceResponse;
-                })
-                .exceptionally(throwable -> {
-                    logger.log(Level.SEVERE, "Failed to process tool calls", throwable);
-                    ServiceResponse errorResponse = new ServiceResponse();
-                    errorResponse.setSuccess(false);
-                    errorResponse.setErrorMessage("Failed to process tool calls: " + throwable.getMessage());
-                    if (response.hasTextResponse()) {
-                        errorResponse.setTextResponse(response.getTextResponse());
-                    }
-                    return errorResponse;
-                });
+                }
+
+                // Update agent's current state to the final state after all tools
+                this.currentState = workingState;
+
+                serviceResponse.setToolExecutionResults(results);
+                serviceResponse.setRequiresApproval(checkIfApprovalRequired(results));
+
+                boolean hasSuccess = results.stream().anyMatch(ToolExecutionResult::isSuccess);
+                serviceResponse.setSuccess(hasSuccess);
+
+                if (response.hasTextResponse() && !hasSuccess) {
+                    serviceResponse.setTextResponse(
+                        "Tool execution failed. AI response: " + response.getTextResponse());
+                }
+
+                addToolResultsToConversation(results);
+                return serviceResponse;
+            });
                 
         } else if (response.hasTextResponse()) {
             // Handle text-only response
@@ -214,8 +224,19 @@ public class AgentService {
             if (isValidToolCall(toolCall)) {
                 validCalls.add(toolCall);
             } else {
-                logger.warning(String.format("Skipping invalid tool call: %s", 
-                    toolCall != null ? toolCall.getName() : "null"));
+                String name = toolCall != null ? toolCall.getName() : "null";
+                logger.warning(String.format("Skipping invalid tool call: %s", name));
+                // Add validation feedback into conversation context
+                try {
+                    if (toolCall != null) {
+                        ValidationResult vr = toolInvoker.validateToolParameters(toolCall.getName(), toolCall.getParameters());
+                        if (!vr.isValid()) {
+                            promptIntegrator.addToolResult(toolCall.getName(), "Validation failed: " + vr.getErrorMessage());
+                        }
+                    }
+                } catch (Exception ignored) {
+                    // keep robust
+                }
             }
         }
         
@@ -243,8 +264,12 @@ public class AgentService {
             logger.warning("Tool not found in registry: " + toolCall.getName());
             return false;
         }
-        
-        // Additional validation can be added here
+        // Validate parameters against schema
+        ValidationResult vr = toolInvoker.validateToolParameters(toolCall.getName(), toolCall.getParameters());
+        if (!vr.isValid()) {
+            logger.warning("Tool parameter validation failed for '" + toolCall.getName() + "': " + vr.getErrorMessage());
+            return false;
+        }
         return true;
     }
     
@@ -327,7 +352,10 @@ public class AgentService {
             .count();
         
         return significantChanges >= 3 || 
-               results.stream().anyMatch(r -> r.getToolName().equals("clearCanvas"));
+               results.stream().anyMatch(r -> {
+                   String n = r.getToolName() != null ? r.getToolName() : "";
+                   return n.equals("clearCanvas") || n.toLowerCase(java.util.Locale.ROOT).contains("clear");
+               });
     }
     
     /**

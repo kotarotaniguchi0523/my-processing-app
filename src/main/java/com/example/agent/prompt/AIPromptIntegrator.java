@@ -102,10 +102,13 @@ public class AIPromptIntegrator {
             }
         }
         
-        // Set parameters
+        // Set parameters and prefer JSON responses for tool call extraction
         requestBuilder.temperature(0.7);
         requestBuilder.maxTokens(2000);
-        
+        java.util.Map<String, Object> params = new java.util.HashMap<>();
+        params.put("responseFormat", "json");
+        requestBuilder.additionalParams(params);
+
         return requestBuilder.build();
     }
     
@@ -169,10 +172,7 @@ public class AIPromptIntegrator {
         
         while (matcher.find()) {
             String jsonStr = matcher.group(1).trim();
-            AIResponse.ToolCall toolCall = parseToolCallJson(jsonStr);
-            if (toolCall != null) {
-                toolCalls.add(toolCall);
-            }
+            toolCalls.addAll(parseToolCallsFromJson(jsonStr));
         }
         
         return toolCalls;
@@ -191,9 +191,10 @@ public class AIPromptIntegrator {
         
         while (matcher.find()) {
             String jsonStr = matcher.group();
-            AIResponse.ToolCall toolCall = parseToolCallJson(jsonStr);
-            if (toolCall != null) {
-                toolCalls.add(toolCall);
+            // Reuse common JSON parser that supports object/array
+            List<AIResponse.ToolCall> parsed = parseToolCallsFromJson(jsonStr);
+            if (parsed != null && !parsed.isEmpty()) {
+                toolCalls.addAll(parsed);
             }
         }
         
@@ -213,26 +214,48 @@ public class AIPromptIntegrator {
         
         while (matcher.find()) {
             String xmlContent = matcher.group(1).trim();
-            AIResponse.ToolCall toolCall = parseToolCallJson(xmlContent);
-            if (toolCall != null) {
-                toolCalls.add(toolCall);
-            }
+            toolCalls.addAll(parseToolCallsFromJson(xmlContent));
         }
         
         return toolCalls;
     }
-    
+
     /**
-     * Parses a JSON string into a ToolCall object with robust error handling
+     * Parses a JSON string (object or array) into ToolCall objects
      */
-    private AIResponse.ToolCall parseToolCallJson(String jsonStr) {
+    private List<AIResponse.ToolCall> parseToolCallsFromJson(String jsonStr) {
+        List<AIResponse.ToolCall> calls = new ArrayList<>();
         if (jsonStr == null || jsonStr.trim().isEmpty()) {
-            return null;
+            return calls;
         }
-        
+
         try {
-            JsonObject json = JsonParser.parseString(jsonStr).getAsJsonObject();
-            
+            var parsed = JsonParser.parseString(jsonStr);
+            if (parsed.isJsonArray()) {
+                var arr = parsed.getAsJsonArray();
+                for (var el : arr) {
+                    if (el.isJsonObject()) {
+                        AIResponse.ToolCall call = parseToolCallObject(el.getAsJsonObject());
+                        if (call != null) {
+                            calls.add(call);
+                        }
+                    }
+                }
+            } else if (parsed.isJsonObject()) {
+                AIResponse.ToolCall call = parseToolCallObject(parsed.getAsJsonObject());
+                if (call != null) {
+                    calls.add(call);
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to parse tool calls JSON: " + e.getMessage());
+        }
+        return calls;
+    }
+
+    /** Parses a single tool call object */
+    private AIResponse.ToolCall parseToolCallObject(JsonObject json) {
+        try {
             // Check if it's a tool call format - support multiple field names
             String toolName = null;
             if (json.has("tool")) {
@@ -242,11 +265,11 @@ public class AIPromptIntegrator {
             } else if (json.has("function")) {
                 toolName = json.get("function").getAsString();
             }
-            
+
             if (toolName == null || toolName.trim().isEmpty()) {
                 return null;
             }
-            
+
             // Extract parameters - support multiple field names
             Map<String, Object> parameters = new java.util.HashMap<>();
             if (json.has("parameters")) {
@@ -256,35 +279,25 @@ public class AIPromptIntegrator {
             } else if (json.has("arguments")) {
                 parameters = gson.fromJson(json.get("arguments"), Map.class);
             }
-            
-            // Ensure parameters is not null
+
             if (parameters == null) {
                 parameters = new java.util.HashMap<>();
             }
-            
-            // Validate tool exists in registry
+
             if (!toolRegistry.hasTool(toolName)) {
                 logger.warning("Tool '" + toolName + "' not found in registry, skipping");
                 return null;
             }
-            
-            logger.info("Successfully parsed tool call: " + toolName + " with " + parameters.size() + " parameters");
-            
+
             return new AIResponse.ToolCall(
                 generateToolCallId(),
                 toolName,
                 parameters
             );
-            
-        } catch (com.google.gson.JsonSyntaxException e) {
-            logger.warning("Invalid JSON format in tool call: " + e.getMessage());
-        } catch (IllegalStateException e) {
-            logger.warning("JSON structure error in tool call: " + e.getMessage());
         } catch (Exception e) {
-            logger.warning("Unexpected error parsing tool call JSON: " + e.getMessage());
+            logger.warning("Error parsing tool call object: " + e.getMessage());
+            return null;
         }
-        
-        return null;
     }
     
     /**
