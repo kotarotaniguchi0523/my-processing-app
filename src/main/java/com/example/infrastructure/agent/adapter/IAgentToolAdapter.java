@@ -3,7 +3,7 @@ package com.example.infrastructure.agent.adapter;
 import com.example.domain.agent.AgentContext;
 import com.example.application.agent.DefaultParameterValidator;
 import com.example.application.agent.ParameterValidator;
-import com.example.application.agent.ValidationResult;
+import com.example.domain.values.ValidationResult;
 import com.example.domain.agent.tools.Tool;
 import com.example.domain.agent.tools.ToolExecutionException;
 import com.example.domain.agent.tools.ToolResult;

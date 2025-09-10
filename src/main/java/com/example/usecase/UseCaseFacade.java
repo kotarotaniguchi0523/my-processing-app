@@ -3,7 +3,7 @@ package com.example.usecase;
 import com.example.domain.models.DrawingState;
 import com.example.domain.services.*;
 import com.example.domain.parsers.ICommandParser;
-import com.example.infrastructure.adapters.*;
+import com.example.infrastructure.ServiceFactory;
 import com.example.infrastructure.ServiceInitializer;
 
 import java.util.concurrent.CompletableFuture;
@@ -41,13 +41,15 @@ public class UseCaseFacade {
         // 初期化
         ServiceInitializer.initialize();
         
-        // 依存関係の構築
-        IAgentService agentService = new AgentServiceAdapter();
-        IDiffService diffService = new DiffServiceAdapter();
-        IStateService stateService = new StateServiceAdapter();
-        ICommandExecutor commandExecutor = new CommandExecutorAdapter();
-        ICommandParser commandParser = new CommandParserAdapter();
-        ISessionManager sessionManager = new SessionManagerAdapter();
+        // ServiceFactoryを使用して依存関係を構築
+        ServiceFactory serviceFactory = ServiceFactory.getInstance();
+        
+        IAgentService agentService = serviceFactory.createAgentService();
+        IDiffService diffService = serviceFactory.createDiffService();
+        IStateService stateService = serviceFactory.createStateService();
+        ICommandExecutor commandExecutor = serviceFactory.createCommandExecutor();
+        ICommandParser commandParser = serviceFactory.createCommandParser();
+        ISessionManager sessionManager = serviceFactory.createSessionManager();
         
         // ユースケースの初期化
         this.processUserInputUseCase = new ProcessUserInputUseCase(
@@ -64,7 +66,7 @@ public class UseCaseFacade {
         // 自動保存の有効化（5分間隔）
         manageDrawingStateUseCase.enableAutoSave(300);
         
-        LOGGER.info("UseCaseFacade初期化完了");
+        LOGGER.info("UseCaseFacade初期化完了 (ServiceFactory使用)");
     }
     
     /**

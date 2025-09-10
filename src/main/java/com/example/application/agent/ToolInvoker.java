@@ -56,7 +56,7 @@ public class ToolInvoker implements IToolInvoker {
             IAgentTool tool = toolRegistry.getTool(toolName);
             
             // Validate parameters against schema
-            com.example.application.agent.ValidationResult validation = validator.validateParameters(tool, parameters);
+            ValidationResult validation = validator.validateParameters(tool, parameters);
             if (!validation.isValid()) {
                 return ToolExecutionResult.error(toolName, 
                     "Parameter validation failed: " + validation.getErrorMessage());
@@ -129,7 +129,7 @@ public class ToolInvoker implements IToolInvoker {
         }
         
         IAgentTool tool = toolRegistry.getTool(toolName);
-        com.example.application.agent.ValidationResult validation = validator.validateParameters(tool, parameters);
+        ValidationResult validation = validator.validateParameters(tool, parameters);
         return validation.isValid();
     }
 
@@ -146,22 +146,8 @@ public class ToolInvoker implements IToolInvoker {
         }
 
         IAgentTool tool = toolRegistry.getTool(toolName);
-        com.example.application.agent.ValidationResult appValidation = validator.validateParameters(tool, parameters);
-        return convertValidationResult(appValidation);
-    }
-    
-    /**
-     * Converts application ValidationResult to domain ValidationResult
-     * @param appResult The application layer validation result
-     * @return The domain layer validation result
-     */
-    private com.example.domain.values.ValidationResult convertValidationResult(
-            com.example.application.agent.ValidationResult appResult) {
-        if (appResult.isValid()) {
-            return com.example.domain.values.ValidationResult.valid();
-        } else {
-            return com.example.domain.values.ValidationResult.invalid(appResult.getErrorMessage());
-        }
+        ValidationResult validation = validator.validateParameters(tool, parameters);
+        return validation;
     }
     
     /**

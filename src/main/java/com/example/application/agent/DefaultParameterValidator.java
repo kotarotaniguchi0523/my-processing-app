@@ -1,6 +1,7 @@
 package com.example.application.agent;
 
 import com.example.domain.tools.IAgentTool;
+import com.example.domain.values.ValidationResult;
 
 import java.util.List;
 import java.util.Map;

@@ -2,7 +2,7 @@ package com.example.infrastructure.agent.diff;
 
 import com.example.domain.models.DrawingState;
 import com.example.infrastructure.services.DiffCalculator;
-import com.example.application.agent.DrawingStateDiff;
+import com.example.domain.agent.DrawingStateDiff;
 
 /**
  * Simple diff calculator for agents that returns a lightweight DrawingStateDiff

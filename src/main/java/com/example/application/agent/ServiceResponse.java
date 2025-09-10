@@ -1,5 +1,6 @@
 package com.example.application.agent;
 
+import com.example.domain.agent.DrawingStateDiff;
 import com.example.domain.values.ToolExecutionResult;
 import java.util.ArrayList;
 import java.util.List;
