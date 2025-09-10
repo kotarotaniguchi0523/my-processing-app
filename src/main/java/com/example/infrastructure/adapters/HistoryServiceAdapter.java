@@ -23,18 +23,13 @@ public class HistoryServiceAdapter implements IHistoryService {
     }
     
     @Override
+    public void saveState(DrawingState state) {
+        historyService.saveState(state);
+    }
+    
+    @Override
     public void addState(DrawingState state) {
         historyService.addState(state);
-    }
-    
-    @Override
-    public boolean undo() {
-        return historyService.undo();
-    }
-    
-    @Override
-    public boolean redo() {
-        return historyService.redo();
     }
     
     @Override
@@ -48,8 +43,28 @@ public class HistoryServiceAdapter implements IHistoryService {
     }
     
     @Override
+    public boolean undo() {
+        return historyService.undo();
+    }
+    
+    @Override
+    public boolean redo() {
+        return historyService.redo();
+    }
+    
+    @Override
+    public void clear() {
+        historyService.clear();
+    }
+    
+    @Override
     public void clearHistory() {
         historyService.clearHistory();
+    }
+    
+    @Override
+    public int getHistorySize() {
+        return historyService.getHistorySize();
     }
     
     @Override

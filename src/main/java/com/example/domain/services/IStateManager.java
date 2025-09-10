@@ -43,4 +43,12 @@ public interface IStateManager {
      * @param listener The listener to remove
      */
     void removeListener(StateChangeListener listener);
+    
+    /**
+     * Notify listeners about history changes.
+     * @param currentState The current state
+     * @param canUndo Whether undo is available
+     * @param canRedo Whether redo is available
+     */
+    void notifyHistoryChanged(DrawingState currentState, boolean canUndo, boolean canRedo);
 }

@@ -1,7 +1,6 @@
 package com.example.infrastructure.serialization;
 
 import com.example.domain.models.DrawingState;
-import com.example.infrastructure.serialization.YamlSerializable;
 
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.error.YAMLException;

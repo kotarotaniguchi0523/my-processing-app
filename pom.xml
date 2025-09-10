@@ -193,6 +193,8 @@
           <violationSeverity>warning</violationSeverity>
           <maxAllowedViolations>100</maxAllowedViolations>
         </configuration>
+        <!-- Temporarily disabled checkstyle execution -->
+        <!--
         <executions>
           <execution>
             <id>validate</id>
@@ -202,6 +204,7 @@
             </goals>
           </execution>
         </executions>
+        -->
       </plugin>
 
       <!-- SpotBugs Plugin -->

@@ -42,29 +42,20 @@ public class StateManagerAdapter implements IStateManager {
     
     @Override
     public void addListener(StateChangeListener listener) {
-        // Convert domain listener to services listener
-        stateManager.addListener(new com.example.infrastructure.services.StateChangeListener() {
-            @Override
-            public void onStateChanged(DrawingState oldState, DrawingState newState) {
-                listener.onStateChanged(oldState, newState);
-            }
-            
-            @Override
-            public void onHistoryChanged(DrawingState currentState, boolean canUndo, boolean canRedo) {
-                listener.onHistoryChanged(currentState, canUndo, canRedo);
-            }
-            
-            @Override
-            public void onStateValidationError(DrawingState state, String error) {
-                listener.onStateValidationError(state, error);
-            }
-        });
+        // StateManager already uses domain StateChangeListener interface
+        stateManager.addListener(listener);
     }
     
     @Override
     public void removeListener(StateChangeListener listener) {
-        // Note: This won't work correctly with wrapped listeners
-        // A proper implementation would need to track the mapping
+        // StateManager already uses domain StateChangeListener interface
+        stateManager.removeListener(listener);
+    }
+    
+    @Override
+    public void notifyHistoryChanged(DrawingState currentState, boolean canUndo, boolean canRedo) {
+        // Delegate to StateManager's notifyHistoryChanged method
+        stateManager.notifyHistoryChanged(currentState, canUndo, canRedo);
     }
     
     public StateManager getStateManager() {

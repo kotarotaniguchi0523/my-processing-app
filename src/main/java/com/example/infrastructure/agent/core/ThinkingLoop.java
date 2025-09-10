@@ -1,6 +1,6 @@
 package com.example.infrastructure.agent.core;
 
-import com.example.agent.tools.ToolResult;
+import com.example.domain.agent.tools.ToolResult;
 
 import java.util.ArrayList;
 import java.util.HashMap;

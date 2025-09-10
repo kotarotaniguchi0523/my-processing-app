@@ -1,6 +1,8 @@
 package com.example.infrastructure.services;
 
 import com.example.domain.models.DrawingState;
+import com.example.domain.services.IStateManager;
+import com.example.domain.services.StateChangeListener;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -13,7 +15,7 @@ import java.util.logging.Logger;
  * Central state management service for the drawing application. Provides thread-safe state
  * management with listener notifications.
  */
-public class StateManager {
+public class StateManager implements IStateManager {
     private static final Logger LOGGER = Logger.getLogger(StateManager.class.getName());
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -251,7 +253,7 @@ public class StateManager {
      * @param canUndo whether undo is available
      * @param canRedo whether redo is available
      */
-    protected void notifyHistoryChanged(
+    public void notifyHistoryChanged(
             DrawingState currentState, boolean canUndo, boolean canRedo) {
         for (StateChangeListener listener : listeners) {
             try {

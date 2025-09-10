@@ -23,462 +23,439 @@ import java.util.Set;
  */
 public class CreateShapeTool implements IAgentTool {
 
-    @Override
-    public String name() {
-        return "createShape";
+  @Override
+  public String name() {
+    return "createShape";
+  }
+
+  @Override
+  public Map<String, Object> schema() {
+    Map<String, Object> schema = new HashMap<>();
+    schema.put("type", "object");
+    schema.put("description", "Create a new shape and add it to the drawing canvas");
+
+    Map<String, Object> properties = new HashMap<>();
+
+    // Shape type
+    Map<String, Object> typeProperty = new HashMap<>();
+    typeProperty.put("type", "string");
+    typeProperty.put("description", "The type of shape to create");
+    typeProperty.put("enum", Arrays.asList("circle", "rectangle", "line", "text"));
+    properties.put("type", typeProperty);
+
+    // Position
+    Map<String, Object> positionProperty = new HashMap<>();
+    positionProperty.put("type", "object");
+    positionProperty.put("description", "The position of the shape");
+    Map<String, Object> positionProps = new HashMap<>();
+    positionProps.put("x", createNumberProperty("X coordinate"));
+    positionProps.put("y", createNumberProperty("Y coordinate"));
+    positionProperty.put("properties", positionProps);
+    positionProperty.put("required", Arrays.asList("x", "y"));
+    properties.put("position", positionProperty);
+
+    // Optional ID
+    Map<String, Object> idProperty = new HashMap<>();
+    idProperty.put("type", "string");
+    idProperty.put("description",
+        "Optional unique ID for the shape. If not provided, one will be generated");
+    properties.put("id", idProperty);
+
+    // Shape-specific properties
+    Map<String, Object> propertiesProperty = new HashMap<>();
+    propertiesProperty.put("type", "object");
+    propertiesProperty.put("description", "Shape-specific properties");
+    Map<String, Object> shapeProps = new HashMap<>();
+
+    // For circle
+    shapeProps.put("radius", createNumberProperty("Radius for circle shapes"));
+
+    // For rectangle
+    shapeProps.put("width", createNumberProperty("Width for rectangle shapes"));
+    shapeProps.put("height", createNumberProperty("Height for rectangle shapes"));
+
+    // For line
+    Map<String, Object> toProperty = new HashMap<>();
+    toProperty.put("type", "object");
+    toProperty.put("description", "End position for line shapes");
+    toProperty.put("properties", positionProps);
+    toProperty.put("required", Arrays.asList("x", "y"));
+    shapeProps.put("to", toProperty);
+
+    // For text
+    shapeProps.put("text", createStringProperty("Text content for text shapes"));
+    shapeProps.put("fontSize", createNumberProperty("Font size for text shapes"));
+
+    propertiesProperty.put("properties", shapeProps);
+    properties.put("properties", propertiesProperty);
+
+    // Style properties
+    Map<String, Object> styleProperty = new HashMap<>();
+    styleProperty.put("type", "object");
+    styleProperty.put("description", "Visual styling properties");
+    Map<String, Object> styleProps = new HashMap<>();
+
+    // Fill color
+    styleProps.put("fillColor", createColorProperty("Fill color"));
+    styleProps.put("strokeColor", createColorProperty("Stroke color"));
+    styleProps.put("strokeWeight", createNumberProperty("Stroke weight"));
+    styleProps.put("hasFill", createBooleanProperty("Whether the shape has a fill"));
+    styleProps.put("hasStroke", createBooleanProperty("Whether the shape has a stroke"));
+
+    styleProperty.put("properties", styleProps);
+    properties.put("style", styleProperty);
+
+    // Visibility and layer
+    properties.put("visible", createBooleanProperty("Whether the shape is visible"));
+    properties.put("layerOrder", createNumberProperty("Layer order (higher values are on top)"));
+
+    schema.put("properties", properties);
+    schema.put("required", Arrays.asList("type", "position"));
+
+    return schema;
+  }
+
+  @Override
+  public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
+    validateParameters(parameters);
+
+    String shapeType = (String) parameters.get("type");
+    Map<String, Object> positionData = getMap(parameters, "position");
+
+    // Provide default position at center of canvas area if not specified
+    if (positionData == null || positionData.isEmpty()) {
+      positionData = new HashMap<>();
+      // Default to center of canvas area (1000x700 window, canvas 60% height)
+      positionData.put("x", 500.0);
+      positionData.put("y", 211.0);
     }
 
-    @Override
-    public Map<String, Object> schema() {
-        Map<String, Object> schema = new HashMap<>();
-        schema.put("type", "object");
-        schema.put("description", "Create a new shape and add it to the drawing canvas");
-
-        Map<String, Object> properties = new HashMap<>();
-
-        // Shape type
-        Map<String, Object> typeProperty = new HashMap<>();
-        typeProperty.put("type", "string");
-        typeProperty.put("description", "The type of shape to create");
-        typeProperty.put("enum", Arrays.asList("circle", "rectangle", "line", "text"));
-        properties.put("type", typeProperty);
-
-        // Position
-        Map<String, Object> positionProperty = new HashMap<>();
-        positionProperty.put("type", "object");
-        positionProperty.put("description", "The position of the shape");
-        Map<String, Object> positionProps = new HashMap<>();
-        positionProps.put("x", createNumberProperty("X coordinate"));
-        positionProps.put("y", createNumberProperty("Y coordinate"));
-        positionProperty.put("properties", positionProps);
-        positionProperty.put("required", Arrays.asList("x", "y"));
-        properties.put("position", positionProperty);
-
-        // Optional ID
-        Map<String, Object> idProperty = new HashMap<>();
-        idProperty.put("type", "string");
-        idProperty.put(
-                "description",
-                "Optional unique ID for the shape. If not provided, one will be generated");
-        properties.put("id", idProperty);
-
-        // Shape-specific properties
-        Map<String, Object> propertiesProperty = new HashMap<>();
-        propertiesProperty.put("type", "object");
-        propertiesProperty.put("description", "Shape-specific properties");
-        Map<String, Object> shapeProps = new HashMap<>();
-
-        // For circle
-        shapeProps.put("radius", createNumberProperty("Radius for circle shapes"));
-
-        // For rectangle
-        shapeProps.put("width", createNumberProperty("Width for rectangle shapes"));
-        shapeProps.put("height", createNumberProperty("Height for rectangle shapes"));
-
-        // For line
-        Map<String, Object> toProperty = new HashMap<>();
-        toProperty.put("type", "object");
-        toProperty.put("description", "End position for line shapes");
-        toProperty.put("properties", positionProps);
-        toProperty.put("required", Arrays.asList("x", "y"));
-        shapeProps.put("to", toProperty);
-
-        // For text
-        shapeProps.put("text", createStringProperty("Text content for text shapes"));
-        shapeProps.put("fontSize", createNumberProperty("Font size for text shapes"));
-
-        propertiesProperty.put("properties", shapeProps);
-        properties.put("properties", propertiesProperty);
-
-        // Style properties
-        Map<String, Object> styleProperty = new HashMap<>();
-        styleProperty.put("type", "object");
-        styleProperty.put("description", "Visual styling properties");
-        Map<String, Object> styleProps = new HashMap<>();
-
-        // Fill color
-        styleProps.put("fillColor", createColorProperty("Fill color"));
-        styleProps.put("strokeColor", createColorProperty("Stroke color"));
-        styleProps.put("strokeWeight", createNumberProperty("Stroke weight"));
-        styleProps.put("hasFill", createBooleanProperty("Whether the shape has a fill"));
-        styleProps.put("hasStroke", createBooleanProperty("Whether the shape has a stroke"));
-
-        styleProperty.put("properties", styleProps);
-        properties.put("style", styleProperty);
-
-        // Visibility and layer
-        properties.put("visible", createBooleanProperty("Whether the shape is visible"));
-        properties.put(
-                "layerOrder", createNumberProperty("Layer order (higher values are on top)"));
-
-        schema.put("properties", properties);
-        schema.put("required", Arrays.asList("type", "position"));
-
-        return schema;
+    // Handle both "properties" and direct size parameters from AI
+    Map<String, Object> propertiesData = getMap(parameters, "properties", new HashMap<>());
+    Map<String, Object> sizeData = getMap(parameters, "size");
+    if (sizeData != null) {
+      // Convert AI's size format to properties format
+      if (sizeData.containsKey("width")) {
+        propertiesData.put("width", sizeData.get("width"));
+      }
+      if (sizeData.containsKey("height")) {
+        propertiesData.put("height", sizeData.get("height"));
+      }
+      // For circles, use width as radius
+      if ("circle".equalsIgnoreCase(shapeType) && sizeData.containsKey("width")) {
+        propertiesData.put("radius", ((Number) sizeData.get("width")).doubleValue() / 2.0);
+      }
     }
 
-    @Override
-    public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
-        // Don't validate parameters strictly - we'll provide defaults
-        // validateParameters(parameters);
+    // Handle both "style" and direct color parameter from AI
+    Map<String, Object> styleData = getMap(parameters, "style", new HashMap<>());
+    String directColor = (String) parameters.get("color");
+    if (directColor != null && styleData.isEmpty()) {
+      // Convert direct color to style format
+      styleData = new HashMap<>();
+      Map<String, Object> fillColorData = parseColorString(directColor);
+      styleData.put("fillColor", fillColorData);
+      styleData.put("hasFill", true);
+    }
 
-        String shapeType = (String) parameters.get("type");
-        Map<String, Object> positionData = getMap(parameters, "position");
-        
-        // Provide default position at center of canvas area if not specified
-        if (positionData == null || positionData.isEmpty()) {
-            positionData = new HashMap<>();
-            // Default to center of canvas area (1000x700 window, canvas 60% height)
-            positionData.put("x", 500.0);
-            positionData.put("y", 211.0);
+    // Extract basic properties
+    String id = (String) parameters.get("id");
+    Position position = parsePosition(positionData);
+    Style style = parseStyle(styleData);
+    boolean visible = getBoolean(parameters, "visible", true);
+    int layerOrder = getInt(parameters, "layerOrder", 0);
+
+    // Create shape based on type
+    Shape shape =
+        createShapeByType(shapeType, id, position, propertiesData, style, visible, layerOrder);
+
+    // Add shape to state
+    return state.withAddedShape(shape);
+  }
+
+  private Shape createShapeByType(String type, String id, Position position,
+      Map<String, Object> properties, Style style, boolean visible, int layerOrder) {
+
+    // Generate ID if not provided
+    if (id == null || id.isBlank()) {
+      id = type + "_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000);
+    }
+
+    switch (type.toLowerCase(Locale.ROOT)) {
+      case "circle":
+        float radius = getFloat(properties, "radius", 50.0f);
+        return new Circle(id, position, radius, style, visible, layerOrder);
+
+      case "rectangle":
+        float width = getFloat(properties, "width", 100.0f);
+        float height = getFloat(properties, "height", 100.0f);
+        return new Rectangle(id, position, width, height, style, visible, layerOrder);
+
+      case "line":
+        Map<String, Object> toData = getMap(properties, "to");
+        if (toData == null) {
+          throw new IllegalArgumentException("Line shape requires 'to' position in properties");
         }
-        
-        // Handle both "properties" and direct size parameters from AI
-        Map<String, Object> propertiesData = getMap(parameters, "properties", new HashMap<>());
-        Map<String, Object> sizeData = getMap(parameters, "size");
-        if (sizeData != null) {
-            // Convert AI's size format to properties format
-            if (sizeData.containsKey("width")) {
-                propertiesData.put("width", sizeData.get("width"));
+        Position toPosition = parsePosition(toData);
+        return new Line(id, position, toPosition, style, visible, layerOrder);
+
+      case "text":
+        String text = (String) properties.get("text");
+        if (text == null || text.isBlank()) {
+          throw new IllegalArgumentException("Text shape requires 'text' content in properties");
+        }
+        float fontSize = getFloat(properties, "fontSize", 12.0f);
+        String fontFamily = (String) properties.getOrDefault("fontFamily", "Arial");
+        return new Text(id, position, text, fontFamily, fontSize, Text.TextAlign.LEFT,
+            Text.TextAlign.TOP, style, visible, layerOrder);
+
+      default:
+        throw new IllegalArgumentException("Unsupported shape type: " + type);
+    }
+  }
+
+  private Position parsePosition(Map<String, Object> positionData) {
+    if (positionData == null) {
+      throw new IllegalArgumentException("Position is required");
+    }
+
+    float x = getFloat(positionData, "x");
+    float y = getFloat(positionData, "y");
+    return new Position(x, y);
+  }
+
+  private Map<String, Object> parseColorString(String colorString) {
+    Map<String, Object> colorData = new HashMap<>();
+
+    // Handle named colors
+    String lowerColor = colorString.toLowerCase();
+    switch (lowerColor) {
+      case "red":
+        colorData.put("r", 255);
+        colorData.put("g", 0);
+        colorData.put("b", 0);
+        break;
+      case "green":
+        colorData.put("r", 0);
+        colorData.put("g", 255);
+        colorData.put("b", 0);
+        break;
+      case "blue":
+        colorData.put("r", 0);
+        colorData.put("g", 0);
+        colorData.put("b", 255);
+        break;
+      case "yellow":
+        colorData.put("r", 255);
+        colorData.put("g", 255);
+        colorData.put("b", 0);
+        break;
+      case "black":
+        colorData.put("r", 0);
+        colorData.put("g", 0);
+        colorData.put("b", 0);
+        break;
+      case "white":
+        colorData.put("r", 255);
+        colorData.put("g", 255);
+        colorData.put("b", 255);
+        break;
+      case "orange":
+        colorData.put("r", 255);
+        colorData.put("g", 165);
+        colorData.put("b", 0);
+        break;
+      case "purple":
+        colorData.put("r", 128);
+        colorData.put("g", 0);
+        colorData.put("b", 128);
+        break;
+      case "pink":
+        colorData.put("r", 255);
+        colorData.put("g", 192);
+        colorData.put("b", 203);
+        break;
+      case "gray":
+      case "grey":
+        colorData.put("r", 128);
+        colorData.put("g", 128);
+        colorData.put("b", 128);
+        break;
+      default:
+        // Handle hex colors
+        if (colorString.startsWith("#")) {
+          try {
+            String hex = colorString.substring(1);
+            if (hex.length() == 6) {
+              colorData.put("r", Integer.parseInt(hex.substring(0, 2), 16));
+              colorData.put("g", Integer.parseInt(hex.substring(2, 4), 16));
+              colorData.put("b", Integer.parseInt(hex.substring(4, 6), 16));
             }
-            if (sizeData.containsKey("height")) {
-                propertiesData.put("height", sizeData.get("height"));
-            }
-            // For circles, use width as radius
-            if ("circle".equalsIgnoreCase(shapeType) && sizeData.containsKey("width")) {
-                propertiesData.put("radius", ((Number)sizeData.get("width")).doubleValue() / 2.0);
-            }
-        }
-        
-        // Handle both "style" and direct color parameter from AI
-        Map<String, Object> styleData = getMap(parameters, "style", new HashMap<>());
-        String directColor = (String) parameters.get("color");
-        if (directColor != null && styleData.isEmpty()) {
-            // Convert direct color to style format
-            styleData = new HashMap<>();
-            Map<String, Object> fillColorData = parseColorString(directColor);
-            styleData.put("fillColor", fillColorData);
-            styleData.put("hasFill", true);
-        }
-
-        // Extract basic properties
-        String id = (String) parameters.get("id");
-        Position position = parsePosition(positionData);
-        Style style = parseStyle(styleData);
-        boolean visible = getBoolean(parameters, "visible", true);
-        int layerOrder = getInt(parameters, "layerOrder", 0);
-
-        // Create shape based on type
-        Shape shape =
-                createShapeByType(
-                        shapeType, id, position, propertiesData, style, visible, layerOrder);
-
-        // Add shape to state
-        return state.withAddedShape(shape);
-    }
-
-    private Shape createShapeByType(
-            String type,
-            String id,
-            Position position,
-            Map<String, Object> properties,
-            Style style,
-            boolean visible,
-            int layerOrder) {
-
-        // Generate ID if not provided
-        if (id == null || id.isBlank()) {
-            id = type + "_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000);
-        }
-
-        switch (type.toLowerCase(Locale.ROOT)) {
-            case "circle":
-                float radius = getFloat(properties, "radius", 50.0f);
-                return new Circle(id, position, radius, style, visible, layerOrder);
-
-            case "rectangle":
-                float width = getFloat(properties, "width", 100.0f);
-                float height = getFloat(properties, "height", 100.0f);
-                return new Rectangle(id, position, width, height, style, visible, layerOrder);
-
-            case "line":
-                Map<String, Object> toData = getMap(properties, "to");
-                if (toData == null) {
-                    throw new IllegalArgumentException(
-                            "Line shape requires 'to' position in properties");
-                }
-                Position toPosition = parsePosition(toData);
-                return new Line(id, position, toPosition, style, visible, layerOrder);
-
-            case "text":
-                String text = (String) properties.get("text");
-                if (text == null || text.isBlank()) {
-                    throw new IllegalArgumentException(
-                            "Text shape requires 'text' content in properties");
-                }
-                float fontSize = getFloat(properties, "fontSize", 12.0f);
-                String fontFamily = (String) properties.getOrDefault("fontFamily", "Arial");
-                return new Text(
-                        id,
-                        position,
-                        text,
-                        fontFamily,
-                        fontSize,
-                        Text.TextAlign.LEFT,
-                        Text.TextAlign.TOP,
-                        style,
-                        visible,
-                        layerOrder);
-
-            default:
-                throw new IllegalArgumentException("Unsupported shape type: " + type);
-        }
-    }
-
-    private Position parsePosition(Map<String, Object> positionData) {
-        if (positionData == null) {
-            throw new IllegalArgumentException("Position is required");
-        }
-
-        float x = getFloat(positionData, "x");
-        float y = getFloat(positionData, "y");
-        return new Position(x, y);
-    }
-
-    private Map<String, Object> parseColorString(String colorString) {
-        Map<String, Object> colorData = new HashMap<>();
-        
-        // Handle named colors
-        String lowerColor = colorString.toLowerCase();
-        switch (lowerColor) {
-            case "red":
-                colorData.put("r", 255);
-                colorData.put("g", 0);
-                colorData.put("b", 0);
-                break;
-            case "green":
-                colorData.put("r", 0);
-                colorData.put("g", 255);
-                colorData.put("b", 0);
-                break;
-            case "blue":
-                colorData.put("r", 0);
-                colorData.put("g", 0);
-                colorData.put("b", 255);
-                break;
-            case "yellow":
-                colorData.put("r", 255);
-                colorData.put("g", 255);
-                colorData.put("b", 0);
-                break;
-            case "black":
-                colorData.put("r", 0);
-                colorData.put("g", 0);
-                colorData.put("b", 0);
-                break;
-            case "white":
-                colorData.put("r", 255);
-                colorData.put("g", 255);
-                colorData.put("b", 255);
-                break;
-            case "orange":
-                colorData.put("r", 255);
-                colorData.put("g", 165);
-                colorData.put("b", 0);
-                break;
-            case "purple":
-                colorData.put("r", 128);
-                colorData.put("g", 0);
-                colorData.put("b", 128);
-                break;
-            case "pink":
-                colorData.put("r", 255);
-                colorData.put("g", 192);
-                colorData.put("b", 203);
-                break;
-            case "gray":
-            case "grey":
-                colorData.put("r", 128);
-                colorData.put("g", 128);
-                colorData.put("b", 128);
-                break;
-            default:
-                // Handle hex colors
-                if (colorString.startsWith("#")) {
-                    try {
-                        String hex = colorString.substring(1);
-                        if (hex.length() == 6) {
-                            colorData.put("r", Integer.parseInt(hex.substring(0, 2), 16));
-                            colorData.put("g", Integer.parseInt(hex.substring(2, 4), 16));
-                            colorData.put("b", Integer.parseInt(hex.substring(4, 6), 16));
-                        }
-                    } catch (NumberFormatException e) {
-                        // Default to black if parsing fails
-                        colorData.put("r", 0);
-                        colorData.put("g", 0);
-                        colorData.put("b", 0);
-                    }
-                } else {
-                    // Default to black for unknown colors
-                    colorData.put("r", 0);
-                    colorData.put("g", 0);
-                    colorData.put("b", 0);
-                }
-        }
-        
-        colorData.put("a", 255); // Full opacity by default
-        return colorData;
-    }
-    
-    private Style parseStyle(Map<String, Object> styleData) {
-        Style.Builder builder = Style.builder();
-
-        // Parse fill color
-        Map<String, Object> fillColorData = getMap(styleData, "fillColor");
-        if (fillColorData != null) {
-            builder.fillColor(parseColor(fillColorData));
-        }
-
-        // Parse stroke color
-        Map<String, Object> strokeColorData = getMap(styleData, "strokeColor");
-        if (strokeColorData != null) {
-            builder.strokeColor(parseColor(strokeColorData));
-        }
-
-        // Parse other style properties
-        if (styleData.containsKey("strokeWeight")) {
-            builder.strokeWeight(getFloat(styleData, "strokeWeight"));
-        }
-
-        if (styleData.containsKey("hasFill")) {
-            builder.hasFill(getBoolean(styleData, "hasFill", true));
-        }
-
-        if (styleData.containsKey("hasStroke")) {
-            builder.hasStroke(getBoolean(styleData, "hasStroke", true));
-        }
-
-        return builder.build();
-    }
-
-    private Color parseColor(Map<String, Object> colorData) {
-        // Support different color formats
-        if (colorData.containsKey("r")
-                && colorData.containsKey("g")
-                && colorData.containsKey("b")) {
-            int r = getInt(colorData, "r");
-            int g = getInt(colorData, "g");
-            int b = getInt(colorData, "b");
-            int a = getInt(colorData, "a", 255);
-            return new Color(r, g, b, a);
-        } else if (colorData.containsKey("hex")) {
-            String hex = (String) colorData.get("hex");
-            return Color.fromHex(hex);
+          } catch (NumberFormatException e) {
+            // Default to black if parsing fails
+            colorData.put("r", 0);
+            colorData.put("g", 0);
+            colorData.put("b", 0);
+          }
         } else {
-            throw new IllegalArgumentException(
-                    "Color must have either 'r', 'g', 'b' values or 'hex' value");
+          // Default to black for unknown colors
+          colorData.put("r", 0);
+          colorData.put("g", 0);
+          colorData.put("b", 0);
         }
     }
 
-    private void validateParameters(Map<String, Object> parameters) {
-        if (parameters == null) {
-            throw new IllegalArgumentException("Parameters cannot be null");
-        }
+    colorData.put("a", 255); // Full opacity by default
+    return colorData;
+  }
 
-        if (!parameters.containsKey("type")) {
-            throw new IllegalArgumentException("Shape type is required");
-        }
+  private Style parseStyle(Map<String, Object> styleData) {
+    Style.Builder builder = Style.builder();
 
-        if (!parameters.containsKey("position")) {
-            throw new IllegalArgumentException("Position is required");
-        }
-
-        String type = (String) parameters.get("type");
-        Set<String> validTypes = Set.of("circle", "rectangle", "line", "text");
-        if (!validTypes.contains(type.toLowerCase(Locale.ROOT))) {
-            throw new IllegalArgumentException(
-                    "Invalid shape type: " + type + ". Valid types: " + validTypes);
-        }
+    // Parse fill color
+    Map<String, Object> fillColorData = getMap(styleData, "fillColor");
+    if (fillColorData != null) {
+      builder.fillColor(parseColor(fillColorData));
     }
 
-    // Utility methods for safe parameter extraction
-    private Map<String, Object> getMap(Map<String, Object> params, String key) {
-        return getMap(params, key, null);
+    // Parse stroke color
+    Map<String, Object> strokeColorData = getMap(styleData, "strokeColor");
+    if (strokeColorData != null) {
+      builder.strokeColor(parseColor(strokeColorData));
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> getMap(
-            Map<String, Object> params, String key, Map<String, Object> defaultValue) {
-        Object value = params.get(key);
-        return value instanceof Map ? (Map<String, Object>) value : defaultValue;
+    // Parse other style properties
+    if (styleData.containsKey("strokeWeight")) {
+      builder.strokeWeight(getFloat(styleData, "strokeWeight"));
     }
 
-    private float getFloat(Map<String, Object> params, String key) {
-        Object value = params.get(key);
-        if (value == null) {
-            throw new IllegalArgumentException("Required parameter missing: " + key);
-        }
-        return ((Number) value).floatValue();
+    if (styleData.containsKey("hasFill")) {
+      builder.hasFill(getBoolean(styleData, "hasFill", true));
     }
 
-    private float getFloat(Map<String, Object> params, String key, float defaultValue) {
-        Object value = params.get(key);
-        return value instanceof Number ? ((Number) value).floatValue() : defaultValue;
+    if (styleData.containsKey("hasStroke")) {
+      builder.hasStroke(getBoolean(styleData, "hasStroke", true));
     }
 
-    private int getInt(Map<String, Object> params, String key) {
-        Object value = params.get(key);
-        if (value == null) {
-            throw new IllegalArgumentException("Required parameter missing: " + key);
-        }
-        return ((Number) value).intValue();
+    return builder.build();
+  }
+
+  private Color parseColor(Map<String, Object> colorData) {
+    // Support different color formats
+    if (colorData.containsKey("r") && colorData.containsKey("g") && colorData.containsKey("b")) {
+      int r = getInt(colorData, "r");
+      int g = getInt(colorData, "g");
+      int b = getInt(colorData, "b");
+      int a = getInt(colorData, "a", 255);
+      return new Color(r, g, b, a);
+    } else if (colorData.containsKey("hex")) {
+      String hex = (String) colorData.get("hex");
+      return Color.fromHex(hex);
+    } else {
+      throw new IllegalArgumentException(
+          "Color must have either 'r', 'g', 'b' values or 'hex' value");
+    }
+  }
+
+  private void validateParameters(Map<String, Object> parameters) {
+    if (parameters == null) {
+      throw new IllegalArgumentException("Parameters cannot be null");
     }
 
-    private int getInt(Map<String, Object> params, String key, int defaultValue) {
-        Object value = params.get(key);
-        return value instanceof Number ? ((Number) value).intValue() : defaultValue;
+    if (!parameters.containsKey("type")) {
+      throw new IllegalArgumentException("Shape type is required");
     }
 
-    private boolean getBoolean(Map<String, Object> params, String key, boolean defaultValue) {
-        Object value = params.get(key);
-        return value instanceof Boolean ? (Boolean) value : defaultValue;
+    if (!parameters.containsKey("position")) {
+      throw new IllegalArgumentException("Position is required");
     }
 
-    // Schema helper methods
-    private Map<String, Object> createNumberProperty(String description) {
-        Map<String, Object> prop = new HashMap<>();
-        prop.put("type", "number");
-        prop.put("description", description);
-        return prop;
+    String type = (String) parameters.get("type");
+    Set<String> validTypes = Set.of("circle", "rectangle", "line", "text");
+    if (!validTypes.contains(type.toLowerCase(Locale.ROOT))) {
+      throw new IllegalArgumentException(
+          "Invalid shape type: " + type + ". Valid types: " + validTypes);
     }
+  }
 
-    private Map<String, Object> createStringProperty(String description) {
-        Map<String, Object> prop = new HashMap<>();
-        prop.put("type", "string");
-        prop.put("description", description);
-        return prop;
+  // Utility methods for safe parameter extraction
+  private Map<String, Object> getMap(Map<String, Object> params, String key) {
+    return getMap(params, key, null);
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> getMap(Map<String, Object> params, String key,
+      Map<String, Object> defaultValue) {
+    Object value = params.get(key);
+    return value instanceof Map ? (Map<String, Object>) value : defaultValue;
+  }
+
+  private float getFloat(Map<String, Object> params, String key) {
+    Object value = params.get(key);
+    if (value == null) {
+      throw new IllegalArgumentException("Required parameter missing: " + key);
     }
+    return ((Number) value).floatValue();
+  }
 
-    private Map<String, Object> createBooleanProperty(String description) {
-        Map<String, Object> prop = new HashMap<>();
-        prop.put("type", "boolean");
-        prop.put("description", description);
-        return prop;
+  private float getFloat(Map<String, Object> params, String key, float defaultValue) {
+    Object value = params.get(key);
+    return value instanceof Number ? ((Number) value).floatValue() : defaultValue;
+  }
+
+  private int getInt(Map<String, Object> params, String key) {
+    Object value = params.get(key);
+    if (value == null) {
+      throw new IllegalArgumentException("Required parameter missing: " + key);
     }
+    return ((Number) value).intValue();
+  }
 
-    private Map<String, Object> createColorProperty(String description) {
-        Map<String, Object> prop = new HashMap<>();
-        prop.put("type", "object");
-        prop.put("description", description);
+  private int getInt(Map<String, Object> params, String key, int defaultValue) {
+    Object value = params.get(key);
+    return value instanceof Number ? ((Number) value).intValue() : defaultValue;
+  }
 
-        Map<String, Object> props = new HashMap<>();
-        props.put("r", createNumberProperty("Red component (0-255)"));
-        props.put("g", createNumberProperty("Green component (0-255)"));
-        props.put("b", createNumberProperty("Blue component (0-255)"));
-        props.put("a", createNumberProperty("Alpha component (0-255, optional)"));
-        props.put("hex", createStringProperty("Hex color string (alternative to RGB)"));
+  private boolean getBoolean(Map<String, Object> params, String key, boolean defaultValue) {
+    Object value = params.get(key);
+    return value instanceof Boolean ? (Boolean) value : defaultValue;
+  }
 
-        prop.put("properties", props);
-        return prop;
-    }
+  // Schema helper methods
+  private Map<String, Object> createNumberProperty(String description) {
+    Map<String, Object> prop = new HashMap<>();
+    prop.put("type", "number");
+    prop.put("description", description);
+    return prop;
+  }
+
+  private Map<String, Object> createStringProperty(String description) {
+    Map<String, Object> prop = new HashMap<>();
+    prop.put("type", "string");
+    prop.put("description", description);
+    return prop;
+  }
+
+  private Map<String, Object> createBooleanProperty(String description) {
+    Map<String, Object> prop = new HashMap<>();
+    prop.put("type", "boolean");
+    prop.put("description", description);
+    return prop;
+  }
+
+  private Map<String, Object> createColorProperty(String description) {
+    Map<String, Object> prop = new HashMap<>();
+    prop.put("type", "object");
+    prop.put("description", description);
+
+    Map<String, Object> props = new HashMap<>();
+    props.put("r", createNumberProperty("Red component (0-255)"));
+    props.put("g", createNumberProperty("Green component (0-255)"));
+    props.put("b", createNumberProperty("Blue component (0-255)"));
+    props.put("a", createNumberProperty("Alpha component (0-255, optional)"));
+    props.put("hex", createStringProperty("Hex color string (alternative to RGB)"));
+
+    prop.put("properties", props);
+    return prop;
+  }
 }

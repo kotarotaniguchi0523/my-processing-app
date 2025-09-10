@@ -2,7 +2,7 @@ package com.example.infrastructure.adapters;
 
 import com.example.application.agent.AgentService;
 import com.example.application.agent.ServiceResponse;
-import com.example.application.agent.ToolExecutionResult;
+import com.example.domain.values.ToolExecutionResult;
 import com.example.domain.models.DrawingState;
 import com.example.domain.services.IAIService;
 import com.example.infrastructure.ai.AIClient;
@@ -51,7 +51,7 @@ public class AIServiceAdapter implements IAIService {
     @Override
     public CompletableFuture<IAIService.AIServiceResponse> processInstruction(String instruction) {
         return agentService.processInstruction(instruction)
-            .thenApply(this::convertResponse)
+            .thenApply(obj -> convertResponse(obj))
             .exceptionally(throwable -> {
                 logger.warning("AI processing failed: " + throwable.getMessage());
                 return IAIService.AIServiceResponse.error(throwable.getMessage());
@@ -95,10 +95,18 @@ public class AIServiceAdapter implements IAIService {
     /**
      * Convert agent service response to domain response
      */
-    private IAIService.AIServiceResponse convertResponse(ServiceResponse response) {
-        if (response == null) {
+    private IAIService.AIServiceResponse convertResponse(Object obj) {
+        if (obj == null) {
             return IAIService.AIServiceResponse.error("Empty response from AI");
         }
+        
+        // Cast the Object to ServiceResponse
+        if (!(obj instanceof ServiceResponse)) {
+            logger.warning("Unexpected response type: " + obj.getClass().getName());
+            return IAIService.AIServiceResponse.error("Invalid response type from AI service");
+        }
+        
+        ServiceResponse response = (ServiceResponse) obj;
         
         if (response.hasErrorMessage()) {
             return IAIService.AIServiceResponse.error(response.getErrorMessage());

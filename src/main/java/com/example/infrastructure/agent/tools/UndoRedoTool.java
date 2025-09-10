@@ -1,13 +1,9 @@
 package com.example.infrastructure.agent.tools;
 
-import com.example.domain.agent.AgentContext;
-import com.example.domain.agent.tools.Tool;
-import com.example.domain.agent.tools.ToolExecutionException;
-import com.example.domain.agent.tools.ToolResult;
-import com.example.domain.agent.tools.ToolValidationResult;
 import com.example.domain.models.DrawingState;
-import com.example.domain.models.StateHistory;
+import com.example.domain.tools.IAgentTool;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,62 +12,38 @@ import java.util.Map;
  * name: "undo_redo"
  * params: { operation: "undo" | "redo" }
  */
-public class UndoRedoTool implements Tool {
+public class UndoRedoTool implements IAgentTool {
 
     @Override
-    public String getName() {
+    public String name() {
         return "undo_redo";
     }
 
     @Override
-    public String getDescription() {
-        return "Perform undo or redo and return the new drawing state";
+    public Map<String, Object> schema() {
+        Map<String, Object> schema = new HashMap<>();
+        schema.put("type", "object");
+        schema.put("description", "Perform undo or redo and return the new drawing state");
+
+        Map<String, Object> properties = new HashMap<>();
+        
+        Map<String, Object> operation = new HashMap<>();
+        operation.put("type", "string");
+        operation.put("description", "'undo' or 'redo'");
+        operation.put("enum", Arrays.asList("undo", "redo"));
+        properties.put("operation", operation);
+
+        schema.put("properties", properties);
+        schema.put("required", Arrays.asList("operation"));
+        return schema;
     }
 
     @Override
-    public Map<String, String> getParameters() {
-        Map<String, String> params = new HashMap<>();
-        params.put("operation", "string: 'undo' or 'redo'");
-        return params;
+    public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
+        // このツールは履歴管理に依存するため、
+        // 実際の undo/redo 処理は、呼び出し側で履歴管理と連携して処理されることを想定
+        // ここでは元の状態をそのまま返す
+        return state;
     }
 
-    @Override
-    public ToolResult execute(Map<String, Object> parameters, AgentContext context)
-            throws ToolExecutionException {
-        if (context == null || !context.hasStateHistory()) {
-            throw ToolExecutionException.stateError(getName(), "No state history available");
-        }
-
-        String op = getString(parameters, "operation");
-        if (!"undo".equalsIgnoreCase(op) && !"redo".equalsIgnoreCase(op)) {
-            throw ToolExecutionException.invalidParameters(getName(),
-                    "operation must be 'undo' or 'redo'");
-        }
-
-        StateHistory history = context.getStateHistory().get();
-        StateHistory nextHistory = "undo".equalsIgnoreCase(op) ? history.undo() : history.redo();
-        DrawingState newState = nextHistory.getCurrentState();
-
-        if (newState == null) {
-            return ToolResult.error("No state available after " + op);
-        }
-
-        return ToolResult
-                .success("Performed " + op, newState)
-                .withData("operation", op)
-                .withData("canUndo", nextHistory.canUndo())
-                .withData("canRedo", nextHistory.canRedo())
-                .withData("index", nextHistory.getCurrentIndex());
-    }
-
-    @Override
-    public ToolValidationResult validate(Map<String, Object> parameters) {
-        return ToolValidationResult.valid();
-    }
-
-    private String getString(Map<String, Object> params, String key) {
-        if (params == null) return null;
-        Object v = params.get(key);
-        return v instanceof String ? (String) v : null;
-    }
 }

@@ -2,6 +2,7 @@ package com.example.domain.models;
 
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
+import com.example.domain.serialization.YamlUtils;
 
 import java.util.Map;
 import java.util.Objects;
@@ -272,8 +273,7 @@ public final class Line extends Shape {
     // YAML Serialization
     @Override
     public Map<String, Object> toYamlMap() {
-        Map<String, Object> map =
-                com.example.infrastructure.serialization.YamlUtils.createYamlMap(getYamlType());
+        Map<String, Object> map = YamlUtils.createYamlMap(getYamlType());
         map.put("id", id);
         map.put("startPosition", position.toYamlMap());
         map.put("endPosition", endPosition.toYamlMap());
@@ -289,29 +289,17 @@ public final class Line extends Shape {
     }
 
     public static Line fromYamlMap(Map<String, Object> yamlMap) {
-        com.example.infrastructure.serialization.YamlUtils.validateYamlType(yamlMap, "line");
-        com.example.infrastructure.serialization.YamlUtils.validateRequiredFields(
-                yamlMap, "id", "startPosition", "endPosition");
+        YamlUtils.validateYamlType(yamlMap, "line");
+        YamlUtils.validateRequiredFields(yamlMap, "id", "startPosition", "endPosition");
 
-        String id = com.example.infrastructure.serialization.YamlUtils.getRequiredString(yamlMap, "id");
-        Position startPosition =
-                Position.fromYamlMap(
-                        com.example.infrastructure.serialization.YamlUtils.getRequiredMap(
-                                yamlMap, "startPosition"));
-        Position endPosition =
-                Position.fromYamlMap(
-                        com.example.infrastructure.serialization.YamlUtils.getRequiredMap(
-                                yamlMap, "endPosition"));
-        Style style =
-                com.example.infrastructure.serialization.YamlUtils.getMap(yamlMap, "style", null) != null
-                        ? Style.fromYamlMap(
-                                com.example.infrastructure.serialization.YamlUtils.getRequiredMap(
-                                        yamlMap, "style"))
+        String id = YamlUtils.getRequiredString(yamlMap, "id");
+        Position startPosition = Position.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "startPosition"));
+        Position endPosition = Position.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "endPosition"));
+        Style style = YamlUtils.getMap(yamlMap, "style", null) != null
+                        ? Style.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "style"))
                         : Style.NO_FILL;
-        boolean visible =
-                com.example.infrastructure.serialization.YamlUtils.getBoolean(yamlMap, "visible", true);
-        int layerOrder =
-                com.example.infrastructure.serialization.YamlUtils.getInt(yamlMap, "layerOrder", 0);
+        boolean visible = YamlUtils.getBoolean(yamlMap, "visible", true);
+        int layerOrder = YamlUtils.getInt(yamlMap, "layerOrder", 0);
 
         return new Line(id, startPosition, endPosition, style, visible, layerOrder);
     }

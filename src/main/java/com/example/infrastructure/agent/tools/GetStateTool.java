@@ -1,12 +1,7 @@
 package com.example.infrastructure.agent.tools;
 
-import com.example.domain.agent.AgentContext;
-import com.example.domain.agent.tools.Tool;
-import com.example.domain.agent.tools.ToolExecutionException;
-import com.example.domain.agent.tools.ToolResult;
-import com.example.domain.agent.tools.ToolValidationResult;
 import com.example.domain.models.DrawingState;
-import com.example.infrastructure.serialization.YamlParser;
+import com.example.domain.tools.IAgentTool;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,79 +10,56 @@ import java.util.Map;
  * Bridge tool: returns current state summary (optionally YAML) without modifying state.
  * name: "get_state"
  */
-public class GetStateTool implements Tool {
+public class GetStateTool implements IAgentTool {
 
     @Override
-    public String getName() {
+    public String name() {
         return "get_state";
     }
 
     @Override
-    public String getDescription() {
-        return "Return current drawing state summary and optional YAML";
+    public Map<String, Object> schema() {
+        Map<String, Object> schema = new HashMap<>();
+        schema.put("type", "object");
+        schema.put("description", "Return current drawing state summary and optional YAML");
+
+        Map<String, Object> properties = new HashMap<>();
+        
+        Map<String, Object> includeShapes = new HashMap<>();
+        includeShapes.put("type", "boolean");
+        includeShapes.put("description", "include shape count (default true)");
+        includeShapes.put("default", true);
+        properties.put("includeShapes", includeShapes);
+
+        Map<String, Object> includeSettings = new HashMap<>();
+        includeSettings.put("type", "boolean");
+        includeSettings.put("description", "include width/height (default true)");
+        includeSettings.put("default", true);
+        properties.put("includeSettings", includeSettings);
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("type", "boolean");
+        summary.put("description", "summary only (default true)");
+        summary.put("default", true);
+        properties.put("summary", summary);
+
+        Map<String, Object> includeYaml = new HashMap<>();
+        includeYaml.put("type", "boolean");
+        includeYaml.put("description", "include full YAML (default false)");
+        includeYaml.put("default", false);
+        properties.put("includeYaml", includeYaml);
+
+        schema.put("properties", properties);
+        return schema;
     }
 
     @Override
-    public Map<String, String> getParameters() {
-        Map<String, String> params = new HashMap<>();
-        params.put("includeShapes", "boolean: include shape count (default true)");
-        params.put("includeSettings", "boolean: include width/height (default true)");
-        params.put("summary", "boolean: summary only (default true)");
-        params.put("includeYaml", "boolean: include full YAML (default false)");
-        return params;
+    public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
+        // このツールは状態を変更せず、情報のみを返すため、
+        // 元の状態をそのまま返します。
+        // 実際の状態情報の取得は、呼び出し側で処理されることを想定
+        return state;
     }
 
-    @Override
-    public ToolResult execute(Map<String, Object> parameters, AgentContext context)
-            throws ToolExecutionException {
-        if (context == null || !context.hasCurrentState()) {
-            throw ToolExecutionException.stateError(getName(), "No current state available");
-        }
-
-        boolean includeShapes = getBoolean(parameters, "includeShapes", true);
-        boolean includeSettings = getBoolean(parameters, "includeSettings", true);
-        boolean summaryOnly = getBoolean(parameters, "summary", true);
-        boolean includeYaml = getBoolean(parameters, "includeYaml", false);
-
-        DrawingState state = context.getCurrentState().get();
-        Map<String, Object> data = new HashMap<>();
-
-        if (includeShapes) {
-            data.put("shapeCount", state.getShapes().size());
-        }
-        if (includeSettings) {
-            data.put("width", state.getIntSetting("width", 800));
-            data.put("height", state.getIntSetting("height", 600));
-        }
-
-        if (includeYaml && !summaryOnly) {
-            try {
-                String yaml = new YamlParser().toYaml(state);
-                data.put("stateYaml", yaml);
-            } catch (YamlParser.YamlParseException ignored) {
-                // YAML生成に失敗してもサマリーは返せる
-            }
-        }
-
-        String msg = String.format(
-                "State: shapes=%d, size=%dx%d",
-                state.getShapes().size(),
-                state.getIntSetting("width", 800),
-                state.getIntSetting("height", 600));
-
-        return ToolResult.success(msg, data).withData("tool", getName());
-    }
-
-    @Override
-    public ToolValidationResult validate(Map<String, Object> parameters) {
-        // 寛容に受け入れる（型/値は execute 内で既定値フォールバック）
-        return ToolValidationResult.valid();
-    }
-
-    private boolean getBoolean(Map<String, Object> params, String key, boolean def) {
-        if (params == null) return def;
-        Object v = params.get(key);
-        return v instanceof Boolean ? (Boolean) v : def;
-    }
 }
 

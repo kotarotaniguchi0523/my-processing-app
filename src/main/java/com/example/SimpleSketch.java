@@ -4,8 +4,7 @@ import com.example.usecase.UseCaseFacade;
 import com.example.domain.models.DrawingState;
 import com.example.domain.models.Shape;
 import com.example.infrastructure.rendering.DrawingEngine;
-import com.example.domain.events.EventType;
-import com.example.domain.events.UIEvent;
+
 
 import processing.core.PApplet;
 import processing.core.PFont;
@@ -20,8 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
+
 
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
@@ -34,9 +32,9 @@ public class SimpleSketch extends PApplet {
   private static final int CHAT_HEIGHT_RATIO = 40; // 40% for chat (PRD)
   private static final int MARGIN = 10;
   private static final int INPUT_HEIGHT = 30;
-  private static final int MAX_CHAT_MESSAGES = 100;
+
   private static final int MAX_MESSAGE_LENGTH = 500;
-  private static final int MIN_POINTS_IN_STROKE = 2;
+
   private static final String ELLIPSIS = "...";
   private static final int CTRL_Z = 26;
   private static final int CTRL_Y = 25;
@@ -76,7 +74,6 @@ public class SimpleSketch extends PApplet {
   private int chatScrollOffset;
   private String agentStatus = "Ready";
   private boolean inputFocused;
-  private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
   // M3: Approval overlay state
   private boolean approvalPending;
   private String approvalSummary = "";
@@ -700,12 +697,9 @@ public class SimpleSketch extends PApplet {
   }
 
   private void handleUndoRedoShortcuts() {
-    if (key == CODED) {
-      // For special key combinations, we'll use a simpler approach
-      // Users can use keyboard shortcuts through the chat interface
-      // TODO: Implement special key handling if needed
-      return; // avoid EmptyBlock rule violation (no-op intended)
-    } else if (key == CTRL_Z) { // Ctrl+Z (ASCII 26)
+    // Handle undo/redo shortcuts using ASCII control codes
+    // Note: Processing CODED keys (arrows, function keys) are not needed currently
+    if (key == CTRL_Z) { // Ctrl+Z (ASCII 26)
       handleUndo();
     } else if (key == CTRL_Y) { // Ctrl+Y (ASCII 25)
       handleRedo();
@@ -730,16 +724,6 @@ public class SimpleSketch extends PApplet {
     }
   }
 
-  // Trigger a refresh after undo/redo. The draw loop already renders from current state,
-  // so this method can remain lightweight.
-  private void updateCanvasFromState() {
-    // Force a redraw; rendering pulls shapes from current session each frame
-    try {
-      redraw();
-    } catch (Exception ignored) {
-      // safe no-op for environments where redraw isn't available
-    }
-  }
 
   // Handle mouse wheel scrolling for chat area
   @Override
@@ -778,11 +762,6 @@ public class SimpleSketch extends PApplet {
     }
   }
 
-  // Helper methods for click detection
-  private boolean isInCanvasArea(int x, int y) {
-    return x >= MARGIN && x <= width - MARGIN && y >= canvasAreaY
-        && y <= canvasAreaY + canvasAreaHeight;
-  }
 
   private boolean isInChatInputArea(int x, int y) {
     return x >= MARGIN + INNER_GAP_SMALL && x <= width - MARGIN - CHAT_INPUT_RIGHT_GAP
@@ -879,49 +858,7 @@ public class SimpleSketch extends PApplet {
     text("拒否 (N)", rejectBtnX + rejectBtnW / 2, rejectBtnY + rejectBtnH / 2);
   }
 
-  // UI Callback implementation for UseCase integration
-  private class UseCaseCallbackImpl implements UseCaseFacade.Callback {
-    @Override
-    public void onStatusUpdate(String status) {
-      agentStatus = status;
-    }
 
-    @Override
-    public void onChatMessage(String message) {
-      // Append timestamp per PRD requirement
-      String ts = LocalTime.now().format(TIME_FMT);
-      chatMessages.add("[" + ts + "] " + message);
-      // Maintain message limit
-      while (chatMessages.size() > MAX_CHAT_MESSAGES) {
-        chatMessages.remove(0);
-      }
-    }
-
-    @Override
-    public void onMessage(String message) {
-      onChatMessage("System: " + message);
-    }
-
-    @Override
-    public void onError(String error) {
-      onChatMessage("ERROR: " + error);
-    }
-
-    @Override
-    public void onStateChanged(DrawingState newState) {
-      // State changed, will be rendered in next draw loop
-      // No manual action required here.
-    }
-
-    @Override
-    public void onApprovalRequired(String summary, String diffText) {
-      approvalPending = true;
-      approvalSummary = summary != null ? summary : "";
-      approvalDiff = diffText != null ? diffText : "";
-      approvalScrollOffset = 0;
-    }
-
-  }
 
   // Update canvas to reflect current domain state
   private void renderDomainShapesInCanvasArea() {

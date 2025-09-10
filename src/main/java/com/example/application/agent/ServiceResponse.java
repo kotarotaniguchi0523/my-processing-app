@@ -1,5 +1,6 @@
 package com.example.application.agent;
 
+import com.example.domain.values.ToolExecutionResult;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -93,6 +94,22 @@ public class ServiceResponse {
      */
     public boolean hasErrorMessage() {
         return errorMessage != null && !errorMessage.trim().isEmpty();
+    }
+    
+    /**
+     * Checks if there is a result state (state diff)
+     * @return true if there is a result state
+     */
+    public boolean hasResultState() {
+        return stateDiff != null;
+    }
+    
+    /**
+     * Gets the error message (alias for getErrorMessage for compatibility)
+     * @return the error message
+     */
+    public String getError() {
+        return errorMessage;
     }
     
     /**

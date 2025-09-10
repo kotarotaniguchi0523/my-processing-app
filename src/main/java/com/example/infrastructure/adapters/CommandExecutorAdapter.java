@@ -1,13 +1,6 @@
 package com.example.infrastructure.adapters;
 
-import com.example.domain.commands.DrawCommand;
-import com.example.domain.commands.ParsedCommand;
 import com.example.domain.services.ICommandExecutor;
-import com.example.application.services.CommandExecutor;
-import com.example.application.services.StateService;
-import com.example.application.CommandFactory;
-
-import java.util.logging.Logger;
 
 /**
  * CommandExecutorのアダプター
@@ -15,7 +8,7 @@ import java.util.logging.Logger;
  */
 public class CommandExecutorAdapter implements ICommandExecutor {
     
-    private final CommandExecutor commandExecutor;
+    private final com.example.application.services.CommandExecutor commandExecutor;
     private final com.example.application.CommandFactory commandFactory;
     
     /**
@@ -23,7 +16,7 @@ public class CommandExecutorAdapter implements ICommandExecutor {
      * 標準のCommandExecutorインスタンスを作成
      */
     public CommandExecutorAdapter() {
-        this.commandExecutor = CommandExecutor.getInstance();
+        this.commandExecutor = com.example.application.services.CommandExecutor.getInstance();
         this.commandFactory = new com.example.application.CommandFactory();
     }
     
@@ -31,7 +24,7 @@ public class CommandExecutorAdapter implements ICommandExecutor {
      * 依存性注入用コンストラクタ
      * @param commandExecutor CommandExecutorインスタンス
      */
-    public CommandExecutorAdapter(CommandExecutor commandExecutor) {
+    public CommandExecutorAdapter(com.example.application.services.CommandExecutor commandExecutor) {
         this.commandExecutor = commandExecutor;
         this.commandFactory = new com.example.application.CommandFactory();
     }

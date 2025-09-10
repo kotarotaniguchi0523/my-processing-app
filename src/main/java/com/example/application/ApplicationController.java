@@ -23,7 +23,6 @@ import com.example.infrastructure.services.SessionManager;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -76,15 +75,16 @@ public class ApplicationController {
 
     // Initialize domain services
     // Initialize infrastructure
-    com.example.infrastructure.services.StateManager stateManager = new com.example.infrastructure.services.StateManager();
-    com.example.infrastructure.services.HistoryService historyService = new com.example.infrastructure.services.HistoryService(stateManager);
-    
+    com.example.infrastructure.services.StateManager stateManager =
+        new com.example.infrastructure.services.StateManager();
+    com.example.infrastructure.services.HistoryService historyService =
+        new com.example.infrastructure.services.HistoryService(stateManager);
+
     // Initialize domain services with infrastructure implementations
     StateService.initialize(
         new com.example.infrastructure.adapters.StateManagerAdapter(stateManager),
-        new com.example.infrastructure.adapters.HistoryServiceAdapter(historyService)
-    );
-    
+        new com.example.infrastructure.adapters.HistoryServiceAdapter(historyService));
+
     this.stateService = StateService.getInstance();
     this.commandExecutor = new CommandExecutor(stateService);
 
@@ -129,10 +129,11 @@ public class ApplicationController {
       // AI unavailable is OK for offline use; fall back to parser/commands only
       this.aiService = null;
       if (LOGGER.isLoggable(Level.WARNING)) {
-        LOGGER.log(Level.WARNING, "AI Service initialization failed (AI disabled): " + e.getMessage());
+        LOGGER.log(Level.WARNING,
+            "AI Service initialization failed (AI disabled): " + e.getMessage());
       }
     }
-    
+
     // Initialize Diff Service
     this.diffService = new DiffServiceAdapter();
 
@@ -383,17 +384,13 @@ public class ApplicationController {
       // Keep agent's working state in sync with domain
       aiService.setCurrentState(stateService.getCurrentState());
 
-      aiService
-          .processInstruction(input)
-          .thenAccept(this::handleAgentResponse)
-          .exceptionally(
-              e -> {
-                if (LOGGER.isLoggable(Level.WARNING)) {
-                  LOGGER.log(Level.WARNING, "Error processing with agent", e);
-                }
-                handleError("AI processing error: " + e.getMessage());
-                return null;
-              });
+      aiService.processInstruction(input).thenAccept(this::handleAgentResponse).exceptionally(e -> {
+        if (LOGGER.isLoggable(Level.WARNING)) {
+          LOGGER.log(Level.WARNING, "Error processing with agent", e);
+        }
+        handleError("AI processing error: " + e.getMessage());
+        return null;
+      });
 
     } catch (Exception e) {
       if (LOGGER.isLoggable(Level.WARNING)) {
@@ -461,26 +458,25 @@ public class ApplicationController {
 
       // Await user approval asynchronously (M3)
       if (aiService != null) {
-        aiService
-            .awaitApproval()
-            .orTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        aiService.awaitApproval().orTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .thenAccept(approved -> {
               if (approved) {
                 try {
                   stateService.updateState(pendingApprovalState);
                   aiService.setCurrentState(pendingApprovalState);
-                  
+
                   // Log the state after approval for debugging
                   DrawingState updatedState = stateService.getCurrentState();
                   int shapeCount = updatedState.getShapes().size();
                   LOGGER.info("After approval - Shape count: " + shapeCount);
                   for (var shape : updatedState.getShapes()) {
-                    LOGGER.info("  Shape: " + shape.getId() + " type=" + shape.getType() + 
-                               " pos=" + shape.getPosition());
+                    LOGGER.info("  Shape: " + shape.getId() + " type=" + shape.getType() + " pos="
+                        + shape.getPosition());
                   }
-                  
+
                   refreshUI();
-                  addChatMessage("System: Changes approved and applied (" + shapeCount + " shapes)");
+                  addChatMessage(
+                      "System: Changes approved and applied (" + shapeCount + " shapes)");
                 } catch (Exception e) {
                   handleError("Failed to apply approved changes: " + e.getMessage());
                 }
@@ -488,8 +484,7 @@ public class ApplicationController {
                 addChatMessage("System: Changes rejected");
               }
               clearApprovalState();
-            })
-            .exceptionally(e -> {
+            }).exceptionally(e -> {
               addChatMessage("System: Approval timed out - changes discarded");
               clearApprovalState();
               return null;
@@ -524,15 +519,7 @@ public class ApplicationController {
     }
   }
 
-  
 
-  
-
-  
-
-  
-
-  
 
   /** Update UI status through callback. */
   private void updateUIStatus(String status) {
@@ -578,7 +565,7 @@ public class ApplicationController {
     return stateService;
   }
 
-  
+
 
   /** Execute save command. */
   private void executeSaveCommand(ParsedCommand parsedCommand) {
@@ -627,8 +614,7 @@ public class ApplicationController {
       refreshUI();
 
       int shapeCount = stateService.getCurrentState().getShapes().size();
-      addChatMessage(
-          "System: Session loaded: '" + filename + "' (" + shapeCount + " shapes)");
+      addChatMessage("System: Session loaded: '" + filename + "' (" + shapeCount + " shapes)");
       updateUIStatus(READY);
 
       if (LOGGER.isLoggable(Level.INFO)) {

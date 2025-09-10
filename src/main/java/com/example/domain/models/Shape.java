@@ -1,6 +1,6 @@
 package com.example.domain.models;
 
-import com.example.infrastructure.serialization.YamlSerializable;
+import com.example.domain.serialization.YamlSerializable;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
 

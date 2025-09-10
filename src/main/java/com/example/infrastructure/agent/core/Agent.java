@@ -1,6 +1,7 @@
-package com.example.domain.agent;
+package com.example.infrastructure.agent.core;
 
 import com.example.application.agent.ToolManager;
+import com.example.domain.agent.AgentContext;
 import com.example.domain.agent.tools.ToolExecutionException;
 import com.example.domain.agent.tools.ToolResult;
 import com.example.domain.models.DrawingState;
@@ -77,7 +78,7 @@ public abstract class Agent {
 
                 // Update context with new state if the tool modified it
                 if (result.hasNewState()) {
-                    context = context.withCurrentState(result.getNewState());
+                    context = AgentContext.withCurrentState(result.getNewState());
                 }
 
                 // Stop execution if a tool failed and is marked as critical

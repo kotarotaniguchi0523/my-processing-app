@@ -35,5 +35,5 @@ public interface ISessionManager {
     /**
      * セッションを削除
      */
-    void deleteSession(String filename) throws Exception;
+    boolean deleteSession(String filename) throws Exception;
 }

@@ -1,6 +1,7 @@
 package com.example.infrastructure.events;
 
 import com.example.domain.events.Event;
+import com.example.domain.events.EventType;
 
 import java.util.HashSet;
 import java.util.List;

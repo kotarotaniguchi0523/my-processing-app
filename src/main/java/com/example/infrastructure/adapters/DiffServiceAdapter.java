@@ -26,48 +26,8 @@ public class DiffServiceAdapter implements IDiffService {
     @Override
     public DiffResult generateDiff(DrawingState oldState, DrawingState newState) {
         try {
-            // Use the existing ProcessingCodeDiffService
-            var diff = codeDiffService.generateCodeDiff(oldState, newState);
-            
-            // Count changes
-            int addedCount = 0;
-            int removedCount = 0;
-            int modifiedCount = 0;
-            
-            // Parse the unified diff to count changes
-            if (diff.unifiedDiff != null) {
-                String[] lines = diff.unifiedDiff.split("\n");
-                for (String line : lines) {
-                    if (line.startsWith("+") && !line.startsWith("+++")) {
-                        addedCount++;
-                    } else if (line.startsWith("-") && !line.startsWith("---")) {
-                        removedCount++;
-                    }
-                }
-            }
-            
-            // Check for modified shapes
-            if (oldState != null && newState != null) {
-                var oldShapes = oldState.getShapes();
-                var newShapes = newState.getShapes();
-                
-                for (var oldShape : oldShapes) {
-                    for (var newShape : newShapes) {
-                        if (oldShape.getId().equals(newShape.getId()) && 
-                            !oldShape.equals(newShape)) {
-                            modifiedCount++;
-                        }
-                    }
-                }
-            }
-            
-            return new DiffResult(
-                diff.summary,
-                diff.unifiedDiff,
-                addedCount,
-                removedCount,
-                modifiedCount
-            );
+            // Use the existing ProcessingCodeDiffService which already provides complete DiffResult
+            return codeDiffService.generateDiff(oldState, newState);
             
         } catch (Exception e) {
             logger.warning("Failed to generate diff: " + e.getMessage());

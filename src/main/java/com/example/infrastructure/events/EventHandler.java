@@ -1,6 +1,7 @@
 package com.example.infrastructure.events;
 
 import com.example.domain.events.Event;
+import com.example.domain.events.EventType;
 
 /**
  * Interface for handling events in the system. Implementations should process specific event types

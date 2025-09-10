@@ -35,6 +35,7 @@ public class DefaultParameterValidator implements ParameterValidator {
                     (value != null ? value.getClass().getSimpleName() : "null"));
         }
 
+        @SuppressWarnings("unchecked")
         Map<String, Object> objectValue = (Map<String, Object>) value;
 
         // required fields
@@ -47,6 +48,7 @@ public class DefaultParameterValidator implements ParameterValidator {
         if (!(propertiesObj instanceof Map)) {
             return ValidationResult.valid();
         }
+        @SuppressWarnings("unchecked")
         Map<String, Object> properties = (Map<String, Object>) propertiesObj;
 
         for (Map.Entry<String, Object> entry : objectValue.entrySet()) {
@@ -55,10 +57,17 @@ public class DefaultParameterValidator implements ParameterValidator {
             String propertyPath = buildPath(path, propertyName);
 
             if (properties.containsKey(propertyName)) {
-                Map<String, Object> propertySchema = (Map<String, Object>) properties.get(propertyName);
-                ValidationResult propertyValidation = validateValue(propertyValue, propertySchema, propertyPath);
-                if (!propertyValidation.isValid()) {
-                    return propertyValidation;
+                Object propertySchemaObj = properties.get(propertyName);
+                if (propertySchemaObj instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> propertySchema = (Map<String, Object>) propertySchemaObj;
+                    ValidationResult propertyValidation = validateValue(propertyValue, propertySchema, propertyPath);
+                    if (!propertyValidation.isValid()) {
+                        return propertyValidation;
+                    }
+                } else {
+                    // If property schema is not a Map, skip validation for this property
+                    continue;
                 }
             } else {
                 Object additionalProperties = schema.get("additionalProperties");
@@ -76,6 +85,7 @@ public class DefaultParameterValidator implements ParameterValidator {
                                                     Map<String, Object> schema, String path) {
         Object requiredObj = schema.get("required");
         if (requiredObj instanceof List) {
+            @SuppressWarnings("unchecked")
             List<String> required = (List<String>) requiredObj;
             for (String field : required) {
                 if (!objectValue.containsKey(field)) {
@@ -121,6 +131,7 @@ public class DefaultParameterValidator implements ParameterValidator {
         String stringValue = (String) value;
         Object enumObj = schema.get("enum");
         if (enumObj instanceof List) {
+            @SuppressWarnings("unchecked")
             List<String> enumValues = (List<String>) enumObj;
             if (!enumValues.contains(stringValue)) {
                 return ValidationResult.invalid(buildPath(path) + "Value '" + stringValue +
@@ -221,6 +232,7 @@ public class DefaultParameterValidator implements ParameterValidator {
 
         Object itemsObj = schema.get("items");
         if (itemsObj instanceof Map) {
+            @SuppressWarnings("unchecked")
             Map<String, Object> itemSchema = (Map<String, Object>) itemsObj;
             for (int i = 0; i < arrayValue.size(); i++) {
                 Object item = arrayValue.get(i);

@@ -1,7 +1,7 @@
 package com.example.domain.models;
 
-import com.example.infrastructure.serialization.YamlSerializable;
-import com.example.infrastructure.serialization.YamlUtils;
+import com.example.domain.serialization.YamlSerializable;
+import com.example.domain.serialization.YamlUtils;
 import com.example.domain.values.Color;
 
 import java.util.ArrayList;

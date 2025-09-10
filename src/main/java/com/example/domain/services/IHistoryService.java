@@ -1,58 +1,73 @@
 package com.example.domain.services;
 
 import com.example.domain.models.DrawingState;
-import java.util.List;
 
 /**
- * Interface for history management service.
- * Provides undo/redo functionality for drawing states.
+ * Interface for managing drawing state history
  */
 public interface IHistoryService {
     
     /**
-     * Add a new state to the history.
-     * @param state The drawing state to add
+     * Save the current state to history
+     * @param state The state to save
+     */
+    void saveState(DrawingState state);
+    
+    /**
+     * Add a state to history (used by adapters and session managers)
+     * @param state The state to add
      */
     void addState(DrawingState state);
     
     /**
-     * Undo to the previous state.
-     * @return true if undo was successful, false otherwise
-     */
-    boolean undo();
-    
-    /**
-     * Redo to the next state.
-     * @return true if redo was successful, false otherwise
-     */
-    boolean redo();
-    
-    /**
-     * Check if undo is possible.
-     * @return true if can undo, false otherwise
+     * Check if undo is available
+     * @return true if undo is available
      */
     boolean canUndo();
     
     /**
-     * Check if redo is possible.
-     * @return true if can redo, false otherwise
+     * Check if redo is available
+     * @return true if redo is available
      */
     boolean canRedo();
     
     /**
-     * Clear all history.
+     * Undo to the previous state
+     * @return true if undo was performed, false if not available
+     */
+    boolean undo();
+    
+    /**
+     * Redo to the next state
+     * @return true if redo was performed, false if not available
+     */
+    boolean redo();
+    
+    /**
+     * Clear all history
+     */
+    void clear();
+    
+    /**
+     * Clear all history (alias for clear, used by adapters)
      */
     void clearHistory();
     
     /**
-     * Get the current index in history.
-     * @return The current index
+     * Get the current history size
+     * @return The number of states in history
+     */
+    int getHistorySize();
+    
+    /**
+     * Get the current index in history
+     * @return The current history index
      */
     int getCurrentIndex();
     
     /**
-     * Get a copy of the history.
-     * @return List of drawing states in history
+     * Get a copy of the history list
+     * @return A copy of the history states
      */
-    List<DrawingState> getHistoryCopy();
+    java.util.List<DrawingState> getHistoryCopy();
 }

@@ -254,7 +254,7 @@ public class ToolFunctionAdapter {
             params.put("shapeId", shapeId);
             
             try {
-                DrawingState newState = tool.execute(params, state);
+                tool.execute(params, state);
                 return gson.toJson(Map.of(
                     "success", true,
                     "deleted", shapeId

@@ -3,7 +3,7 @@ package com.example.infrastructure.agent.adapter;
 import com.example.domain.agent.AgentContext;
 import com.example.application.agent.DefaultParameterValidator;
 import com.example.application.agent.ParameterValidator;
-import com.example.domain.agent.ValidationResult;
+import com.example.application.agent.ValidationResult;
 import com.example.domain.agent.tools.Tool;
 import com.example.domain.agent.tools.ToolExecutionException;
 import com.example.domain.agent.tools.ToolResult;
@@ -56,6 +56,7 @@ public class IAgentToolAdapter implements Tool {
         if (!(propsObj instanceof Map)) {
             return Collections.emptyMap();
         }
+        @SuppressWarnings("unchecked")
         Map<String, Object> props = (Map<String, Object>) propsObj;
         Map<String, String> parameters = new HashMap<>();
         for (Map.Entry<String, Object> e : props.entrySet()) {

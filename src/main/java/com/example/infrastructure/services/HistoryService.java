@@ -1,6 +1,8 @@
 package com.example.infrastructure.services;
 
 import com.example.domain.models.DrawingState;
+import com.example.domain.services.IHistoryService;
+import com.example.domain.services.IStateManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,11 +11,11 @@ import java.util.List;
  * Service for managing drawing state history with undo/redo functionality. Maintains a history
  * stack with configurable size limits.
  */
-public class HistoryService {
+public class HistoryService implements IHistoryService {
 
     public static final int DEFAULT_MAX_HISTORY_SIZE = 50;
 
-    private final StateManager stateManager;
+    private final IStateManager stateManager;
     private final List<DrawingState> history;
     private final int maxHistorySize;
     private int currentIndex;
@@ -23,7 +25,7 @@ public class HistoryService {
      *
      * @param stateManager the state manager to work with
      */
-    public HistoryService(StateManager stateManager) {
+    public HistoryService(IStateManager stateManager) {
         this(stateManager, DEFAULT_MAX_HISTORY_SIZE);
     }
 
@@ -33,7 +35,7 @@ public class HistoryService {
      * @param stateManager the state manager to work with
      * @param maxHistorySize the maximum number of states to keep in history
      */
-    public HistoryService(StateManager stateManager, int maxHistorySize) {
+    public HistoryService(IStateManager stateManager, int maxHistorySize) {
         if (stateManager == null) {
             throw new IllegalArgumentException("StateManager cannot be null");
         }
@@ -55,6 +57,7 @@ public class HistoryService {
      *
      * @param state the state to add
      */
+    @Override
     public void addState(DrawingState state) {
         if (state == null) {
             throw new IllegalArgumentException("State cannot be null");
@@ -89,6 +92,7 @@ public class HistoryService {
      *
      * @return true if undo was performed, false if no undo available
      */
+    @Override
     public boolean undo() {
         if (!canUndo()) {
             return false;
@@ -106,6 +110,7 @@ public class HistoryService {
      *
      * @return true if redo was performed, false if no redo available
      */
+    @Override
     public boolean redo() {
         if (!canRedo()) {
             return false;
@@ -123,6 +128,7 @@ public class HistoryService {
      *
      * @return true if undo is possible, false otherwise
      */
+    @Override
     public boolean canUndo() {
         return currentIndex > 0 && !history.isEmpty();
     }
@@ -132,6 +138,7 @@ public class HistoryService {
      *
      * @return true if redo is possible, false otherwise
      */
+    @Override
     public boolean canRedo() {
         return currentIndex >= 0 && currentIndex < history.size() - 1;
     }
@@ -153,6 +160,7 @@ public class HistoryService {
      *
      * @return the history size
      */
+    @Override
     public int getHistorySize() {
         return history.size();
     }
@@ -162,6 +170,7 @@ public class HistoryService {
      *
      * @return the current index in history
      */
+    @Override
     public int getCurrentIndex() {
         return currentIndex;
     }
@@ -176,6 +185,7 @@ public class HistoryService {
     }
 
     /** Clears the entire history and starts fresh with the current state. */
+    @Override
     public void clearHistory() {
         history.clear();
         currentIndex = -1;
@@ -220,6 +230,7 @@ public class HistoryService {
      *
      * @return a copy of the history list
      */
+    @Override
     public List<DrawingState> getHistoryCopy() {
         return new ArrayList<>(history);
     }
@@ -315,5 +326,17 @@ public class HistoryService {
         if (currentState != null) {
             stateManager.notifyHistoryChanged(currentState, canUndo(), canRedo());
         }
+    }
+
+    // IHistoryService interface methods
+
+    @Override
+    public void saveState(DrawingState state) {
+        addState(state);
+    }
+
+    @Override
+    public void clear() {
+        clearHistory();
     }
 }

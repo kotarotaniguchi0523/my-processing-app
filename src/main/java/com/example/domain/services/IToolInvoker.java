@@ -1,7 +1,7 @@
 package com.example.domain.services;
 
-import com.example.application.agent.ToolExecutionResult;
-import com.example.application.agent.ValidationResult;
+import com.example.domain.values.ToolExecutionResult;
+import com.example.domain.values.ValidationResult;
 import com.example.domain.models.DrawingState;
 
 import java.util.Map;

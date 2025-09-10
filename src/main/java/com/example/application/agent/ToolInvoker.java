@@ -4,8 +4,10 @@ import com.example.domain.models.DrawingState;
 import com.example.domain.services.IToolInvoker;
 import com.example.domain.tools.IAgentTool;
 import com.example.domain.tools.IToolRegistry;
+import com.example.domain.values.ToolExecutionResult;
+import com.example.domain.values.ValidationResult;
 import com.example.application.tools.ToolRegistry;
-// ParameterValidator, ValidationResult, and ToolExecutionResult are now in the same package
+// ParameterValidator is in the same package
 import com.google.gson.Gson;
 
 import java.util.HashMap;
@@ -54,7 +56,7 @@ public class ToolInvoker implements IToolInvoker {
             IAgentTool tool = toolRegistry.getTool(toolName);
             
             // Validate parameters against schema
-            ValidationResult validation = validator.validateParameters(tool, parameters);
+            com.example.application.agent.ValidationResult validation = validator.validateParameters(tool, parameters);
             if (!validation.isValid()) {
                 return ToolExecutionResult.error(toolName, 
                     "Parameter validation failed: " + validation.getErrorMessage());
@@ -105,6 +107,7 @@ public class ToolInvoker implements IToolInvoker {
     public ToolExecutionResult invokeToolWithJson(String toolName, String jsonParameters, 
                                                  DrawingState currentState) {
         try {
+            @SuppressWarnings("unchecked")
             Map<String, Object> parameters = gson.fromJson(jsonParameters, Map.class);
             return invokeTool(toolName, parameters, currentState);
         } catch (Exception e) {
@@ -126,7 +129,7 @@ public class ToolInvoker implements IToolInvoker {
         }
         
         IAgentTool tool = toolRegistry.getTool(toolName);
-        ValidationResult validation = validator.validateParameters(tool, parameters);
+        com.example.application.agent.ValidationResult validation = validator.validateParameters(tool, parameters);
         return validation.isValid();
     }
 
@@ -143,7 +146,22 @@ public class ToolInvoker implements IToolInvoker {
         }
 
         IAgentTool tool = toolRegistry.getTool(toolName);
-        return validator.validateParameters(tool, parameters);
+        com.example.application.agent.ValidationResult appValidation = validator.validateParameters(tool, parameters);
+        return convertValidationResult(appValidation);
+    }
+    
+    /**
+     * Converts application ValidationResult to domain ValidationResult
+     * @param appResult The application layer validation result
+     * @return The domain layer validation result
+     */
+    private com.example.domain.values.ValidationResult convertValidationResult(
+            com.example.application.agent.ValidationResult appResult) {
+        if (appResult.isValid()) {
+            return com.example.domain.values.ValidationResult.valid();
+        } else {
+            return com.example.domain.values.ValidationResult.invalid(appResult.getErrorMessage());
+        }
     }
     
     /**

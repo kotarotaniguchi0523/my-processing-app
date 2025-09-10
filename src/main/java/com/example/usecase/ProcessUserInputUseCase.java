@@ -124,9 +124,17 @@ public class ProcessUserInputUseCase {
                 }
                 
                 // 状態変更がある場合
-                if (response.hasResultState()) {
-                    DrawingState newState = response.getResultState();
-                    
+                DrawingState newState = null;
+                if (response.hasToolExecutionResults()) {
+                    // Find the latest successful tool execution with a result state
+                    for (var result : response.getToolExecutionResults()) {
+                        if (result.isSuccess() && result.hasResultState()) {
+                            newState = result.getResultState();
+                        }
+                    }
+                }
+                
+                if (newState != null) {
                     if (response.requiresApproval()) {
                         // 承認が必要な場合
                         prepareApproval(stateService.getCurrentState(), newState);
@@ -139,7 +147,7 @@ public class ProcessUserInputUseCase {
                 }
                 
                 // エラーがある場合
-                if (response.hasError()) {
+                if (response.hasErrorMessage()) {
                     return Result.error(response.getError());
                 }
                 
