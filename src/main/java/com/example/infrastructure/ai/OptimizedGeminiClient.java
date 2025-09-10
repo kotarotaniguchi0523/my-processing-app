@@ -96,8 +96,8 @@ public class OptimizedGeminiClient extends AIClient {
                     }
                 }
                 
-                // Build optimized generation config
-                GenerateContentConfig config = buildOptimizedConfig(request);
+                // Build config with tool support
+                GenerateContentConfig config = buildOptimizedConfigWithTools(request);
                 
                 // Build contents from messages
                 List<Content> contents = buildContents(request);
@@ -353,6 +353,94 @@ public class OptimizedGeminiClient extends AIClient {
         return configBuilder.build();
     }
     
+    private GenerateContentConfig buildOptimizedConfigWithTools(ChatRequest request) {
+        GenerateContentConfig.Builder configBuilder = GenerateContentConfig.builder();
+        
+        // Basic settings
+        configureBasicSettings(configBuilder, request);
+        
+        // Add tool definitions for drawing operations
+        configureToolDefinitions(configBuilder);
+        
+        // Add advanced optimizations
+        configureAdvancedSettings(configBuilder, request);
+        
+        return configBuilder.build();
+    }
+    
+    private void configureToolDefinitions(GenerateContentConfig.Builder configBuilder) {
+        // Define tools for drawing operations
+        List<FunctionDeclaration> functions = new ArrayList<>();
+        
+        // createShape tool - build parameters as a single schema object
+        Map<String, Schema> createShapeProperties = new HashMap<>();
+        createShapeProperties.put("type", Schema.builder()
+            .type("string")
+            .description("Type of shape: circle, rectangle, triangle, or line")
+            .build());
+        createShapeProperties.put("position", Schema.builder()
+            .type("object")
+            .description("Position of the shape with x and y coordinates")
+            .properties(Map.of(
+                "x", Schema.builder().type("number").description("X coordinate").build(),
+                "y", Schema.builder().type("number").description("Y coordinate").build()
+            ))
+            .build());
+        createShapeProperties.put("size", Schema.builder()
+            .type("object")
+            .description("Size of the shape")
+            .properties(Map.of(
+                "width", Schema.builder().type("number").description("Width").build(),
+                "height", Schema.builder().type("number").description("Height").build()
+            ))
+            .build());
+        createShapeProperties.put("color", Schema.builder()
+            .type("string")
+            .description("Color of the shape (e.g., red, blue, #FF0000)")
+            .build());
+        
+        Schema createShapeParameters = Schema.builder()
+            .type("object")
+            .properties(createShapeProperties)
+            .build();
+        
+        functions.add(FunctionDeclaration.builder()
+            .name("createShape")
+            .description("Create a new shape on the canvas")
+            .parameters(createShapeParameters)
+            .build());
+        
+        // clearCanvas tool - no parameters
+        functions.add(FunctionDeclaration.builder()
+            .name("clearCanvas")
+            .description("Clear all shapes from the canvas")
+            .parameters(Schema.builder().type("object").properties(new HashMap<>()).build())
+            .build());
+        
+        // getState tool - no parameters
+        functions.add(FunctionDeclaration.builder()
+            .name("getState")
+            .description("Get the current drawing state")
+            .parameters(Schema.builder().type("object").properties(new HashMap<>()).build())
+            .build());
+        
+        // undoAction tool - no parameters
+        functions.add(FunctionDeclaration.builder()
+            .name("undoAction")
+            .description("Undo the last action")
+            .parameters(Schema.builder().type("object").properties(new HashMap<>()).build())
+            .build());
+        
+        // Build tool with functions
+        Tool tool = Tool.builder()
+            .functionDeclarations(functions)
+            .build();
+        
+        configBuilder.tools(tool);
+        
+        logger.info("Configured " + functions.size() + " tool functions for Gemini API");
+    }
+    
     private void configureBasicSettings(GenerateContentConfig.Builder configBuilder, ChatRequest request) {
         // Temperature with smart defaults
         if (request.getTemperature() != null) {
@@ -440,7 +528,28 @@ public class OptimizedGeminiClient extends AIClient {
     private List<Content> buildContents(ChatRequest request) {
         List<Content> contents = new ArrayList<>();
         
-        // Skip system messages as they're handled separately
+        // Combine system messages into a single context message
+        StringBuilder systemContext = new StringBuilder();
+        boolean hasSystemMessages = false;
+        
+        for (ChatRequest.Message msg : request.getMessages()) {
+            if (msg.getRole() == ChatRequest.Role.SYSTEM) {
+                systemContext.append(msg.getContent()).append("\n\n");
+                hasSystemMessages = true;
+            }
+        }
+        
+        // Add system context as a user message if present
+        if (hasSystemMessages) {
+            Part contextPart = Part.fromText("System Context:\n" + systemContext.toString());
+            Content contextContent = Content.builder()
+                .role("user")
+                .parts(contextPart)
+                .build();
+            contents.add(contextContent);
+        }
+        
+        // Process other messages
         for (ChatRequest.Message msg : request.getMessages()) {
             if (msg.getRole() == ChatRequest.Role.SYSTEM) {
                 continue;
@@ -474,10 +583,46 @@ public class OptimizedGeminiClient extends AIClient {
     private AIResponse convertResponse(GenerateContentResponse response) {
         AIResponse.Builder builder = AIResponse.builder();
         
-        // Extract text content
-        String text = response.text();
-        if (text != null) {
-            builder.content(text);
+        // Check for tool calls first
+        List<AIResponse.ToolCall> toolCalls = new ArrayList<>();
+        response.candidates().ifPresent(candidates -> {
+            if (!candidates.isEmpty()) {
+                candidates.get(0).content().ifPresent(content -> {
+                    content.parts().ifPresent(parts -> {
+                        parts.forEach(part -> {
+                            part.functionCall().ifPresent(functionCall -> {
+                                // Convert function call to tool call
+                                String toolName = functionCall.name().orElse("unknown");
+                                Map<String, Object> args = functionCall.args().orElse(new HashMap<>());
+                                String toolId = "tool_" + System.currentTimeMillis(); // Generate ID
+                                
+                                AIResponse.ToolCall toolCall = new AIResponse.ToolCall(toolId, toolName, args);
+                                toolCalls.add(toolCall);
+                                
+                                logger.info("Tool call detected: " + toolName + " with args: " + args);
+                            });
+                        });
+                    });
+                });
+            }
+        });
+        
+        // Set tool calls if any
+        if (!toolCalls.isEmpty()) {
+            builder.toolCalls(toolCalls);
+        }
+        
+        // Only extract text if no tool calls present (to avoid UNEXPECTED_TOOL_CALL error)
+        if (toolCalls.isEmpty()) {
+            try {
+                String text = response.text();
+                if (text != null && !text.isEmpty()) {
+                    builder.content(text);
+                }
+            } catch (IllegalArgumentException e) {
+                // If text extraction fails due to tool calls, log and continue
+                logger.fine("Could not extract text (likely due to tool calls): " + e.getMessage());
+            }
         }
         
         // Extract usage metadata
@@ -493,7 +638,7 @@ public class OptimizedGeminiClient extends AIClient {
         response.candidates().ifPresent(candidates -> {
             if (!candidates.isEmpty()) {
                 candidates.get(0).groundingMetadata().ifPresent(metadata -> {
-                    logger.info("Grounding metadata available: " + metadata);
+                    logger.fine("Grounding metadata available: " + metadata);
                 });
             }
         });

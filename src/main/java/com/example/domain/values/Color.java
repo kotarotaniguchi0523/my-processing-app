@@ -1,7 +1,7 @@
 package com.example.domain.values;
 
-import com.example.domain.serialization.YamlSerializable;
-import com.example.domain.serialization.YamlUtils;
+import com.example.infrastructure.serialization.YamlSerializable;
+import com.example.infrastructure.serialization.YamlUtils;
 
 import java.util.Map;
 

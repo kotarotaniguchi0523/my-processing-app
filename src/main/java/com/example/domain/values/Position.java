@@ -1,7 +1,7 @@
 package com.example.domain.values;
 
-import com.example.domain.serialization.YamlSerializable;
-import com.example.domain.serialization.YamlUtils;
+import com.example.infrastructure.serialization.YamlSerializable;
+import com.example.infrastructure.serialization.YamlUtils;
 
 import java.util.Map;
 
@@ -80,5 +80,16 @@ public final class Position implements YamlSerializable {
         float y = YamlUtils.getRequiredFloat(yamlMap, "y");
 
         return new Position(x, y);
+    }
+    
+    /**
+     * ファクトリメソッド
+     */
+    public static Position of(float x, float y) {
+        return new Position(x, y);
+    }
+    
+    public static Position of(int x, int y) {
+        return new Position((float) x, (float) y);
     }
 }

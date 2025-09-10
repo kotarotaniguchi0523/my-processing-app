@@ -1,10 +1,11 @@
 package com.example;
 
-import com.example.application.ApplicationController;
+import com.example.usecase.UseCaseFacade;
+import com.example.domain.models.DrawingState;
 import com.example.domain.models.Shape;
-import com.example.engine.DrawingEngine;
-import com.example.events.EventType;
-import com.example.events.UIEvent;
+import com.example.infrastructure.rendering.DrawingEngine;
+import com.example.domain.events.EventType;
+import com.example.domain.events.UIEvent;
 
 import processing.core.PApplet;
 import processing.core.PFont;
@@ -44,9 +45,9 @@ public class SimpleSketch extends PApplet {
   private static final int CURSOR_BLINK_ON_TICKS = 30;
   private static final float WARN_THRESHOLD_RATIO = 0.8f;
   private static final int CHAT_SCROLL_SPEED = 20;
-  private static final int WORD_TRUNCATE_LIMIT = 50;
   private static final int CHAT_LOG_INNER_PADDING = 30;
-  private static final int LINE_HEIGHT = 16;
+  // Increase default line height for better readability
+  private static final int LINE_HEIGHT = 20;
   private static final int INPUT_TEXT_RIGHT_PADDING = 80;
   private static final int CHAT_INPUT_RIGHT_GAP = 70;
   private static final int SEND_BUTTON_WIDTH = 55;
@@ -87,9 +88,10 @@ public class SimpleSketch extends PApplet {
   // Drawing Canvas State (manual drawing removed per PRD)
   private boolean shiftDown;
 
-    // Application Integration
-    private ApplicationController appController;
-    private DrawingEngine drawingEngine;
+  // Application Integration
+  private UseCaseFacade useCaseFacade;
+  private DrawingEngine drawingEngine;
+  private DrawingState pendingApprovalState;
 
   // Japanese IME Support
   private JTextField japaneseInputField;
@@ -118,26 +120,29 @@ public class SimpleSketch extends PApplet {
       // safe to ignore if surface not available
     }
 
-    // Initialize fonts
+    // Improve text readability: prefer Meiryo/Yu Gothic on Windows, with fallbacks
     try {
-      font = createFont("MS Gothic", 16, true);
-      smallFont = createFont("MS Gothic", 12, true);
+      font = chooseReadableFont(
+          new String[] {"Meiryo UI", "Meiryo", "Yu Gothic UI", "Yu Gothic", "MS Gothic"}, 18);
+      smallFont = chooseReadableFont(
+          new String[] {"Meiryo UI", "Meiryo", "Yu Gothic UI", "Yu Gothic", "MS Gothic"}, 16);
+      smooth(); // enable anti-aliasing for crisper text
     } catch (Exception e) {
       // フォント作成に失敗した場合のフォールバック
-      textSize(16);
+      textSize(18);
     }
 
     // Initialize chat system
     chatMessages = new ArrayList<>();
     chatMessages.add("System: AI Agent ready for instructions");
 
-        // Initialize application controller
-        appController = new ApplicationController();
-        appController.setUICallback(new UICallbackImpl());
-        appController.start();
+    // Initialize application controller (kept for compatibility but not used)
+    // appController = new ApplicationController();
+    // appController.setUICallback(new UICallbackImpl());
+    // appController.start();
 
-        // Initialize drawing engine for domain rendering
-        drawingEngine = new DrawingEngine(this);
+    // Initialize drawing engine for domain rendering
+    drawingEngine = new DrawingEngine(this);
 
     // Calculate layout areas
     calculateLayout();
@@ -156,7 +161,8 @@ public class SimpleSketch extends PApplet {
       try {
         // Create Japanese input field
         japaneseInputField = new JTextField();
-        japaneseInputField.setFont(new Font("MS Gothic", Font.PLAIN, 14));
+        // Match in-canvas font size for consistency
+        japaneseInputField.setFont(new Font("Meiryo UI", Font.PLAIN, 16));
 
         // Add action listener for Enter key
         japaneseInputField.addActionListener(new ActionListener() {
@@ -260,6 +266,84 @@ public class SimpleSketch extends PApplet {
     updateJapaneseInputPosition();
   }
 
+  // Try creating the first available font from candidates
+  private PFont chooseReadableFont(String[] candidates, int size) {
+    for (String name : candidates) {
+      try {
+        PFont f = createFont(name, size, true);
+        if (f != null) {
+          return f;
+        }
+      } catch (Exception ignored) {
+        // try next candidate
+      }
+    }
+    // Fallback to default
+    return createFont("SansSerif", size, true);
+  }
+
+  // Wrap text to the given width. Handles languages without spaces (e.g., Japanese)
+  private List<String> wrapForWidth(String text, float maxWidth) {
+    List<String> lines = new ArrayList<>();
+    if (text == null || text.isEmpty()) {
+      return lines;
+    }
+
+    // Prefer space-based wrapping when spaces exist
+    if (text.contains(" ")) {
+      String current = "";
+      for (String word : text.split(" ")) {
+        String test = current.isEmpty() ? word : current + " " + word;
+        if (textWidth(test) > maxWidth) {
+          if (!current.isEmpty()) {
+            lines.add(current);
+            current = word;
+          } else {
+            // Single long word – fall back to char wrapping
+            lines.addAll(charWrap(word, maxWidth));
+            current = "";
+          }
+        } else {
+          current = test;
+        }
+      }
+      if (!current.isEmpty()) {
+        lines.add(current);
+      }
+    } else {
+      // No spaces – use character wrapping (common for Japanese)
+      lines.addAll(charWrap(text, maxWidth));
+    }
+
+    return lines;
+  }
+
+  private List<String> charWrap(String text, float maxWidth) {
+    List<String> out = new ArrayList<>();
+    StringBuilder buf = new StringBuilder();
+    for (int i = 0; i < text.length(); i++) {
+      char c = text.charAt(i);
+      String test = buf.toString() + c;
+      if (textWidth(test) > maxWidth) {
+        if (buf.length() > 0) {
+          out.add(buf.toString());
+          buf.setLength(0);
+        }
+        // If even a single char is wider than maxWidth, hard add to avoid infinite loop
+        if (textWidth(String.valueOf(c)) > maxWidth) {
+          out.add(String.valueOf(c));
+        } else {
+          buf.append(c);
+        }
+      } else {
+        buf.append(c);
+      }
+    }
+    if (buf.length() > 0)
+      out.add(buf.toString());
+    return out;
+  }
+
   private void updateJapaneseInputPosition() {
     if (japaneseInputField != null) {
       SwingUtilities.invokeLater(() -> japaneseInputField.setBounds(MARGIN + INNER_GAP_SMALL,
@@ -292,7 +376,7 @@ public class SimpleSketch extends PApplet {
     strokeWeight(1);
     rect(MARGIN, canvasAreaY, width - MARGIN * 2, canvasAreaHeight);
 
-    // Render domain shapes (AI/state-driven), no manual strokes
+    // Render domain shapes (AI/state-driven), clipped to canvas area
     renderDomainShapesInCanvasArea();
 
     // Canvas title
@@ -330,68 +414,36 @@ public class SimpleSketch extends PApplet {
     stroke(180);
     rect(MARGIN + INNER_GAP_SMALL, chatLogY, width - MARGIN * 2 - 10, chatLogHeight);
 
-    // Draw messages
+    // Constrain drawing to chat log box
+    clip(MARGIN + INNER_GAP_SMALL, chatLogY, width - MARGIN * 2 - 10, chatLogHeight);
+
+    // Draw messages bottom-aligned for better readability
     if (smallFont != null) {
       textFont(smallFont);
     }
     fill(0);
     textAlign(LEFT, TOP);
 
-    int y = chatLogY + 5 - chatScrollOffset;
     int lineHeight = LINE_HEIGHT;
+    float maxWidth = width - MARGIN * 2 - CHAT_LOG_INNER_PADDING;
 
+    // Prepare wrapped lines for all messages
+    List<String> allLines = new ArrayList<>();
     for (String message : chatMessages) {
-      if (y > chatLogY - lineHeight && y < chatLogY + chatLogHeight) {
-        // Word wrap for long messages
-        String[] words = message.split(" ");
-        String line = "";
-
-        for (String word : words) {
-          String testLine = line + (line.isEmpty() ? "" : " ") + word;
-          if (textWidth(testLine) > width - MARGIN * 2 - CHAT_LOG_INNER_PADDING) {
-            if (!line.isEmpty()) {
-              text(line, MARGIN + 10, y);
-              y += lineHeight;
-              line = word;
-            } else {
-              // Single word too long, truncate
-              text(word.substring(0, Math.min(word.length(), WORD_TRUNCATE_LIMIT)) + ELLIPSIS,
-                  MARGIN + 10, y);
-              y += lineHeight;
-              line = "";
-            }
-          } else {
-            line = testLine;
-          }
-        }
-
-        if (!line.isEmpty()) {
-          text(line, MARGIN + 10, y);
-          y += lineHeight;
-        }
-      } else {
-        // Skip rendering but still count line height
-        String[] words = message.split(" ");
-        String line = "";
-        for (String word : words) {
-          String testLine = line + (line.isEmpty() ? "" : " ") + word;
-          if (textWidth(testLine) > width - MARGIN * 2 - CHAT_LOG_INNER_PADDING) {
-            if (!line.isEmpty()) {
-              y += lineHeight;
-              line = word;
-            } else {
-              y += lineHeight;
-              line = "";
-            }
-          } else {
-            line = testLine;
-          }
-        }
-        if (!line.isEmpty()) {
-          y += lineHeight;
-        }
-      }
+      allLines.addAll(wrapForWidth(message, maxWidth));
     }
+
+    int totalHeight = allLines.size() * lineHeight;
+    // Start so that the last line sits near the bottom with small padding
+    int startY = chatLogY + chatLogHeight - totalHeight - 8;
+    int y = startY; // may be above the top; clipping will handle overflow
+
+    for (String line : allLines) {
+      text(line, MARGIN + 10, y);
+      y += lineHeight;
+    }
+
+    noClip();
   }
 
   private void drawChatInput() {
@@ -414,7 +466,8 @@ public class SimpleSketch extends PApplet {
     if (smallFont != null) {
       textFont(smallFont);
     }
-    textAlign(LEFT, TOP);
+    // Center vertically to avoid visual misalignment
+    textAlign(LEFT, CENTER);
 
     // Split input by newlines and display what fits
     String[] lines = currentInput.split("\n", -1);
@@ -436,7 +489,7 @@ public class SimpleSketch extends PApplet {
       displayText += ELLIPSIS;
     }
 
-    text(displayText, MARGIN + 10, chatInputY + 8);
+    text(displayText, MARGIN + 10, chatInputY + INPUT_HEIGHT / 2f);
 
     // Cursor
     if (inputFocused && frameCount % CURSOR_BLINK_PERIOD < CURSOR_BLINK_ON_TICKS) {
@@ -448,7 +501,7 @@ public class SimpleSketch extends PApplet {
     // Send button text
     fill(100);
     textAlign(CENTER, CENTER);
-    text("Send", width - MARGIN - 32, chatInputY + INPUT_HEIGHT / 2);
+    text("Send", width - MARGIN - 32, chatInputY + INPUT_HEIGHT / 2f);
 
     // Character count
     fill(currentInput.length() > MAX_MESSAGE_LENGTH * WARN_THRESHOLD_RATIO ? 200 : 150);
@@ -509,16 +562,16 @@ public class SimpleSketch extends PApplet {
       // Check overlay buttons
       if (isInRect(mouseX, mouseY, approveBtnX, approveBtnY, approveBtnW, approveBtnH)) {
         // Approve
-        UIEvent approve = new UIEvent(EventType.UI_APPROVAL_ACCEPTED, "approval");
-        if (appController != null) {
-          appController.getEventDispatcher().dispatchUIEvent(approve);
+        if (pendingApprovalState != null) {
+          useCaseFacade.applyApprovedChanges(pendingApprovalState);
+          approvalPending = false;
+          pendingApprovalState = null;
         }
       } else if (isInRect(mouseX, mouseY, rejectBtnX, rejectBtnY, rejectBtnW, rejectBtnH)) {
         // Reject
-        UIEvent reject = new UIEvent(EventType.UI_APPROVAL_REJECTED, "approval");
-        if (appController != null) {
-          appController.getEventDispatcher().dispatchUIEvent(reject);
-        }
+        useCaseFacade.rejectChanges();
+        approvalPending = false;
+        pendingApprovalState = null;
       }
       return; // block other interactions
     }
@@ -567,15 +620,15 @@ public class SimpleSketch extends PApplet {
       } else if (keyCode == java.awt.event.KeyEvent.VK_DOWN) {
         approvalScrollOffset += 20;
       } else if (key == 'y' || key == 'Y') {
-        UIEvent approve = new UIEvent(EventType.UI_APPROVAL_ACCEPTED, "approval");
-        if (appController != null) {
-          appController.getEventDispatcher().dispatchUIEvent(approve);
+        if (pendingApprovalState != null) {
+          useCaseFacade.applyApprovedChanges(pendingApprovalState);
+          approvalPending = false;
+          pendingApprovalState = null;
         }
       } else if (key == 'n' || key == 'N') {
-        UIEvent reject = new UIEvent(EventType.UI_APPROVAL_REJECTED, "approval");
-        if (appController != null) {
-          appController.getEventDispatcher().dispatchUIEvent(reject);
-        }
+        useCaseFacade.rejectChanges();
+        approvalPending = false;
+        pendingApprovalState = null;
       }
       return;
     }
@@ -637,12 +690,13 @@ public class SimpleSketch extends PApplet {
   }
 
   private void handleCanvasClear() {
-    // Clear canvas - send event to ApplicationController
-    UIEvent clearEvent = new UIEvent(EventType.UI_CANVAS_CLEARED, "canvas");
-    if (appController != null) {
-      appController.getEventDispatcher().dispatchUIEvent(clearEvent);
+    // Clear canvas using use case
+    var result = useCaseFacade.clearCanvas();
+    if (result.success) {
+      println("Canvas cleared");
+    } else {
+      println("Clear failed: " + result.message);
     }
-    println("Canvas clear requested");
   }
 
   private void handleUndoRedoShortcuts() {
@@ -659,22 +713,20 @@ public class SimpleSketch extends PApplet {
   }
 
   private void handleUndo() {
-    if (appController != null) {
-      boolean undone = appController.getStateService().undo();
-      if (undone) {
-        println("Undo performed");
-        updateCanvasFromState();
-      }
+    var result = useCaseFacade.undo();
+    if (result.success) {
+      println("Undo performed");
+    } else {
+      println("Undo failed: " + result.message);
     }
   }
 
   private void handleRedo() {
-    if (appController != null) {
-      boolean redone = appController.getStateService().redo();
-      if (redone) {
-        println("Redo performed");
-        updateCanvasFromState();
-      }
+    var result = useCaseFacade.redo();
+    if (result.success) {
+      println("Redo performed");
+    } else {
+      println("Redo failed: " + result.message);
     }
   }
 
@@ -719,11 +771,8 @@ public class SimpleSketch extends PApplet {
         LOGGER.fine("Sending message to ApplicationController: " + userInput);
       }
 
-      // Send UI event to ApplicationController
-      UIEvent chatEvent = new UIEvent(EventType.UI_CHAT_INPUT_SUBMITTED, userInput, "chat");
-      if (appController != null) {
-        appController.getEventDispatcher().dispatchUIEvent(chatEvent);
-      }
+      // Process user input through use case facade
+      useCaseFacade.processUserInput(userInput);
 
       currentInput = "";
     }
@@ -774,13 +823,15 @@ public class SimpleSketch extends PApplet {
 
     // Title
     fill(0);
-    if (font != null) textFont(font);
+    if (font != null)
+      textFont(font);
     textAlign(LEFT, TOP);
     text("変更の承認", contentX, contentY);
 
     // Summary
     int summaryY = contentY + 30;
-    if (smallFont != null) textFont(smallFont);
+    if (smallFont != null)
+      textFont(smallFont);
     text(approvalSummary, contentX, summaryY);
 
     // Diff area (scrollable)
@@ -828,15 +879,15 @@ public class SimpleSketch extends PApplet {
     text("拒否 (N)", rejectBtnX + rejectBtnW / 2, rejectBtnY + rejectBtnH / 2);
   }
 
-  // UI Callback implementation for ApplicationController integration
-  private class UICallbackImpl implements ApplicationController.UIUpdateCallback {
+  // UI Callback implementation for UseCase integration
+  private class UseCaseCallbackImpl implements UseCaseFacade.Callback {
     @Override
-    public void updateStatus(String status) {
+    public void onStatusUpdate(String status) {
       agentStatus = status;
     }
 
     @Override
-    public void addChatMessage(String message) {
+    public void onChatMessage(String message) {
       // Append timestamp per PRD requirement
       String ts = LocalTime.now().format(TIME_FMT);
       chatMessages.add("[" + ts + "] " + message);
@@ -847,67 +898,72 @@ public class SimpleSketch extends PApplet {
     }
 
     @Override
-    public void refreshCanvas() {
-      // Trigger redraw via draw loop (drawCanvasArea calls renderer each frame)
+    public void onMessage(String message) {
+      onChatMessage("System: " + message);
+    }
+
+    @Override
+    public void onError(String error) {
+      onChatMessage("ERROR: " + error);
+    }
+
+    @Override
+    public void onStateChanged(DrawingState newState) {
+      // State changed, will be rendered in next draw loop
       // No manual action required here.
     }
 
     @Override
-    public void showError(String error) {
-      chatMessages.add("ERROR: " + error);
-    }
-
-    @Override
-    public void showApproval(String summary, String diffText) {
+    public void onApprovalRequired(String summary, String diffText) {
       approvalPending = true;
       approvalSummary = summary != null ? summary : "";
       approvalDiff = diffText != null ? diffText : "";
       approvalScrollOffset = 0;
     }
 
-    @Override
-    public void clearApproval() {
-      approvalPending = false;
-      approvalSummary = "";
-      approvalDiff = "";
-      approvalScrollOffset = 0;
+  }
+
+  // Update canvas to reflect current domain state
+  private void renderDomainShapesInCanvasArea() {
+    try {
+      if (useCaseFacade == null || drawingEngine == null) {
+        return;
+      }
+
+      DrawingState currentState = useCaseFacade.getCurrentState();
+      if (currentState == null) {
+        return;
+      }
+
+      List<Shape> shapes = currentState.getShapes();
+
+      // Always log shape count for debugging
+      println("Rendering shapes: " + shapes.size() + " total");
+      if (LOGGER.isLoggable(Level.FINE)) {
+        LOGGER.fine("Domain shapes count: " + shapes.size());
+      }
+
+      // Clip to the canvas viewport and render all shapes
+      clip(MARGIN, canvasAreaY, width - MARGIN * 2, canvasAreaHeight);
+      try {
+        drawingEngine.renderShapes(shapes);
+      } finally {
+        noClip();
+      }
+    } catch (Exception e) {
+      if (LOGGER.isLoggable(Level.SEVERE)) {
+        LOGGER.log(Level.SEVERE, "Error rendering domain shapes: " + e.getMessage(), e);
+      }
     }
   }
 
-    // Update canvas to reflect current domain state
-    private void renderDomainShapesInCanvasArea() {
-        try {
-            if (appController != null && appController.getCurrentSession() != null && drawingEngine != null) {
-                List<Shape> shapes = appController.getCurrentSession().getAllShapes();
 
-                if (LOGGER.isLoggable(Level.FINE)) {
-                    LOGGER.fine("Domain shapes count: " + shapes.size());
-                }
-
-                // Filter to canvas viewport
-                List<Shape> shapesInView = new ArrayList<>();
-                Shape.BoundingBox viewport = new Shape.BoundingBox(
-                        MARGIN, canvasAreaY, width - MARGIN * 2, canvasAreaHeight);
-                for (Shape shape : shapes) {
-                    if (shape != null && shape.isVisible()) {
-                        try {
-                            if (shape.getBounds().overlaps(viewport)) {
-                                shapesInView.add(shape);
-                            }
-                        } catch (Exception e) {
-                            // If bounds unavailable, draw it anyway to avoid missing shapes
-                            shapesInView.add(shape);
-                        }
-                    }
-                }
-                drawingEngine.renderShapes(shapesInView);
-            }
-        } catch (Exception e) {
-            if (LOGGER.isLoggable(Level.SEVERE)) {
-                LOGGER.log(Level.SEVERE, "Error rendering domain shapes: " + e.getMessage(), e);
-            }
-        }
+  @Override
+  public void exit() {
+    // シャットダウン時の処理
+    if (useCaseFacade != null) {
+      useCaseFacade.shutdown();
     }
-
-  
+    super.exit();
+  }
 }

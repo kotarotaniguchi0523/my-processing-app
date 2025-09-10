@@ -1,5 +1,6 @@
 package com.example.application;
 
+import com.example.domain.commands.ParsedCommand;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;

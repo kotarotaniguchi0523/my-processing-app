@@ -1,7 +1,7 @@
 package com.example.domain.values;
 
-import com.example.domain.serialization.YamlSerializable;
-import com.example.domain.serialization.YamlUtils;
+import com.example.infrastructure.serialization.YamlSerializable;
+import com.example.infrastructure.serialization.YamlUtils;
 
 import java.util.Map;
 
@@ -154,6 +154,13 @@ public final class Style implements YamlSerializable {
             new Style(Color.TRANSPARENT, Color.BLACK, 1.0f, false, true);
     public static final Style NO_STROKE =
             new Style(Color.WHITE, Color.TRANSPARENT, 0.0f, true, false);
+    
+    /**
+     * デフォルトスタイルを返すメソッド
+     */
+    public static Style defaultStyle() {
+        return DEFAULT;
+    }
 
     // YAML Serialization
     @Override

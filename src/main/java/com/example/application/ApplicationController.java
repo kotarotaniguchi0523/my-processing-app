@@ -1,22 +1,24 @@
 package com.example.application;
 
-import com.example.agent.service.AgentService;
-import com.example.agent.service.ServiceResponse;
-import com.example.agent.service.ToolExecutionResult;
 import com.example.domain.commands.ClearCanvasCommand;
 import com.example.domain.commands.DrawCommand;
-import com.example.domain.model.DrawingSession;
+import com.example.domain.commands.ParsedCommand;
+import com.example.domain.models.DrawingSession;
 import com.example.domain.models.DrawingState;
-import com.example.domain.services.CommandExecutor;
-import com.example.domain.services.StateService;
-import com.example.domain.tools.ToolInitializer;
-import com.example.events.DomainEvent;
-import com.example.events.EventDispatcher;
-import com.example.events.EventType;
-import com.example.events.SystemEvent;
-import com.example.events.UIEvent;
-import com.example.services.FileStateRepository;
-import com.example.services.SessionManager;
+import com.example.application.services.CommandExecutor;
+import com.example.domain.services.IAIService;
+import com.example.domain.services.IDiffService;
+import com.example.application.services.StateService;
+import com.example.infrastructure.adapters.AIServiceAdapter;
+import com.example.infrastructure.adapters.DiffServiceAdapter;
+import com.example.application.tools.ToolInitializer;
+import com.example.domain.events.DomainEvent;
+import com.example.infrastructure.events.EventDispatcher;
+import com.example.domain.events.EventType;
+import com.example.domain.events.SystemEvent;
+import com.example.domain.events.UIEvent;
+import com.example.infrastructure.services.FileStateRepository;
+import com.example.infrastructure.services.SessionManager;
 
 import java.util.HashMap;
 import java.util.List;
@@ -42,7 +44,8 @@ public class ApplicationController {
   private final CommandParser commandParser;
   private final CommandFactory commandFactory;
   private final SessionManager sessionManager;
-  private AgentService agentService; // M2: AI integration
+  private IAIService aiService; // M2: AI integration
+  private IDiffService diffService; // M3: Diff generation
   // M3: Approval workflow state
   private DrawingState pendingApprovalState;
   private String pendingApprovalSummary;
@@ -72,7 +75,17 @@ public class ApplicationController {
     this.eventDispatcher = new EventDispatcher(true); // Enable async processing
 
     // Initialize domain services
-    this.stateService = new StateService();
+    // Initialize infrastructure
+    com.example.infrastructure.services.StateManager stateManager = new com.example.infrastructure.services.StateManager();
+    com.example.infrastructure.services.HistoryService historyService = new com.example.infrastructure.services.HistoryService(stateManager);
+    
+    // Initialize domain services with infrastructure implementations
+    StateService.initialize(
+        new com.example.infrastructure.adapters.StateManagerAdapter(stateManager),
+        new com.example.infrastructure.adapters.HistoryServiceAdapter(historyService)
+    );
+    
+    this.stateService = StateService.getInstance();
     this.commandExecutor = new CommandExecutor(stateService);
 
     // Initialize command parser and factory
@@ -81,8 +94,7 @@ public class ApplicationController {
 
     // Initialize session manager (handles repository init internally)
     FileStateRepository repository = new FileStateRepository();
-    this.sessionManager =
-        new SessionManager(stateService.getStateManager(), stateService.getHistoryService(), repository);
+    this.sessionManager = new SessionManager(stateManager, historyService, repository);
 
     // Initialize domain tools
     ToolInitializer.initialize();
@@ -91,19 +103,38 @@ public class ApplicationController {
           "Domain tools initialized with " + ToolInitializer.getRegisteredToolCount() + " tools");
     }
 
-    // Initialize AgentService (if API keys configured)
+    // Initialize AI Service (if API keys configured)
     try {
-      this.agentService = new AgentService();
-      if (LOGGER.isLoggable(Level.INFO)) {
-        LOGGER.info("AgentService initialized (AI client available)");
+      AIServiceAdapter aiAdapter = new AIServiceAdapter();
+      if (aiAdapter.isAvailable()) {
+        this.aiService = aiAdapter;
+        // Stream AI thinking logs into the chat interface
+        this.aiService.setProgressListener(message -> {
+          try {
+            addChatMessage("AI (thinking): " + message);
+          } catch (Exception ignored) {
+            // keep robust if UI not ready yet
+          }
+        });
+        if (LOGGER.isLoggable(Level.INFO)) {
+          LOGGER.info("AI Service initialized (AI client available)");
+        }
+      } else {
+        this.aiService = null;
+        if (LOGGER.isLoggable(Level.WARNING)) {
+          LOGGER.log(Level.WARNING, "AI Service unavailable (offline mode)");
+        }
       }
     } catch (Exception e) {
       // AI unavailable is OK for offline use; fall back to parser/commands only
-      this.agentService = null;
+      this.aiService = null;
       if (LOGGER.isLoggable(Level.WARNING)) {
-        LOGGER.log(Level.WARNING, "AgentService initialization failed (AI disabled): " + e.getMessage());
+        LOGGER.log(Level.WARNING, "AI Service initialization failed (AI disabled): " + e.getMessage());
       }
     }
+    
+    // Initialize Diff Service
+    this.diffService = new DiffServiceAdapter();
 
     // Set up event handlers
     setupEventHandlers();
@@ -342,7 +373,7 @@ public class ApplicationController {
     try {
       updateUIStatus("AI processing...");
 
-      if (agentService == null) {
+      if (aiService == null) {
         // Fallback: AI unavailable, guide user
         addChatMessage("AI: 現在AI連携は無効です。.envにAPIキーを設定してください。");
         updateUIStatus(READY);
@@ -350,9 +381,9 @@ public class ApplicationController {
       }
 
       // Keep agent's working state in sync with domain
-      agentService.setCurrentState(stateService.getCurrentState());
+      aiService.setCurrentState(stateService.getCurrentState());
 
-      agentService
+      aiService
           .processInstruction(input)
           .thenAccept(this::handleAgentResponse)
           .exceptionally(
@@ -372,8 +403,8 @@ public class ApplicationController {
     }
   }
 
-  // Apply AgentService response to domain/UI (M2)
-  private void handleAgentResponse(ServiceResponse response) {
+  // Apply AI service response to domain/UI (M2)
+  private void handleAgentResponse(IAIService.AIServiceResponse response) {
     try {
       if (response == null) {
         handleError("Empty response from agent");
@@ -385,29 +416,20 @@ public class ApplicationController {
         addChatMessage("AI: " + response.getTextResponse());
       }
 
-      // Apply tool results to domain state
-      if (response.hasToolExecutionResults()) {
-        DrawingState lastApplied = null;
-        for (ToolExecutionResult result : response.getToolExecutionResults()) {
-          if (result.isSuccess() && result.hasResultState()) {
-            lastApplied = result.getResultState();
-          } else if (result.hasErrorMessage()) {
-            addChatMessage("System: Tool '" + result.getToolName() + "' failed - " + result.getErrorMessage());
+      // Apply result state from AI response
+      if (response.hasResultState()) {
+        DrawingState resultState = response.getResultState();
+        if (response.requiresApproval()) {
+          // Prepare approval request (M3)
+          prepareApproval(stateService.getCurrentState(), resultState);
+        } else {
+          // Immediate apply
+          stateService.updateState(resultState);
+          if (aiService != null) {
+            aiService.setCurrentState(resultState);
           }
-        }
-        if (lastApplied != null) {
-          if (response.requiresApproval()) {
-            // Prepare approval request (M3)
-            prepareApproval(stateService.getCurrentState(), lastApplied);
-          } else {
-            // Immediate apply
-            stateService.updateState(lastApplied);
-            if (agentService != null) {
-              agentService.setCurrentState(lastApplied);
-            }
-            refreshUI();
-            addChatMessage("System: Applied AI tool results");
-          }
+          refreshUI();
+          addChatMessage("System: Applied AI tool results");
         }
       }
 
@@ -424,12 +446,12 @@ public class ApplicationController {
   // M3: Build diff and show approval overlay
   private void prepareApproval(DrawingState current, DrawingState proposed) {
     try {
-      com.example.agent.diff.DiffService diffService = new com.example.agent.diff.DiffService();
-      var diff = diffService.diff(current, proposed);
+      // Use diff service to generate code diff
+      var diffResult = diffService.generateDiff(current, proposed);
 
       this.pendingApprovalState = proposed;
-      this.pendingApprovalSummary = diff.summary;
-      this.pendingApprovalDiff = diff.unifiedDiff;
+      this.pendingApprovalSummary = diffResult.summary;
+      this.pendingApprovalDiff = diffResult.unifiedDiff;
 
       updateUIStatus("Approval required");
       if (uiCallback != null) {
@@ -438,17 +460,27 @@ public class ApplicationController {
       addChatMessage("System: Approval required - " + pendingApprovalSummary);
 
       // Await user approval asynchronously (M3)
-      if (agentService != null) {
-        agentService
+      if (aiService != null) {
+        aiService
             .awaitApproval()
             .orTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .thenAccept(approved -> {
               if (approved) {
                 try {
                   stateService.updateState(pendingApprovalState);
-                  agentService.setCurrentState(pendingApprovalState);
+                  aiService.setCurrentState(pendingApprovalState);
+                  
+                  // Log the state after approval for debugging
+                  DrawingState updatedState = stateService.getCurrentState();
+                  int shapeCount = updatedState.getShapes().size();
+                  LOGGER.info("After approval - Shape count: " + shapeCount);
+                  for (var shape : updatedState.getShapes()) {
+                    LOGGER.info("  Shape: " + shape.getId() + " type=" + shape.getType() + 
+                               " pos=" + shape.getPosition());
+                  }
+                  
                   refreshUI();
-                  addChatMessage("System: Changes approved and applied");
+                  addChatMessage("System: Changes approved and applied (" + shapeCount + " shapes)");
                 } catch (Exception e) {
                   handleError("Failed to apply approved changes: " + e.getMessage());
                 }
@@ -470,15 +502,15 @@ public class ApplicationController {
 
   // M3: Handle approval accept
   private void handleApprovalAccepted(UIEvent event) {
-    if (agentService != null) {
-      agentService.completeApproval(true);
+    if (aiService != null) {
+      aiService.completeApproval(true);
     }
   }
 
   // M3: Handle approval reject
   private void handleApprovalRejected(UIEvent event) {
-    if (agentService != null) {
-      agentService.completeApproval(false);
+    if (aiService != null) {
+      aiService.completeApproval(false);
     }
   }
 

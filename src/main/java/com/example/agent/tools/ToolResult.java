@@ -1,8 +1,6 @@
 package com.example.agent.tools;
 
 import com.example.domain.models.DrawingState;
-import com.example.domain.serialization.YamlSerializable;
-import com.example.domain.serialization.YamlUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,7 +10,7 @@ import java.util.Objects;
  * ToolResult represents the result of executing a tool Contains information about success/failure,
  * output data, and any state changes
  */
-public final class ToolResult implements YamlSerializable {
+public final class ToolResult {
 
     public enum Status {
         SUCCESS, // Tool executed successfully
@@ -260,60 +258,4 @@ public final class ToolResult implements YamlSerializable {
                 status, toolName, message, hasNewState());
     }
 
-    // YAML Serialization
-    @Override
-    public Map<String, Object> toYamlMap() {
-        Map<String, Object> map = YamlUtils.createYamlMap(getYamlType());
-        map.put("status", status.name());
-        map.put("message", message);
-        map.put("data", new HashMap<>(data));
-        map.put("toolName", toolName);
-        map.put("executionTime", executionTime);
-
-        if (errorType != null) {
-            map.put("errorType", errorType);
-        }
-
-        if (newState != null) {
-            map.put("newState", newState.toYamlMap());
-        }
-
-        return map;
-    }
-
-    @Override
-    public String getYamlType() {
-        return "tool_result";
-    }
-
-    @SuppressWarnings("unchecked")
-    public static ToolResult fromYamlMap(Map<String, Object> yamlMap) {
-        YamlUtils.validateYamlType(yamlMap, "tool_result");
-
-        String statusStr = YamlUtils.getString(yamlMap, "status", "SUCCESS");
-        Status status = Status.valueOf(statusStr);
-
-        String message = YamlUtils.getString(yamlMap, "message", "");
-        String toolName = YamlUtils.getString(yamlMap, "toolName", "");
-        String errorType = YamlUtils.getString(yamlMap, "errorType", null);
-        long executionTime = YamlUtils.getLong(yamlMap, "executionTime", 0L);
-
-        Map<String, Object> data = YamlUtils.getMap(yamlMap, "data", new HashMap<>());
-
-        DrawingState newState = null;
-        Map<String, Object> stateMap = YamlUtils.getMap(yamlMap, "newState", null);
-        if (stateMap != null) {
-            newState = DrawingState.fromYamlMap(stateMap);
-        }
-
-        return new Builder()
-                .status(status)
-                .message(message)
-                .toolName(toolName)
-                .errorType(errorType)
-                .executionTime(executionTime)
-                .data(data)
-                .newState(newState)
-                .build();
-    }
 }

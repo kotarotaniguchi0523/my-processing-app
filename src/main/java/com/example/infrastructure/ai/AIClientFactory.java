@@ -52,8 +52,7 @@ public class AIClientFactory {
                 return new OptimizedGeminiClient(apiKey, geminiConfig);
                 
             case OPENAI:
-                logger.info("Creating OpenAI client");
-                // OpenAI client would be implemented similarly
+                logger.warning("OpenAI client not yet implemented");
                 throw new UnsupportedOperationException("OpenAI client not yet implemented");
                 
             default:

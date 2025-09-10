@@ -1,7 +1,7 @@
 package com.example.domain.models;
 
-import com.example.domain.serialization.YamlSerializable;
-import com.example.domain.serialization.YamlUtils;
+import com.example.infrastructure.serialization.YamlSerializable;
+import com.example.infrastructure.serialization.YamlUtils;
 import com.example.domain.values.Color;
 
 import java.util.ArrayList;
@@ -58,6 +58,10 @@ public final class DrawingState implements YamlSerializable {
         public Builder addShape(Shape shape) {
             this.shapes.add(shape);
             return this;
+        }
+        
+        public Builder shape(Shape shape) {
+            return addShape(shape);
         }
 
         public Builder arrays(Map<String, List<Object>> arrays) {

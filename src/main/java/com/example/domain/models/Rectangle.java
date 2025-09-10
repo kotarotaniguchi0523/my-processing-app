@@ -239,7 +239,7 @@ public final class Rectangle extends Shape {
     @Override
     public Map<String, Object> toYamlMap() {
         Map<String, Object> map =
-                com.example.domain.serialization.YamlUtils.createYamlMap(getYamlType());
+                com.example.infrastructure.serialization.YamlUtils.createYamlMap(getYamlType());
         map.put("id", id);
         map.put("position", position.toYamlMap());
         map.put("width", width);
@@ -256,28 +256,28 @@ public final class Rectangle extends Shape {
     }
 
     public static Rectangle fromYamlMap(Map<String, Object> yamlMap) {
-        com.example.domain.serialization.YamlUtils.validateYamlType(yamlMap, "rectangle");
-        com.example.domain.serialization.YamlUtils.validateRequiredFields(
+        com.example.infrastructure.serialization.YamlUtils.validateYamlType(yamlMap, "rectangle");
+        com.example.infrastructure.serialization.YamlUtils.validateRequiredFields(
                 yamlMap, "id", "position", "width", "height");
 
-        String id = com.example.domain.serialization.YamlUtils.getRequiredString(yamlMap, "id");
+        String id = com.example.infrastructure.serialization.YamlUtils.getRequiredString(yamlMap, "id");
         Position position =
                 Position.fromYamlMap(
-                        com.example.domain.serialization.YamlUtils.getRequiredMap(
+                        com.example.infrastructure.serialization.YamlUtils.getRequiredMap(
                                 yamlMap, "position"));
-        float width = com.example.domain.serialization.YamlUtils.getRequiredFloat(yamlMap, "width");
+        float width = com.example.infrastructure.serialization.YamlUtils.getRequiredFloat(yamlMap, "width");
         float height =
-                com.example.domain.serialization.YamlUtils.getRequiredFloat(yamlMap, "height");
+                com.example.infrastructure.serialization.YamlUtils.getRequiredFloat(yamlMap, "height");
         Style style =
-                com.example.domain.serialization.YamlUtils.getMap(yamlMap, "style", null) != null
+                com.example.infrastructure.serialization.YamlUtils.getMap(yamlMap, "style", null) != null
                         ? Style.fromYamlMap(
-                                com.example.domain.serialization.YamlUtils.getRequiredMap(
+                                com.example.infrastructure.serialization.YamlUtils.getRequiredMap(
                                         yamlMap, "style"))
                         : Style.DEFAULT;
         boolean visible =
-                com.example.domain.serialization.YamlUtils.getBoolean(yamlMap, "visible", true);
+                com.example.infrastructure.serialization.YamlUtils.getBoolean(yamlMap, "visible", true);
         int layerOrder =
-                com.example.domain.serialization.YamlUtils.getInt(yamlMap, "layerOrder", 0);
+                com.example.infrastructure.serialization.YamlUtils.getInt(yamlMap, "layerOrder", 0);
 
         return new Rectangle(id, position, width, height, style, visible, layerOrder);
     }

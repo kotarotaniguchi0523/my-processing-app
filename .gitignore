@@ -67,3 +67,4 @@ out/
 bin/
 .jdks/
 .mcp.json
+.serena/

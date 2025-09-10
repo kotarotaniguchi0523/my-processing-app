@@ -139,6 +139,7 @@
   </dependencies>
 
   <build>
+    <testSourceDirectory>src/test</testSourceDirectory>
     <plugins>
       <!-- Essential Maven plugins with explicit versions -->
       <plugin>
