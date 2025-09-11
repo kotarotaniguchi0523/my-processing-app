@@ -1,7 +1,6 @@
 package com.example;
 
-import com.example.usecase.UseCaseFacade;
-import com.example.infrastructure.rendering.DrawingEngine;
+
 import com.example.presentation.SketchUIRenderer;
 import com.example.presentation.SketchEventHandler;
 import com.example.presentation.ChatManager;
@@ -13,9 +12,6 @@ import processing.core.PFont;
 
 public class SimpleSketch extends PApplet {
 
-  // Application Integration
-  private UseCaseFacade useCaseFacade;
-  private DrawingEngine drawingEngine;
 
   // UI Components (refactored into focused classes)
   private SketchUIRenderer uiRenderer;
@@ -51,11 +47,7 @@ public class SimpleSketch extends PApplet {
     // Initialize fonts
     setupFonts();
 
-    // Initialize use case facade
-    useCaseFacade = UseCaseFacade.getInstance();
-    
-    // Initialize drawing engine for domain rendering
-    drawingEngine = new DrawingEngine(this);
+
 
     // Initialize UI components
     initializeUIComponents();
@@ -79,54 +71,16 @@ public class SimpleSketch extends PApplet {
 
   private void initializeUIComponents() {
     // Initialize managers in order of dependency
-    chatManager = new ChatManager(this, useCaseFacade);
+    chatManager = new ChatManager(this);
     inputManager = new InputManager(this, chatManager);
-    uiRenderer = new SketchUIRenderer(this, chatManager, drawingEngine, useCaseFacade);
-    eventHandler = new SketchEventHandler(this, uiRenderer, chatManager, inputManager, useCaseFacade);
+    uiRenderer = new SketchUIRenderer(this, chatManager);
+    eventHandler = new SketchEventHandler(this, uiRenderer, chatManager, inputManager);
 
     // Configure UI renderer
     uiRenderer.setFonts(font, smallFont);
     uiRenderer.calculateLayout();
-    
-    // CRITICAL: Setup callbacks for UseCaseFacade to connect business logic to UI
-    setupUseCaseFacadeCallback();
-  }
-  
-  private void setupUseCaseFacadeCallback() {
-    useCaseFacade.setCallback(new UseCaseFacade.Callback() {
-      @Override
-      public void onStatusUpdate(String status) {
-        println("Status: " + status);
-      }
-      
-      @Override
-      public void onChatMessage(String message) {
-        chatManager.addMessage(message);
-      }
-      
-      @Override
-      public void onApprovalRequired(String summary, String diff, com.example.domain.models.DrawingState pendingState) {
-        // Approval functionality removed
-        println("Approval required (disabled): " + summary);
-      }
-      
-      @Override
-      public void onStateChanged(com.example.domain.models.DrawingState newState) {
-        // State change is handled by the drawing engine
-        println("State changed");
-      }
-      
-      @Override
-      public void onError(String error) {
-        chatManager.addMessage("Error: " + error);
-        println("Error: " + error);
-      }
-      
-      @Override
-      public void onMessage(String message) {
-        chatManager.addMessage("System: " + message);
-      }
-    });
+
+
   }
 
   // Try creating the first available font from candidates
@@ -156,16 +110,10 @@ public class SimpleSketch extends PApplet {
     // Draw UI areas through renderer
     uiRenderer.drawCanvasArea();
     uiRenderer.drawChatArea();
-    // drawStatusArea() disabled - AI status display removed
-    // uiRenderer.drawStatusArea();
 
     // Draw UI borders for clarity
     uiRenderer.drawUIBorders();
 
-    // Approval overlay disabled - approval functionality removed
-    // if (approvalManager.isApprovalPending()) {
-    //   uiRenderer.drawApprovalOverlay(approvalManager);
-    // }
   }
 
   // Event handlers - delegate to EventHandler
@@ -190,12 +138,5 @@ public class SimpleSketch extends PApplet {
     eventHandler.handleMouseWheel(event);
   }
 
-  @Override
-  public void exit() {
-    // シャットダウン時の処理
-    if (useCaseFacade != null) {
-      useCaseFacade.shutdown();
-    }
-    super.exit();
-  }
+
 }

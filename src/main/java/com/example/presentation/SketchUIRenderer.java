@@ -1,22 +1,17 @@
 package com.example.presentation;
 
-import com.example.domain.models.DrawingState;
-import com.example.domain.models.Shape;
-import com.example.infrastructure.rendering.DrawingEngine;
-import com.example.usecase.UseCaseFacade;
+
 import processing.core.PApplet;
 import processing.core.PFont;
 
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 
 /**
  * SketchUIRenderer handles all UI drawing responsibilities for the SimpleSketch application. This
  * class follows the Single Responsibility Principle by focusing solely on rendering UI components.
  */
 public class SketchUIRenderer {
-  private static final Logger LOGGER = Logger.getLogger(SketchUIRenderer.class.getName());
 
   // UI Layout constants
   private static final int MARGIN = 10;
@@ -36,8 +31,6 @@ public class SketchUIRenderer {
 
   private final PApplet sketch;
   private final ChatManager chatManager;
-  private final DrawingEngine drawingEngine;
-  private final UseCaseFacade useCaseFacade;
 
   // UI Areas
   private int canvasAreaY;
@@ -52,12 +45,9 @@ public class SketchUIRenderer {
   private PFont font;
   private PFont smallFont;
 
-  public SketchUIRenderer(PApplet sketch, ChatManager chatManager, DrawingEngine drawingEngine,
-      UseCaseFacade useCaseFacade) {
+  public SketchUIRenderer(PApplet sketch, ChatManager chatManager) {
     this.sketch = sketch;
     this.chatManager = chatManager;
-    this.drawingEngine = drawingEngine;
-    this.useCaseFacade = useCaseFacade;
   }
 
   public void setFonts(PFont font, PFont smallFont) {
@@ -89,8 +79,7 @@ public class SketchUIRenderer {
       sketch.strokeWeight(1);
       sketch.rect(MARGIN, canvasAreaY, sketch.width - MARGIN * 2, canvasAreaHeight);
 
-      // Render domain shapes (AI/state-driven), clipped to canvas area
-      renderDomainShapesInCanvasArea();
+
 
       // Canvas title
       sketch.fill(100);
@@ -264,45 +253,6 @@ public class SketchUIRenderer {
   }
 
 
-  private void renderDomainShapesInCanvasArea() {
-    try {
-      if (useCaseFacade == null || drawingEngine == null) {
-        return;
-      }
-
-      DrawingState currentState = useCaseFacade.getCurrentState();
-      if (currentState == null) {
-        return;
-      }
-
-      List<Shape> shapes = currentState.getShapes();
-
-      // Log shape count for debugging (only at FINE level)
-      if (LOGGER.isLoggable(Level.FINE)) {
-        LOGGER.fine("Rendering shapes: " + shapes.size() + " total");
-      }
-
-      // Clip to the canvas viewport and render all shapes
-      sketch.clip(MARGIN, canvasAreaY, sketch.width - MARGIN * 2, canvasAreaHeight);
-      try {
-        // Push matrix to apply transformation
-        sketch.pushMatrix();
-        // Translate to canvas origin so (0,0) is at the top-left of the canvas area
-        sketch.translate(MARGIN, canvasAreaY);
-
-        // Render shapes directly - they're already in canvas coordinates
-        drawingEngine.renderShapes(shapes);
-
-        sketch.popMatrix();
-      } finally {
-        sketch.noClip();
-      }
-    } catch (Exception e) {
-      if (LOGGER.isLoggable(Level.SEVERE)) {
-        LOGGER.log(Level.SEVERE, "Error rendering domain shapes: " + e.getMessage(), e);
-      }
-    }
-  }
 
   private void drawInputIndicator() {
     boolean useJapaneseInput = chatManager.isUsingJapaneseInput();
