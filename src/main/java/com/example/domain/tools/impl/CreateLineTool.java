@@ -12,7 +12,7 @@ import com.example.application.usecase.dto.UseCaseResult;
 
 import java.util.HashMap;
 import java.util.Map;
-import static com.example.domain.tools.support.ToolSchemas.commonColorSchema;
+import static com.example.domain.tools.support.ToolSchemas.colorSchema;
 
 /**
  * Tool for creating lines in the drawing
@@ -58,7 +58,7 @@ public class CreateLineTool implements IAgentTool {
     properties.put("end", end);
 
     // Stroke color (optional) - commonized
-    properties.put("strokeColor", commonColorSchema());
+    properties.put("strokeColor", colorSchema());
 
     // Stroke weight (optional)
     properties.put("strokeWeight",
@@ -122,5 +122,5 @@ public class CreateLineTool implements IAgentTool {
     return new Color(r.intValue(), g.intValue(), b.intValue(), a.intValue());
   }
 
-  // local helpers removed (centralized)
+  // Helper methods from ToolSchemas
 }

@@ -47,6 +47,8 @@ public class SketchEventHandler {
         String text = chatManager.getCurrentInput();
         chatManager.setCurrentInput("");
         AiChatHelper.sendAndAppendAsync(aiAgentService, chatManager, text, "AI-Call-Input");
+        // クリック押下のフィードバック
+        uiRenderer.setSendPressed(true);
       }
     } else {
       chatManager.setInputFocused(false);
@@ -58,6 +60,12 @@ public class SketchEventHandler {
   public void handleKeyPressed() {
     if (sketch.keyCode == PConstants.SHIFT) {
       shiftDown = true;
+      return;
+    }
+
+    // テーマ切替: 'T'
+    if (sketch.key == 't' || sketch.key == 'T') {
+      uiRenderer.toggleTheme();
       return;
     }
 
@@ -113,7 +121,21 @@ public class SketchEventHandler {
       if (!chatManager.getCurrentInput().isBlank()) {
         String text = chatManager.getCurrentInput();
         chatManager.setCurrentInput("");
-        AiChatHelper.sendAndAppendAsync(aiAgentService, chatManager, text, "AI-Call-Input");
+        // Command: /load_history or /history
+        if (text.equalsIgnoreCase("/load_history") || text.equalsIgnoreCase("/history")) {
+          if (aiAgentService != null) {
+            boolean loaded = aiAgentService.loadHistoryOnDemand();
+            if (loaded) {
+              chatManager.addMessage("System: 履歴を読み込みました (.agent_history.json)");
+            } else {
+              chatManager.addMessage("System: 読み込む履歴がありません");
+            }
+          } else {
+            chatManager.addMessage("System: AIサービスが無効のため履歴を読み込めません");
+          }
+        } else {
+          AiChatHelper.sendAndAppendAsync(aiAgentService, chatManager, text, "AI-Call-Input");
+        }
       }
     }
   }
@@ -138,6 +160,5 @@ public class SketchEventHandler {
   }
 
   // AI trigger logic is centralized in AiChatHelper
-
 
 }

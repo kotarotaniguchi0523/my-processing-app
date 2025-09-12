@@ -5,6 +5,7 @@ import com.example.domain.models.Shape;
 import com.example.domain.tools.ToolRegistry;
 import com.example.infrastructure.services.ToolInvoker;
 import com.example.domain.values.ToolExecutionResult;
+import com.example.domain.values.Color;
 import com.example.application.usecase.UseCaseFacade;
 import com.example.infrastructure.ServiceInitializer;
 import com.example.application.services.AIAgentService;
@@ -334,6 +335,30 @@ public class DrawingFunctions {
       return String.format("図形をリサイズしました (ID: %s)", shapeId);
     } else {
       return "図形のリサイズに失敗しました: " + result.getErrorMessage();
+    }
+  }
+  
+  /**
+   * Load conversation history from the persisted file.
+   * This allows the AI to remember previous conversations.
+   * 
+   * @return Description of the action taken
+   */
+  public static String loadHistory() {
+    try {
+      AIAgentService aiService = ServiceInitializer.getAIAgentService();
+      if (aiService == null) {
+        return "AIサービスが初期化されていません。履歴を読み込めません。";
+      }
+      boolean loaded = aiService.loadHistoryOnDemand();
+      if (loaded) {
+        return "履歴を読み込みました。前の会話の内容を思い出しました。";
+      } else {
+        return "新しい履歴はありません。すでに最新の状態です。";
+      }
+    } catch (Exception e) {
+      System.err.println("Failed to load history: " + e.getMessage());
+      return "履歴の読み込みに失敗しました: " + e.getMessage();
     }
   }
 }

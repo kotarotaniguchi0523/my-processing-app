@@ -7,6 +7,7 @@ import com.example.presentation.ChatManager;
 import com.example.presentation.InputManager;
 import com.example.application.services.AIAgentService;
 import com.example.domain.models.DrawingState;
+import com.example.infrastructure.ServiceInitializer;
 
 import processing.core.PApplet;
 import processing.core.PFont;
@@ -38,6 +39,8 @@ public class SimpleSketch extends PApplet {
   @Override
   public void setup() {
     background(240);
+    // Ensure color mode is RGB across the app
+    colorMode(RGB, 255);
     // Allow window resize per PRD
     try {
       if (getSurface() != null) {
@@ -75,10 +78,22 @@ public class SimpleSketch extends PApplet {
   private void initializeUIComponents() {
     // Initialize managers in order of dependency
     chatManager = new ChatManager(this);
-    // Initialize AI agent service with default state
-    aiAgentService = new AIAgentService(DrawingState.defaultState());
-    inputManager = new InputManager(this, chatManager, aiAgentService);
+
+    // Initialize AI agent service with error handling for missing API key
+    try {
+      aiAgentService = new AIAgentService(DrawingState.defaultState());
+      // Register with ServiceInitializer for access from other components
+      ServiceInitializer.setAIAgentService(aiAgentService);
+    } catch (IllegalArgumentException e) {
+      // API key is missing, but continue with null AI service
+      System.err.println("警告: Gemini APIキーが設定されていません。AI機能は無効です。");
+      System.err.println("環境変数 GOOGLE_API_KEY または GEMINI_API_KEY を設定してください。");
+      aiAgentService = null;
+      ServiceInitializer.setAIAgentService(null);
+    }
+
     uiRenderer = new SketchUIRenderer(this, chatManager, aiAgentService);
+    inputManager = new InputManager(this, chatManager, aiAgentService, uiRenderer);
     eventHandler =
         new SketchEventHandler(this, uiRenderer, chatManager, inputManager, aiAgentService);
 
@@ -86,7 +101,11 @@ public class SimpleSketch extends PApplet {
     uiRenderer.setFonts(font, smallFont);
     uiRenderer.calculateLayout();
 
-
+    // Register ChatManager as AI processing listener
+    // This enables real-time display of AI thinking process
+    if (aiAgentService != null) {
+      aiAgentService.addProcessingListener(chatManager);
+    }
   }
 
   // Try creating the first available font from candidates
@@ -107,7 +126,11 @@ public class SimpleSketch extends PApplet {
 
   @Override
   public void draw() {
-    background(245);
+    // 背景グラデーション（テーマ）
+    uiRenderer.drawBackground();
+
+    // Flush AI processing messages from queue to UI (thread-safe)
+    chatManager.flushQueueToUI();
 
     // Recalculate layout on window resize
     uiRenderer.calculateLayout();
@@ -126,6 +149,10 @@ public class SimpleSketch extends PApplet {
   @Override
   public void mousePressed() {
     eventHandler.handleMousePressed();
+    // 送信ボタン押下アニメ
+    if (uiRenderer.isInSendButtonArea(mouseX, mouseY)) {
+      uiRenderer.setSendPressed(true);
+    }
   }
 
 
@@ -137,6 +164,11 @@ public class SimpleSketch extends PApplet {
   @Override
   public void keyReleased() {
     eventHandler.handleKeyReleased();
+  }
+
+  @Override
+  public void mouseReleased() {
+    uiRenderer.setSendPressed(false);
   }
 
   @Override

@@ -1,6 +1,7 @@
 package com.example.infrastructure;
 
 import com.example.application.services.StateService;
+import com.example.application.services.AIAgentService;
 import com.example.application.usecase.UseCaseFacade;
 import com.example.domain.services.ShapeOps;
 import com.example.infrastructure.services.InMemoryShapeOps;
@@ -16,6 +17,7 @@ public class ServiceInitializer {
   private static boolean initialized = false;
   private static ShapeOps shapeOps;
   private static UseCaseFacade facade;
+  private static AIAgentService aiAgentService;
 
   /**
    * Initialize all domain services with infrastructure implementations.
@@ -53,5 +55,13 @@ public class ServiceInitializer {
 
   public static UseCaseFacade getUseCaseFacade() {
     return facade;
+  }
+  
+  public static AIAgentService getAIAgentService() {
+    return aiAgentService;
+  }
+  
+  public static void setAIAgentService(AIAgentService service) {
+    aiAgentService = service;
   }
 }

@@ -84,6 +84,13 @@
       <version>2.5</version>
     </dependency>
 
+    <!-- Java Dotenv (.env file support) -->
+    <dependency>
+      <groupId>io.github.cdimascio</groupId>
+      <artifactId>dotenv-java</artifactId>
+      <version>3.0.0</version>
+    </dependency>
+
     <!-- java-diff-utils (diff) -->
     <dependency>
       <groupId>io.github.java-diff-utils</groupId>
@@ -158,6 +165,9 @@
         <version>3.11.0</version>
         <configuration>
           <release>17</release>
+          <compilerArgs>
+            <arg>-parameters</arg>
+          </compilerArgs>
         </configuration>
       </plugin>
       

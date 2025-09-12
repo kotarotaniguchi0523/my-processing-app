@@ -154,10 +154,11 @@ public class ToolInvoker implements IToolInvoker {
     // Check oneOf constraints if present
     Object oneOfObj = schema.get("oneOf");
     if (oneOfObj instanceof Map[]) {
-      Map[] oneOfOptions = (Map[]) oneOfObj;
+      @SuppressWarnings("unchecked")
+      Map<String, Object>[] oneOfOptions = (Map<String, Object>[]) oneOfObj;
       boolean anyValid = false;
 
-      for (Map option : oneOfOptions) {
+      for (Map<String, Object> option : oneOfOptions) {
         Object optionRequired = option.get("required");
         if (optionRequired instanceof String[]) {
           String[] fields = (String[]) optionRequired;

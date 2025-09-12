@@ -1,5 +1,6 @@
 package com.example.domain.tools.impl;
 
+import com.example.adapter.tools.Parameters;
 import com.example.domain.models.Circle;
 import com.example.domain.models.DrawingState;
 import com.example.domain.tools.IAgentTool;
@@ -74,10 +75,10 @@ public class CreateCircleTool implements IAgentTool {
   @Override
   public UseCaseResult<String> execute(Map<String, Object> parameters, DrawingState state) {
     // Extract parameters
-    Map<String, Object> centerMap = getObjectMap(parameters, "center", true);
-    Number x = getNumber(centerMap, "x", true);
-    Number y = getNumber(centerMap, "y", true);
-    Number radius = getNumber(parameters, "radius", true);
+    Map<String, Object> centerMap = Parameters.obj(parameters, "center", true);
+    Number x = Parameters.num(centerMap, "x", true);
+    Number y = Parameters.num(centerMap, "y", true);
+    Number radius = Parameters.num(parameters, "radius", true);
 
     if (x == null || y == null || radius == null) {
       throw new IllegalArgumentException("Center position and radius are required");
@@ -103,30 +104,4 @@ public class CreateCircleTool implements IAgentTool {
     DrawingState newState = port.addShape(circle);
     return UseCaseResult.ok(newState, circle.getId(), "created");
   }
-
-  @SuppressWarnings("unchecked")
-  private Map<String, Object> getObjectMap(Map<String, Object> src, String key, boolean required) {
-    Object v = src.get(key);
-    if (v == null) {
-      if (required)
-        throw new IllegalArgumentException("Missing object: " + key);
-      return null;
-    }
-    if (v instanceof Map)
-      return (Map<String, Object>) v;
-    throw new IllegalArgumentException("Field '" + key + "' must be object");
-  }
-
-  private Number getNumber(Map<String, Object> src, String key, boolean required) {
-    Object v = src.get(key);
-    if (v == null) {
-      if (required)
-        throw new IllegalArgumentException("Missing number: " + key);
-      return null;
-    }
-    if (v instanceof Number)
-      return (Number) v;
-    throw new IllegalArgumentException("Field '" + key + "' must be number");
-  }
-
 }

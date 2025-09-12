@@ -21,23 +21,23 @@ import java.util.logging.Logger;
  */
 public class InputManager {
   private static final Logger LOGGER = Logger.getLogger(InputManager.class.getName());
-  private static final int MARGIN = 10;
-  private static final int INNER_GAP_SMALL = 5;
-  private static final int INPUT_HEIGHT = 30;
-  private static final int CHAT_INPUT_RIGHT_GAP = 70;
+  // Layout constants are now sourced from SketchUIRenderer
 
   private final PApplet sketch;
   private final ChatManager chatManager;
   private final AIAgentService aiAgentService;
+  private final SketchUIRenderer uiRenderer;
 
   // Japanese IME Support
   private JTextField japaneseInputField;
   private boolean useJapaneseInput;
 
-  public InputManager(PApplet sketch, ChatManager chatManager, AIAgentService aiAgentService) {
+  public InputManager(PApplet sketch, ChatManager chatManager, AIAgentService aiAgentService,
+      SketchUIRenderer uiRenderer) {
     this.sketch = sketch;
     this.chatManager = chatManager;
     this.aiAgentService = aiAgentService;
+    this.uiRenderer = uiRenderer;
     setupJapaneseInput();
   }
 
@@ -135,10 +135,11 @@ public class InputManager {
   public void updateJapaneseInputPosition() {
     if (japaneseInputField != null) {
       SwingUtilities.invokeLater(() -> {
-        // This would need the actual chatInputY from SketchUIRenderer
-        int chatInputY = getChatInputYFromRenderer();
-        japaneseInputField.setBounds(MARGIN + INNER_GAP_SMALL, chatInputY,
-            sketch.width - MARGIN * 2 - CHAT_INPUT_RIGHT_GAP, INPUT_HEIGHT);
+        int chatInputY = uiRenderer.getChatInputY();
+        int chatInputLeft = uiRenderer.getChatInputLeft();
+        int chatInputWidth = uiRenderer.getChatInputWidth();
+        int inputHeight = uiRenderer.getInputHeight();
+        japaneseInputField.setBounds(chatInputLeft, chatInputY, chatInputWidth, inputHeight);
       });
     }
   }
@@ -163,14 +164,7 @@ public class InputManager {
     }
   }
 
-  // This is a temporary method - would need proper integration with SketchUIRenderer
-  private int getChatInputYFromRenderer() {
-    // Mock calculation for now - in real implementation this would come from SketchUIRenderer
-    int canvasAreaHeight = (int) ((sketch.height - MARGIN * 3) * 50 / 100.0);
-    int chatAreaY = MARGIN + canvasAreaHeight + MARGIN;
-    int chatAreaHeight = (int) ((sketch.height - MARGIN * 3) * 40 / 100.0);
-    return chatAreaY + chatAreaHeight - INPUT_HEIGHT - MARGIN;
-  }
+  // No longer needed heuristic; we now rely on uiRenderer for exact layout
 
   // Getters
   public boolean isUsingJapaneseInput() {

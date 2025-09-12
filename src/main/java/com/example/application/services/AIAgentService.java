@@ -15,6 +15,7 @@ import com.google.genai.types.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +52,7 @@ public class AIAgentService {
       "Keep answers concise. If a drawing action is requested, you may later emit a tool call (not yet implemented).",
       "Ask clarifying questions when parameters are ambiguous.");
 
-  private static final int MAX_HISTORY = 5; // Reduced to minimize prompt size
+  private static final int MAX_HISTORY = 20; // Store up to 20 messages for better context
   private static final Path HISTORY_FILE = Path.of(".agent_history.json");
   private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
   private long historyPersistCounter = 0; // persist every N changes
@@ -315,6 +316,7 @@ public class AIAgentService {
 
   /**
    * Build conversation context from history.
+   * Only include recent messages to avoid exceeding API limits.
    */
   private String buildContextPrompt(String currentPrompt) {
     StringBuilder prompt = new StringBuilder();
@@ -322,14 +324,24 @@ public class AIAgentService {
     // Add system prompt
     prompt.append(SYSTEM_PROMPT).append("\n\n");
 
-    // Add recent conversation history (excluding system message)
-    prompt.append("会話履歴:\n");
-    for (int i = 1; i < history.size(); i++) { // Skip system message at index 0
-      ChatMessage msg = history.get(i);
-      if (msg.role == Role.USER) {
-        prompt.append("ユーザー: ").append(msg.content).append("\n");
-      } else if (msg.role == Role.ASSISTANT) {
-        prompt.append("アシスタント: ").append(msg.content).append("\n");
+    // Only include last 5 messages to avoid prompt size issues
+    // Even though we store 20 messages, we only send recent 5 to API
+    int startIndex = Math.max(1, history.size() - 5);
+    
+    if (startIndex < history.size()) {
+      prompt.append("会話履歴:\n");
+      for (int i = startIndex; i < history.size(); i++) {
+        ChatMessage msg = history.get(i);
+        if (msg.role == Role.USER) {
+          prompt.append("ユーザー: ").append(msg.content).append("\n");
+        } else if (msg.role == Role.ASSISTANT) {
+          // Truncate long assistant messages to avoid prompt size issues
+          String content = msg.content;
+          if (content.length() > 200) {
+            content = content.substring(0, 200) + "...";
+          }
+          prompt.append("アシスタント: ").append(content).append("\n");
+        }
       }
     }
 
@@ -546,9 +558,28 @@ public class AIAgentService {
       for (Map<String, Object> e : list) {
         Object r = e.get("role");
         Object c = e.get("content");
+        Object toolCallsObj = e.get("toolCalls");
         if (!(c instanceof String))
           continue;
         String roleStr = r instanceof String ? (String) r : "assistant";
+        
+        // Parse tool calls if present
+        List<ToolCall> toolCalls = null;
+        if (toolCallsObj instanceof List) {
+          @SuppressWarnings("unchecked")
+          List<Map<String, Object>> toolCallsList = (List<Map<String, Object>>) toolCallsObj;
+          toolCalls = new ArrayList<>();
+          for (Map<String, Object> tc : toolCallsList) {
+            String name = (String) tc.get("name");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> args = (Map<String, Object>) tc.get("arguments");
+            String result = (String) tc.get("result");
+            if (name != null) {
+              toolCalls.add(new ToolCall(name, args != null ? args : new HashMap<>(), result));
+            }
+          }
+        }
+        
         switch (roleStr.toLowerCase()) {
           case "system":
             // replace initial system with loaded if different
@@ -560,7 +591,11 @@ public class AIAgentService {
             history.add(ChatMessage.user((String) c));
             break;
           default:
-            history.add(ChatMessage.assistant((String) c));
+            if (toolCalls != null && !toolCalls.isEmpty()) {
+              history.add(ChatMessage.assistantWithTools((String) c, toolCalls));
+            } else {
+              history.add(ChatMessage.assistant((String) c));
+            }
             break;
         }
       }
