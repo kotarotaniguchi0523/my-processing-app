@@ -1,6 +1,5 @@
 package com.example.domain.tools.impl;
 
-import com.example.domain.commands.RemoveShapeCommand;
 import com.example.domain.models.DrawingState;
 import com.example.domain.models.Shape;
 import com.example.domain.tools.IAgentTool;
@@ -13,6 +12,14 @@ import java.util.Map;
  * Tool for deleting shapes from the drawing
  */
 public class DeleteShapeTool implements IAgentTool {
+
+  // Feature flag removed: always facade
+  private com.example.application.usecase.UseCaseFacade facade;
+
+  public DeleteShapeTool withFacade(com.example.application.usecase.UseCaseFacade facade) {
+    this.facade = facade;
+    return this;
+  }
 
   @Override
   public String name() {
@@ -52,21 +59,32 @@ public class DeleteShapeTool implements IAgentTool {
 
     List<Shape> shapes = state.getShapes();
 
+    int targetIndex = -1;
     if (shapeId != null) {
       for (int i = 0; i < shapes.size(); i++) {
         if (shapes.get(i).getId().equals(shapeId)) {
-          return new RemoveShapeCommand(shapeId, i).execute(state);
+          targetIndex = i;
+          break;
         }
       }
-      throw new IllegalArgumentException("Shape with ID '" + shapeId + "' not found");
+      if (targetIndex < 0) {
+        throw new IllegalArgumentException("Shape with ID '" + shapeId + "' not found");
+      }
     } else {
       int idx = index.intValue();
       if (idx < 0 || idx >= shapes.size()) {
         throw new IllegalArgumentException(
             "Index " + idx + " is out of bounds. Valid range: 0-" + (shapes.size() - 1));
       }
-      String idAtIndex = shapes.get(idx).getId();
-      return new RemoveShapeCommand(idAtIndex, idx).execute(state);
+      targetIndex = idx;
+      shapeId = shapes.get(idx).getId();
     }
+
+    if (facade == null) {
+      throw new IllegalStateException("UseCaseFacade not injected");
+    }
+    var result =
+        facade.deleteShape(new com.example.application.usecase.dto.DeleteShapeInput(shapeId));
+    return result.success() ? facade.getCurrentState() : state;
   }
 }

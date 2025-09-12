@@ -1,8 +1,9 @@
 package com.example.domain.tools.impl;
 
-import com.example.domain.commands.AddShapeCommand;
+import com.example.adapter.tools.Parameters;
+import com.example.application.usecase.UseCaseFacade;
+import com.example.application.usecase.dto.CreateRectangleInput;
 import com.example.domain.models.DrawingState;
-import com.example.domain.models.Rectangle;
 import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Color;
 import com.example.domain.values.Position;
@@ -15,6 +16,13 @@ import java.util.Map;
  * Tool for creating rectangles in the drawing
  */
 public class CreateRectangleTool implements IAgentTool {
+
+  private UseCaseFacade facade; // lazily injected to avoid circular init
+
+  public CreateRectangleTool withFacade(UseCaseFacade facade) {
+    this.facade = facade;
+    return this;
+  }
 
   @Override
   public String name() {
@@ -75,11 +83,11 @@ public class CreateRectangleTool implements IAgentTool {
 
   @Override
   public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
-    Map<String, Object> positionMap = getObjectMap(parameters, "position", true);
-    Number x = getNumber(positionMap, "x", true);
-    Number y = getNumber(positionMap, "y", true);
-    Number width = getNumber(parameters, "width", true);
-    Number height = getNumber(parameters, "height", true);
+    Map<String, Object> positionMap = Parameters.obj(parameters, "position", true);
+    Number x = Parameters.num(positionMap, "x", true);
+    Number y = Parameters.num(positionMap, "y", true);
+    Number width = Parameters.num(parameters, "width", true);
+    Number height = Parameters.num(parameters, "height", true);
 
     if (x == null || y == null || width == null || height == null) {
       throw new IllegalArgumentException("Position, width and height are required");
@@ -92,13 +100,13 @@ public class CreateRectangleTool implements IAgentTool {
     Style.Builder styleBuilder = Style.builder();
 
     // Set stroke color if provided
-    Map<String, Object> strokeColorMap = getObjectMap(parameters, "strokeColor", false);
+    Map<String, Object> strokeColorMap = Parameters.obj(parameters, "strokeColor", false);
     if (strokeColorMap != null) {
       styleBuilder.strokeColor(extractColor(strokeColorMap));
     }
 
     // Set fill color if provided
-    Map<String, Object> fillColorMap = getObjectMap(parameters, "fillColor", false);
+    Map<String, Object> fillColorMap = Parameters.obj(parameters, "fillColor", false);
     if (fillColorMap != null) {
       styleBuilder.fillColor(extractColor(fillColorMap));
     } else {
@@ -106,12 +114,12 @@ public class CreateRectangleTool implements IAgentTool {
     }
 
     // Set stroke weight if provided
-    Number strokeWeight = getNumber(parameters, "strokeWeight", false);
+    Number strokeWeight = Parameters.num(parameters, "strokeWeight", false);
     if (strokeWeight != null)
       styleBuilder.strokeWeight(strokeWeight.floatValue());
 
     // Set fill enabled
-    Boolean filled = getBoolean(parameters, "filled");
+    Boolean filled = Parameters.bool(parameters, "filled");
     if (filled != null) {
       if (filled)
         styleBuilder.hasFill(true);
@@ -121,62 +129,30 @@ public class CreateRectangleTool implements IAgentTool {
 
     Style style = styleBuilder.build();
 
-    // Create the rectangle
-    Rectangle rectangle = new Rectangle(position, width.floatValue(), height.floatValue(), style);
-
-    // Create and execute the add command
-    AddShapeCommand command = new AddShapeCommand(rectangle);
-    return command.execute(state);
+    if (facade == null) {
+      throw new IllegalStateException("UseCaseFacade not injected");
+    }
+    var result = facade.createRectangle(new CreateRectangleInput(position.getX(), position.getY(),
+        width.floatValue(), height.floatValue(), style.getFillColor(), style.getStrokeColor(),
+        style.getStrokeWeight(), style.hasFill(), style.hasStroke()));
+    return result.success() ? facade.getCurrentState() : state;
   }
 
   private Color extractColor(Map<String, Object> map) {
-    Number r = getNumber(map, "r", false);
+    Number r = Parameters.num(map, "r", false);
     if (r == null)
       r = 0;
-    Number g = getNumber(map, "g", false);
+    Number g = Parameters.num(map, "g", false);
     if (g == null)
       g = 0;
-    Number b = getNumber(map, "b", false);
+    Number b = Parameters.num(map, "b", false);
     if (b == null)
       b = 0;
-    Number a = getNumber(map, "a", false);
+    Number a = Parameters.num(map, "a", false);
     if (a == null)
       a = 255;
     return new Color(r.intValue(), g.intValue(), b.intValue(), a.intValue());
   }
 
-  // ---- small helpers ----
-  @SuppressWarnings("unchecked")
-  private Map<String, Object> getObjectMap(Map<String, Object> src, String key, boolean required) {
-    Object v = src.get(key);
-    if (v == null) {
-      if (required)
-        throw new IllegalArgumentException("Missing object: " + key);
-      return null;
-    }
-    if (v instanceof Map)
-      return (Map<String, Object>) v;
-    throw new IllegalArgumentException("Field '" + key + "' must be object");
-  }
-
-  private Number getNumber(Map<String, Object> src, String key, boolean required) {
-    Object v = src.get(key);
-    if (v == null) {
-      if (required)
-        throw new IllegalArgumentException("Missing number: " + key);
-      return null;
-    }
-    if (v instanceof Number)
-      return (Number) v;
-    throw new IllegalArgumentException("Field '" + key + "' must be number");
-  }
-
-  private Boolean getBoolean(Map<String, Object> src, String key) {
-    Object v = src.get(key);
-    if (v == null)
-      return null;
-    if (v instanceof Boolean)
-      return (Boolean) v;
-    throw new IllegalArgumentException("Field '" + key + "' must be boolean");
-  }
+  // local helpers removed (centralized in Parameters)
 }

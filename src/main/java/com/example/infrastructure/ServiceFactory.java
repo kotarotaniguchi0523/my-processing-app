@@ -1,7 +1,6 @@
 package com.example.infrastructure;
 
 import com.example.domain.services.*;
-import com.example.infrastructure.adapters.*;
 import com.example.infrastructure.services.SessionManager;
 
 import java.util.Properties;
@@ -34,8 +33,6 @@ public class ServiceFactory {
     public static final String AI_CLIENT_TYPE = "ai.client.type";
     public static final String DIFF_SERVICE_TYPE = "diff.service.type";
     public static final String STATE_SERVICE_TYPE = "state.service.type";
-    public static final String COMMAND_EXECUTOR_TYPE = "command.executor.type";
-    public static final String COMMAND_PARSER_TYPE = "command.parser.type";
     public static final String SESSION_MANAGER_TYPE = "session.manager.type";
     public static final String STATE_MANAGER_TYPE = "state.manager.type";
     public static final String HISTORY_SERVICE_TYPE = "history.service.type";
@@ -48,8 +45,6 @@ public class ServiceFactory {
     public static final String AI_CLIENT_TYPE = "gemini";
     public static final String DIFF_SERVICE_TYPE = "default";
     public static final String STATE_SERVICE_TYPE = "default";
-    public static final String COMMAND_EXECUTOR_TYPE = "default";
-    public static final String COMMAND_PARSER_TYPE = "default";
     public static final String SESSION_MANAGER_TYPE = "default";
     public static final String STATE_MANAGER_TYPE = "default";
     public static final String HISTORY_SERVICE_TYPE = "default";
@@ -87,8 +82,7 @@ public class ServiceFactory {
     props.setProperty(ConfigKeys.AI_CLIENT_TYPE, Defaults.AI_CLIENT_TYPE);
     props.setProperty(ConfigKeys.DIFF_SERVICE_TYPE, Defaults.DIFF_SERVICE_TYPE);
     props.setProperty(ConfigKeys.STATE_SERVICE_TYPE, Defaults.STATE_SERVICE_TYPE);
-    props.setProperty(ConfigKeys.COMMAND_EXECUTOR_TYPE, Defaults.COMMAND_EXECUTOR_TYPE);
-    props.setProperty(ConfigKeys.COMMAND_PARSER_TYPE, Defaults.COMMAND_PARSER_TYPE);
+
     props.setProperty(ConfigKeys.SESSION_MANAGER_TYPE, Defaults.SESSION_MANAGER_TYPE);
     props.setProperty(ConfigKeys.STATE_MANAGER_TYPE, Defaults.STATE_MANAGER_TYPE);
     props.setProperty(ConfigKeys.HISTORY_SERVICE_TYPE, Defaults.HISTORY_SERVICE_TYPE);
@@ -123,20 +117,7 @@ public class ServiceFactory {
     });
   }
 
-  /**
-   * Creates or returns cached ICommandExecutor implementation
-   */
-  public ICommandExecutor createCommandExecutor() {
-    return getOrCreate(ICommandExecutor.class, () -> {
-      String type =
-          config.getProperty(ConfigKeys.COMMAND_EXECUTOR_TYPE, Defaults.COMMAND_EXECUTOR_TYPE);
-      switch (type.toLowerCase()) {
-        case "default":
-        default:
-          return new CommandExecutorAdapter();
-      }
-    });
-  }
+
 
   /**
    * Creates or returns cached ISessionManager implementation

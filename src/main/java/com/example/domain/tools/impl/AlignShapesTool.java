@@ -1,10 +1,10 @@
 package com.example.domain.tools.impl;
 
-import com.example.domain.commands.ModifyShapeCommand;
 import com.example.domain.models.DrawingState;
 import com.example.domain.models.Shape;
 import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Position;
+import com.example.application.usecase.UseCaseFacade; // Phase A1 central mutation
 
 import java.util.*;
 
@@ -70,11 +70,37 @@ public class AlignShapesTool implements IAgentTool {
 
   @Override
   public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
-    List<String> shapeIds = (List<String>) parameters.get("shapeIds");
-    List<Number> indices = (List<Number>) parameters.get("indices");
+    Object shapeIdsRaw = parameters.get("shapeIds");
+    Object indicesRaw = parameters.get("indices");
     String alignmentStr = (String) parameters.get("alignment");
     String referenceShapeId = (String) parameters.get("referenceShapeId");
     Number referenceIndex = (Number) parameters.get("referenceIndex");
+
+    List<String> shapeIds = null;
+    if (shapeIdsRaw != null) {
+      if (!(shapeIdsRaw instanceof List))
+        throw new IllegalArgumentException("shapeIds must be array");
+      @SuppressWarnings("unchecked")
+      List<Object> tmp = (List<Object>) shapeIdsRaw;
+      shapeIds = tmp.stream().map(o -> {
+        if (!(o instanceof String))
+          throw new IllegalArgumentException("shapeIds elements must be string");
+        return (String) o;
+      }).toList();
+    }
+
+    List<Number> indices = null;
+    if (indicesRaw != null) {
+      if (!(indicesRaw instanceof List))
+        throw new IllegalArgumentException("indices must be array");
+      @SuppressWarnings("unchecked")
+      List<Object> tmp = (List<Object>) indicesRaw;
+      indices = tmp.stream().map(o -> {
+        if (!(o instanceof Number))
+          throw new IllegalArgumentException("indices elements must be number");
+        return (Number) o;
+      }).toList();
+    }
 
     if (shapeIds == null && indices == null) {
       throw new IllegalArgumentException("Either shapeIds or indices must be provided");
@@ -113,6 +139,9 @@ public class AlignShapesTool implements IAgentTool {
       }
     } else {
       // Use indices
+      if (indices == null) {
+        throw new IllegalArgumentException("indices must not be null");
+      }
       for (Number indexNum : indices) {
         int idx = indexNum.intValue();
         if (idx < 0 || idx >= shapes.size()) {
@@ -163,9 +192,7 @@ public class AlignShapesTool implements IAgentTool {
 
       if (!shape.getPosition().equals(newPosition)) {
         Shape alignedShape = shape.moveTo(newPosition);
-        ModifyShapeCommand command = new ModifyShapeCommand(shape.getId(), s -> alignedShape,
-            "align " + alignment.name().toLowerCase());
-        currentState = command.execute(currentState);
+        currentState = UseCaseFacade.replaceShape(currentState, shape.getId(), alignedShape);
       }
     }
 

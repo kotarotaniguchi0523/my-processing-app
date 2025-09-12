@@ -1,12 +1,12 @@
 package com.example.domain.tools.impl;
 
-import com.example.domain.commands.AddShapeCommand;
 import com.example.domain.models.Circle;
 import com.example.domain.models.DrawingState;
 import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Color;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
+import com.example.application.usecase.UseCaseFacade; // Phase A1 central mutation
 
 import java.util.HashMap;
 import java.util.Map;
@@ -116,12 +116,9 @@ public class CreateCircleTool implements IAgentTool {
 
     Style style = styleBuilder.build();
 
-    // Create the circle
     Circle circle = new Circle(center, radius.floatValue(), style);
-
-    // Create and execute the add command
-    AddShapeCommand command = new AddShapeCommand(circle);
-    return command.execute(state);
+    // Centralized mutation via facade helper
+    return UseCaseFacade.addShape(state, circle);
   }
 
   private Color extractColor(Map<String, Object> map) {

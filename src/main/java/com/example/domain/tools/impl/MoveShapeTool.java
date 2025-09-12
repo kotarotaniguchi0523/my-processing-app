@@ -1,10 +1,12 @@
 package com.example.domain.tools.impl;
 
-import com.example.domain.commands.ModifyShapeCommand;
+import com.example.adapter.tools.Parameters;
 import com.example.domain.models.DrawingState;
 import com.example.domain.models.Shape;
 import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Position;
+import com.example.application.usecase.UseCaseFacade;
+import com.example.application.usecase.dto.MoveShapeInput;
 
 import java.util.HashMap;
 import java.util.List;
@@ -14,6 +16,14 @@ import java.util.Map;
  * Tool for moving shapes to a new position
  */
 public class MoveShapeTool implements IAgentTool {
+
+  // Feature flag removed: always use facade
+  private UseCaseFacade facade;
+
+  public MoveShapeTool withFacade(UseCaseFacade facade) {
+    this.facade = facade;
+    return this;
+  }
 
   @Override
   public String name() {
@@ -61,7 +71,7 @@ public class MoveShapeTool implements IAgentTool {
   public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
     String shapeId = (String) parameters.get("shapeId");
     Number index = (Number) parameters.get("index");
-    Map<String, Object> newPosMap = getObjectMap(parameters, "newPosition", true);
+    Map<String, Object> newPosMap = Parameters.obj(parameters, "newPosition", true);
     Boolean relative = (Boolean) parameters.get("relative");
 
     if (shapeId == null && index == null) {
@@ -72,8 +82,8 @@ public class MoveShapeTool implements IAgentTool {
       throw new IllegalArgumentException("New position is required");
     }
 
-    Number newX = getNumber(newPosMap, "x", true);
-    Number newY = getNumber(newPosMap, "y", true);
+    Number newX = Parameters.num(newPosMap, "x", true);
+    Number newY = Parameters.num(newPosMap, "y", true);
 
     if (newX == null || newY == null) {
       throw new IllegalArgumentException("New position must have x and y coordinates");
@@ -116,38 +126,13 @@ public class MoveShapeTool implements IAgentTool {
       newPosition = new Position(newX.floatValue(), newY.floatValue());
     }
 
-    // Create modified shape with new position
-    Shape modifiedShape = targetShape.moveTo(newPosition);
-
-    // Create and execute modify command via modifier function
-    ModifyShapeCommand command = new ModifyShapeCommand(targetShape.getId(), s -> modifiedShape,
-        "move to (" + newPosition.getX() + "," + newPosition.getY() + ")");
-    return command.execute(state);
-  }
-
-  // helpers
-  @SuppressWarnings("unchecked")
-  private Map<String, Object> getObjectMap(Map<String, Object> src, String key, boolean required) {
-    Object v = src.get(key);
-    if (v == null) {
-      if (required)
-        throw new IllegalArgumentException("Missing object: " + key);
-      return null;
+    if (facade == null) {
+      throw new IllegalStateException("UseCaseFacade not injected");
     }
-    if (v instanceof Map)
-      return (Map<String, Object>) v;
-    throw new IllegalArgumentException("Field '" + key + "' must be object");
+    var result = facade
+        .moveShape(new MoveShapeInput(targetShape.getId(), newPosition.getX(), newPosition.getY()));
+    return result.success() ? facade.getCurrentState() : state;
   }
 
-  private Number getNumber(Map<String, Object> src, String key, boolean required) {
-    Object v = src.get(key);
-    if (v == null) {
-      if (required)
-        throw new IllegalArgumentException("Missing number: " + key);
-      return null;
-    }
-    if (v instanceof Number)
-      return (Number) v;
-    throw new IllegalArgumentException("Field '" + key + "' must be number");
-  }
+  // local helpers removed (centralized)
 }

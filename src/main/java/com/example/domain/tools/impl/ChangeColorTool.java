@@ -1,11 +1,13 @@
 package com.example.domain.tools.impl;
 
-import com.example.domain.commands.ModifyShapeCommand;
+import com.example.adapter.tools.Parameters;
 import com.example.domain.models.DrawingState;
 import com.example.domain.models.Shape;
 import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Color;
 import com.example.domain.values.Style;
+import com.example.application.usecase.UseCaseFacade;
+import com.example.application.usecase.dto.ChangeColorInput;
 
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +17,14 @@ import java.util.Map;
  * Tool for changing the color and style of shapes
  */
 public class ChangeColorTool implements IAgentTool {
+
+  // Feature flag removed: always facade
+  private UseCaseFacade facade;
+
+  public ChangeColorTool withFacade(UseCaseFacade facade) {
+    this.facade = facade;
+    return this;
+  }
 
   @Override
   public String name() {
@@ -116,26 +126,26 @@ public class ChangeColorTool implements IAgentTool {
       styleBuilder.noStroke();
 
     // Apply new stroke color if provided
-    Map<String, Object> strokeColorMap = getObjectMap(parameters, "strokeColor", false);
+    Map<String, Object> strokeColorMap = Parameters.obj(parameters, "strokeColor", false);
     if (strokeColorMap != null) {
       Color strokeColor = extractColor(strokeColorMap);
       styleBuilder.strokeColor(strokeColor);
     }
 
     // Apply new fill color if provided
-    Map<String, Object> fillColorMap = getObjectMap(parameters, "fillColor", false);
+    Map<String, Object> fillColorMap = Parameters.obj(parameters, "fillColor", false);
     if (fillColorMap != null) {
       Color fillColor = extractColor(fillColorMap);
       styleBuilder.fillColor(fillColor);
     }
 
     // Apply new stroke weight if provided
-    Number strokeWeight = getNumber(parameters, "strokeWeight", false);
+    Number strokeWeight = Parameters.num(parameters, "strokeWeight", false);
     if (strokeWeight != null)
       styleBuilder.strokeWeight(strokeWeight.floatValue());
 
     // Apply fill enabled if provided
-    Boolean filled = getBoolean(parameters, "filled");
+    Boolean filled = Parameters.bool(parameters, "filled");
     if (filled != null) {
       if (filled)
         styleBuilder.hasFill(true);
@@ -148,59 +158,29 @@ public class ChangeColorTool implements IAgentTool {
 
     Style newStyle = styleBuilder.build();
 
-    // Modify via command factory (keeps undo intact)
-    ModifyShapeCommand command = ModifyShapeCommand.changeStyle(targetShape.getId(), newStyle);
-    return command.execute(state);
+    if (facade == null) {
+      throw new IllegalStateException("UseCaseFacade not injected");
+    }
+    var result = facade.changeColor(new ChangeColorInput(targetShape.getId(),
+        newStyle.getFillColor(), newStyle.getStrokeColor()));
+    return result.success() ? facade.getCurrentState() : state;
   }
 
   private Color extractColor(Map<String, Object> map) {
-    Number r = getNumber(map, "r", false);
+    Number r = Parameters.num(map, "r", false);
     if (r == null)
       r = 0;
-    Number g = getNumber(map, "g", false);
+    Number g = Parameters.num(map, "g", false);
     if (g == null)
       g = 0;
-    Number b = getNumber(map, "b", false);
+    Number b = Parameters.num(map, "b", false);
     if (b == null)
       b = 0;
-    Number a = getNumber(map, "a", false);
+    Number a = Parameters.num(map, "a", false);
     if (a == null)
       a = 255;
     return new Color(r.intValue(), g.intValue(), b.intValue(), a.intValue());
   }
 
-  // helpers
-  @SuppressWarnings("unchecked")
-  private Map<String, Object> getObjectMap(Map<String, Object> src, String key, boolean required) {
-    Object v = src.get(key);
-    if (v == null) {
-      if (required)
-        throw new IllegalArgumentException("Missing object: " + key);
-      return null;
-    }
-    if (v instanceof Map)
-      return (Map<String, Object>) v;
-    throw new IllegalArgumentException("Field '" + key + "' must be object");
-  }
-
-  private Number getNumber(Map<String, Object> src, String key, boolean required) {
-    Object v = src.get(key);
-    if (v == null) {
-      if (required)
-        throw new IllegalArgumentException("Missing number: " + key);
-      return null;
-    }
-    if (v instanceof Number)
-      return (Number) v;
-    throw new IllegalArgumentException("Field '" + key + "' must be number");
-  }
-
-  private Boolean getBoolean(Map<String, Object> src, String key) {
-    Object v = src.get(key);
-    if (v == null)
-      return null;
-    if (v instanceof Boolean)
-      return (Boolean) v;
-    throw new IllegalArgumentException("Field '" + key + "' must be boolean");
-  }
+  // local helpers removed (centralized)
 }

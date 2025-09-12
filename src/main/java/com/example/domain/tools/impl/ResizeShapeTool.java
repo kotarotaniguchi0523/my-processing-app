@@ -1,9 +1,10 @@
 package com.example.domain.tools.impl;
 
-import com.example.domain.commands.ModifyShapeCommand;
+import com.example.adapter.tools.Parameters;
 import com.example.domain.models.*;
 import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Position;
+import com.example.application.usecase.UseCaseFacade; // Phase A1 central mutation
 
 import java.util.HashMap;
 import java.util.List;
@@ -64,9 +65,9 @@ public class ResizeShapeTool implements IAgentTool {
   public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
     String shapeId = (String) parameters.get("shapeId");
     Number index = (Number) parameters.get("index");
-    Number scale = getNumber(parameters, "scale", false);
-    Map<String, Object> newSizeMap = getObjectMap(parameters, "newSize", false);
-    Number newRadius = getNumber(parameters, "newRadius", false);
+    Number scale = Parameters.num(parameters, "scale", false);
+    Map<String, Object> newSizeMap = Parameters.obj(parameters, "newSize", false);
+    Number newRadius = Parameters.num(parameters, "newRadius", false);
 
     if (shapeId == null && index == null) {
       throw new IllegalArgumentException("Either shapeId or index must be provided");
@@ -119,8 +120,8 @@ public class ResizeShapeTool implements IAgentTool {
       float newWidth, newHeight;
 
       if (newSizeMap != null) {
-        Number w = getNumber(newSizeMap, "width", false);
-        Number h = getNumber(newSizeMap, "height", false);
+        Number w = Parameters.num(newSizeMap, "width", false);
+        Number h = Parameters.num(newSizeMap, "height", false);
         newWidth = w != null ? w.floatValue() : rect.getWidth();
         newHeight = h != null ? h.floatValue() : rect.getHeight();
       } else if (scale != null) {
@@ -184,10 +185,10 @@ public class ResizeShapeTool implements IAgentTool {
           "Unsupported shape type for resizing: " + targetShape.getClass().getSimpleName());
     }
 
-    // Execute modify via modifier command
-    ModifyShapeCommand command =
-        new ModifyShapeCommand(targetShape.getId(), s -> resizedShape, "resize");
-    return command.execute(state);
+
+    // Replace shape directly (find index and immutable replace)
+    // Centralized replacement
+    return UseCaseFacade.replaceShape(state, targetShape.getId(), resizedShape);
   }
 
   private Position scalePoint(Position point, Position center, float scale) {
@@ -196,29 +197,5 @@ public class ResizeShapeTool implements IAgentTool {
     return new Position(center.getX() + dx * scale, center.getY() + dy * scale);
   }
 
-  // helpers
-  @SuppressWarnings("unchecked")
-  private Map<String, Object> getObjectMap(Map<String, Object> src, String key, boolean required) {
-    Object v = src.get(key);
-    if (v == null) {
-      if (required)
-        throw new IllegalArgumentException("Missing object: " + key);
-      return null;
-    }
-    if (v instanceof Map)
-      return (Map<String, Object>) v;
-    throw new IllegalArgumentException("Field '" + key + "' must be object");
-  }
-
-  private Number getNumber(Map<String, Object> src, String key, boolean required) {
-    Object v = src.get(key);
-    if (v == null) {
-      if (required)
-        throw new IllegalArgumentException("Missing number: " + key);
-      return null;
-    }
-    if (v instanceof Number)
-      return (Number) v;
-    throw new IllegalArgumentException("Field '" + key + "' must be number");
-  }
+  // local helpers removed (centralized)
 }

@@ -1,6 +1,5 @@
 package com.example.domain.tools.impl;
 
-import com.example.domain.commands.ClearCanvasCommand;
 import com.example.domain.models.DrawingState;
 import com.example.domain.tools.IAgentTool;
 
@@ -11,6 +10,14 @@ import java.util.Map;
  * Tool for clearing the entire canvas
  */
 public class ClearCanvasTool implements IAgentTool {
+
+  // Feature flag removed: always facade
+  private com.example.application.usecase.UseCaseFacade facade;
+
+  public ClearCanvasTool withFacade(com.example.application.usecase.UseCaseFacade facade) {
+    this.facade = facade;
+    return this;
+  }
 
   @Override
   public String name() {
@@ -29,7 +36,10 @@ public class ClearCanvasTool implements IAgentTool {
 
   @Override
   public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
-    // TODO: まだやらないが、背景色指定機能を実装する場合は ClearCanvasCommand 拡張 or 新Commandを追加
-    return new ClearCanvasCommand().execute(state);
+    if (facade == null) {
+      throw new IllegalStateException("UseCaseFacade not injected");
+    }
+    var result = facade.clearCanvas();
+    return result.success() ? facade.getCurrentState() : state;
   }
 }
