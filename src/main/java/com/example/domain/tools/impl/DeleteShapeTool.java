@@ -1,6 +1,7 @@
 package com.example.domain.tools.impl;
 
 import com.example.domain.models.DrawingState;
+import com.example.application.usecase.dto.UseCaseResult;
 import com.example.domain.models.Shape;
 import com.example.domain.tools.IAgentTool;
 
@@ -49,7 +50,7 @@ public class DeleteShapeTool implements IAgentTool {
   }
 
   @Override
-  public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
+  public UseCaseResult<String> execute(Map<String, Object> parameters, DrawingState state) {
     String shapeId = (String) parameters.get("shapeId");
     Number index = (Number) parameters.get("index");
 
@@ -85,6 +86,9 @@ public class DeleteShapeTool implements IAgentTool {
     }
     var result =
         facade.deleteShape(new com.example.application.usecase.dto.DeleteShapeInput(shapeId));
-    return result.success() ? facade.getCurrentState() : state;
+    if (result.success()) {
+      return UseCaseResult.ok(result.newState(), result.payload(), result.message());
+    }
+    return UseCaseResult.fail(state, result.message());
   }
 }

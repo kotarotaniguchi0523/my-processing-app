@@ -5,29 +5,28 @@ import com.example.application.usecase.api.*;
 import com.example.application.usecase.dto.*;
 import com.example.domain.models.DrawingState;
 import com.example.domain.models.Shape;
+import com.example.domain.services.ShapeOps;
 
-import java.util.List;
 
-/**
- * Aggregates individual use cases behind a simple API. Later this will hide repositories /
- * transaction / history composition.
- */
 public class UseCaseFacade {
   private final ICreateRectangle createRectangleUseCase;
   private final IMoveShape moveShapeUseCase;
   private final IChangeColor changeColorUseCase;
   private final IDeleteShape deleteShapeUseCase;
   private final IClearCanvas clearCanvasUseCase;
+  private final IGroupShapes groupShapesUseCase;
   private final StateService stateService;
+  private final ShapeOps shapeOps;
 
-  public UseCaseFacade(StateService stateService) {
-    // In future: pass repositories or services
+  public UseCaseFacade(StateService stateService, ShapeOps shapeOps) {
     this.stateService = stateService;
-    this.createRectangleUseCase = new CreateRectangleUseCase(stateService);
-    this.moveShapeUseCase = new MoveShapeUseCase(stateService);
-    this.changeColorUseCase = new ChangeColorUseCase(stateService);
-    this.deleteShapeUseCase = new DeleteShapeUseCase(stateService);
-    this.clearCanvasUseCase = new ClearCanvasUseCase(stateService);
+    this.shapeOps = shapeOps;
+    this.createRectangleUseCase = new CreateRectangleUseCase(stateService, shapeOps);
+    this.moveShapeUseCase = new MoveShapeUseCase(stateService, shapeOps);
+    this.changeColorUseCase = new ChangeColorUseCase(stateService, shapeOps);
+    this.deleteShapeUseCase = new DeleteShapeUseCase(stateService, shapeOps);
+    this.clearCanvasUseCase = new ClearCanvasUseCase(stateService, shapeOps); // enable clearAll()
+    this.groupShapesUseCase = new GroupShapesUseCase(stateService, shapeOps);
   }
 
   public UseCaseResult<String> createRectangle(CreateRectangleInput input) {
@@ -50,52 +49,21 @@ public class UseCaseFacade {
     return clearCanvasUseCase.execute();
   }
 
-  /**
-   * Temporary accessor until unified UseCaseResult provides newState in later steps. Tools should
-   * call this after successful facade invocation to obtain the latest immutable DrawingState.
-   */
-  public DrawingState getCurrentState() {
-    return stateService.getCurrentState();
+  public UseCaseResult<java.util.Map<String, Object>> groupShapes(GroupShapesInput input) {
+    return groupShapesUseCase.execute(input);
   }
 
-  // =============================================================
-  // Phase A1: Centralized state mutation helpers (temporary static)
-  // All direct structural modifications to DrawingState (add/replace/remove)
-  // must happen only here or in dedicated UseCase classes. Tools call these
-  // helpers instead of invoking withAddedShape / withReplacedShape directly.
-  // Later phases will route through repositories + history.
-  // =============================================================
-
-  /** Append a shape immutably to the provided state. */
-  public static DrawingState addShape(DrawingState state, Shape shape) {
-    if (state == null || shape == null)
-      return state; // defensive no-op
-    return state.withAddedShape(shape);
+  // Instance helpers (thin wrappers delegating to ShapeOps)
+  public DrawingState addShape(Shape shape) {
+    if (shape == null)
+      return stateService.getCurrentState();
+    return shapeOps.add(shape);
   }
 
-  /**
-   * Replace a shape identified by id with a new instance. If not found, returns original state.
-   */
-  public static DrawingState replaceShape(DrawingState state, String shapeId, Shape newShape) {
-    if (state == null || shapeId == null || newShape == null)
-      return state;
-    List<Shape> shapes = state.getShapes();
-    for (int i = 0; i < shapes.size(); i++) {
-      if (shapeId.equals(shapes.get(i).getId())) {
-        return state.withReplacedShape(i, newShape);
-      }
-    }
-    return state; // not found
+  public DrawingState replaceShape(String shapeId, Shape newShape) {
+    if (shapeId == null || newShape == null)
+      return stateService.getCurrentState();
+    return shapeOps.replace(shapeId, newShape);
   }
 
-  /** Bulk replace a list of shapes (matched by id) returning the updated state. */
-  public static DrawingState replaceShapes(DrawingState state, List<Shape> replacements) {
-    if (state == null || replacements == null || replacements.isEmpty())
-      return state;
-    DrawingState current = state;
-    for (Shape s : replacements) {
-      current = replaceShape(current, s.getId(), s);
-    }
-    return current;
-  }
 }

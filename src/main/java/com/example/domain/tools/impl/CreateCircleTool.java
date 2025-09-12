@@ -6,15 +6,26 @@ import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Color;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
-import com.example.application.usecase.UseCaseFacade; // Phase A1 central mutation
+import com.example.application.usecase.UseCaseFacade; // central mutation
+import com.example.application.usecase.dto.UseCaseResult;
 
 import java.util.HashMap;
 import java.util.Map;
+import static com.example.domain.tools.support.ToolPreconditions.requireFacade;
+import static com.example.domain.tools.support.ToolStyleUtil.*;
+import static com.example.domain.tools.support.ToolSchemas.colorSchema;
 
 /**
  * Tool for creating circles in the drawing
  */
 public class CreateCircleTool implements IAgentTool {
+  // Inject facade to use instance helpers
+  private UseCaseFacade facade;
+
+  public CreateCircleTool withFacade(UseCaseFacade facade) {
+    this.facade = facade;
+    return this;
+  }
 
   @Override
   public String name() {
@@ -43,18 +54,8 @@ public class CreateCircleTool implements IAgentTool {
         Map.of("type", "number", "description", "Radius of the circle", "minimum", 1));
 
     // Color (optional)
-    Map<String, Object> color = new HashMap<>();
-    color.put("type", "object");
-    Map<String, Object> colorProps = new HashMap<>();
-    colorProps.put("r", Map.of("type", "integer", "minimum", 0, "maximum", 255));
-    colorProps.put("g", Map.of("type", "integer", "minimum", 0, "maximum", 255));
-    colorProps.put("b", Map.of("type", "integer", "minimum", 0, "maximum", 255));
-    colorProps.put("a", Map.of("type", "integer", "minimum", 0, "maximum", 255, "default", 255));
-    color.put("properties", colorProps);
-    properties.put("strokeColor", color);
-
-    // Fill color (optional)
-    properties.put("fillColor", color);
+    properties.put("strokeColor", colorSchema());
+    properties.put("fillColor", colorSchema());
 
     // Stroke weight (optional)
     properties.put("strokeWeight",
@@ -71,7 +72,7 @@ public class CreateCircleTool implements IAgentTool {
   }
 
   @Override
-  public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
+  public UseCaseResult<String> execute(Map<String, Object> parameters, DrawingState state) {
     // Extract parameters
     Map<String, Object> centerMap = getObjectMap(parameters, "center", true);
     Number x = getNumber(centerMap, "x", true);
@@ -89,52 +90,18 @@ public class CreateCircleTool implements IAgentTool {
     Style.Builder styleBuilder = Style.builder();
 
     // Set stroke color if provided
-    Map<String, Object> strokeColorMap = getObjectMap(parameters, "strokeColor", false);
-    if (strokeColorMap != null)
-      styleBuilder.strokeColor(extractColor(strokeColorMap));
-
-    // Set fill color if provided
-    Map<String, Object> fillColorMap = getObjectMap(parameters, "fillColor", false);
-    if (fillColorMap != null)
-      styleBuilder.fillColor(extractColor(fillColorMap));
-    else
+    applyOptionalStrokeFill(parameters, styleBuilder);
+    if (styleBuilder.build().getFillColor() == null) {
       styleBuilder.fillColor(new Color(200, 200, 200, 255));
-
-    // Set stroke weight if provided
-    Number strokeWeight = getNumber(parameters, "strokeWeight", false);
-    if (strokeWeight != null)
-      styleBuilder.strokeWeight(strokeWeight.floatValue());
-
-    // Set fill enabled
-    Boolean filled = getBoolean(parameters, "filled");
-    if (filled != null) {
-      if (filled)
-        styleBuilder.hasFill(true);
-      else
-        styleBuilder.noFill();
     }
 
     Style style = styleBuilder.build();
 
     Circle circle = new Circle(center, radius.floatValue(), style);
+    requireFacade(facade);
     // Centralized mutation via facade helper
-    return UseCaseFacade.addShape(state, circle);
-  }
-
-  private Color extractColor(Map<String, Object> map) {
-    Number r = getNumber(map, "r", false);
-    if (r == null)
-      r = 0;
-    Number g = getNumber(map, "g", false);
-    if (g == null)
-      g = 0;
-    Number b = getNumber(map, "b", false);
-    if (b == null)
-      b = 0;
-    Number a = getNumber(map, "a", false);
-    if (a == null)
-      a = 255;
-    return new Color(r.intValue(), g.intValue(), b.intValue(), a.intValue());
+    DrawingState newState = facade.addShape(circle);
+    return UseCaseResult.ok(newState, circle.getId(), "created");
   }
 
   @SuppressWarnings("unchecked")
@@ -162,12 +129,4 @@ public class CreateCircleTool implements IAgentTool {
     throw new IllegalArgumentException("Field '" + key + "' must be number");
   }
 
-  private Boolean getBoolean(Map<String, Object> src, String key) {
-    Object v = src.get(key);
-    if (v == null)
-      return null;
-    if (v instanceof Boolean)
-      return (Boolean) v;
-    throw new IllegalArgumentException("Field '" + key + "' must be boolean");
-  }
 }

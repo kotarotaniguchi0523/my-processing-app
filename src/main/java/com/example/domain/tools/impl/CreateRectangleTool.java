@@ -3,6 +3,7 @@ package com.example.domain.tools.impl;
 import com.example.adapter.tools.Parameters;
 import com.example.application.usecase.UseCaseFacade;
 import com.example.application.usecase.dto.CreateRectangleInput;
+import com.example.application.usecase.dto.UseCaseResult;
 import com.example.domain.models.DrawingState;
 import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Color;
@@ -11,6 +12,9 @@ import com.example.domain.values.Style;
 
 import java.util.HashMap;
 import java.util.Map;
+import static com.example.domain.tools.support.ToolPreconditions.requireFacade;
+import static com.example.domain.tools.support.ToolStyleUtil.*;
+import static com.example.domain.tools.support.ToolSchemas.colorSchema;
 
 /**
  * Tool for creating rectangles in the drawing
@@ -54,18 +58,8 @@ public class CreateRectangleTool implements IAgentTool {
         Map.of("type", "number", "description", "Height of the rectangle", "minimum", 1));
 
     // Color (optional)
-    Map<String, Object> color = new HashMap<>();
-    color.put("type", "object");
-    Map<String, Object> colorProps = new HashMap<>();
-    colorProps.put("r", Map.of("type", "integer", "minimum", 0, "maximum", 255));
-    colorProps.put("g", Map.of("type", "integer", "minimum", 0, "maximum", 255));
-    colorProps.put("b", Map.of("type", "integer", "minimum", 0, "maximum", 255));
-    colorProps.put("a", Map.of("type", "integer", "minimum", 0, "maximum", 255, "default", 255));
-    color.put("properties", colorProps);
-    properties.put("strokeColor", color);
-
-    // Fill color (optional)
-    properties.put("fillColor", color);
+    properties.put("strokeColor", colorSchema());
+    properties.put("fillColor", colorSchema());
 
     // Stroke weight (optional)
     properties.put("strokeWeight",
@@ -82,7 +76,7 @@ public class CreateRectangleTool implements IAgentTool {
   }
 
   @Override
-  public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
+  public UseCaseResult<String> execute(Map<String, Object> parameters, DrawingState state) {
     Map<String, Object> positionMap = Parameters.obj(parameters, "position", true);
     Number x = Parameters.num(positionMap, "x", true);
     Number y = Parameters.num(positionMap, "y", true);
@@ -100,59 +94,23 @@ public class CreateRectangleTool implements IAgentTool {
     Style.Builder styleBuilder = Style.builder();
 
     // Set stroke color if provided
-    Map<String, Object> strokeColorMap = Parameters.obj(parameters, "strokeColor", false);
-    if (strokeColorMap != null) {
-      styleBuilder.strokeColor(extractColor(strokeColorMap));
-    }
-
-    // Set fill color if provided
-    Map<String, Object> fillColorMap = Parameters.obj(parameters, "fillColor", false);
-    if (fillColorMap != null) {
-      styleBuilder.fillColor(extractColor(fillColorMap));
-    } else {
+    applyOptionalStrokeFill(parameters, styleBuilder);
+    if (styleBuilder.build().getFillColor() == null) {
+      // default fill color when none specified
       styleBuilder.fillColor(new Color(150, 150, 150, 255));
-    }
-
-    // Set stroke weight if provided
-    Number strokeWeight = Parameters.num(parameters, "strokeWeight", false);
-    if (strokeWeight != null)
-      styleBuilder.strokeWeight(strokeWeight.floatValue());
-
-    // Set fill enabled
-    Boolean filled = Parameters.bool(parameters, "filled");
-    if (filled != null) {
-      if (filled)
-        styleBuilder.hasFill(true);
-      else
-        styleBuilder.noFill();
     }
 
     Style style = styleBuilder.build();
 
-    if (facade == null) {
-      throw new IllegalStateException("UseCaseFacade not injected");
-    }
+    requireFacade(facade);
     var result = facade.createRectangle(new CreateRectangleInput(position.getX(), position.getY(),
         width.floatValue(), height.floatValue(), style.getFillColor(), style.getStrokeColor(),
         style.getStrokeWeight(), style.hasFill(), style.hasStroke()));
-    return result.success() ? facade.getCurrentState() : state;
+    if (result.success()) {
+      return UseCaseResult.ok(result.newState(), result.payload(), result.message());
+    }
+    return UseCaseResult.fail(state, result.message());
   }
 
-  private Color extractColor(Map<String, Object> map) {
-    Number r = Parameters.num(map, "r", false);
-    if (r == null)
-      r = 0;
-    Number g = Parameters.num(map, "g", false);
-    if (g == null)
-      g = 0;
-    Number b = Parameters.num(map, "b", false);
-    if (b == null)
-      b = 0;
-    Number a = Parameters.num(map, "a", false);
-    if (a == null)
-      a = 255;
-    return new Color(r.intValue(), g.intValue(), b.intValue(), a.intValue());
-  }
-
-  // local helpers removed (centralized in Parameters)
+  // color & stroke helpers centralized in ToolStyleUtil
 }

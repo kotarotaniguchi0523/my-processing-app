@@ -5,6 +5,8 @@ import com.example.presentation.SketchUIRenderer;
 import com.example.presentation.SketchEventHandler;
 import com.example.presentation.ChatManager;
 import com.example.presentation.InputManager;
+import com.example.application.services.AIAgentService;
+import com.example.domain.models.DrawingState;
 
 import processing.core.PApplet;
 import processing.core.PFont;
@@ -18,6 +20,7 @@ public class SimpleSketch extends PApplet {
   private SketchEventHandler eventHandler;
   private ChatManager chatManager;
   private InputManager inputManager;
+  private AIAgentService aiAgentService;
 
   // UI Components
   private PFont font;
@@ -72,9 +75,12 @@ public class SimpleSketch extends PApplet {
   private void initializeUIComponents() {
     // Initialize managers in order of dependency
     chatManager = new ChatManager(this);
-    inputManager = new InputManager(this, chatManager);
-    uiRenderer = new SketchUIRenderer(this, chatManager);
-    eventHandler = new SketchEventHandler(this, uiRenderer, chatManager, inputManager);
+    // Initialize AI agent service with default state
+    aiAgentService = new AIAgentService(DrawingState.defaultState());
+    inputManager = new InputManager(this, chatManager, aiAgentService);
+    uiRenderer = new SketchUIRenderer(this, chatManager, aiAgentService);
+    eventHandler =
+        new SketchEventHandler(this, uiRenderer, chatManager, inputManager, aiAgentService);
 
     // Configure UI renderer
     uiRenderer.setFonts(font, smallFont);

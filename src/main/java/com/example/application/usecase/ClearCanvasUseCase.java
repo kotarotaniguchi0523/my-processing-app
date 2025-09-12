@@ -1,24 +1,25 @@
 package com.example.application.usecase;
 
 import com.example.application.services.StateService;
+import com.example.domain.services.ShapeOps;
 import com.example.application.usecase.api.IClearCanvas;
 import com.example.application.usecase.dto.UseCaseResult;
 
 /** Implementation of clearing all shapes. */
 class ClearCanvasUseCase implements IClearCanvas {
-  private final StateService stateService;
+  private final ShapeOps shapeOps;
 
-  ClearCanvasUseCase(StateService stateService) {
-    this.stateService = stateService;
+  ClearCanvasUseCase(StateService stateService, ShapeOps shapeOps) {
+    this.shapeOps = shapeOps;
   }
 
   @Override
   public UseCaseResult<Integer> execute() {
-    int count = stateService.getAllShapes().size();
+    int count = shapeOps.listAll().size();
     if (count == 0) {
-      return UseCaseResult.ok(stateService.getCurrentState(), 0, "cleared"); // idempotent
+      return UseCaseResult.ok(shapeOps.state(), 0, "cleared"); // idempotent
     }
-    stateService.clearAllShapes();
-    return UseCaseResult.ok(stateService.getCurrentState(), count, "cleared");
+    var newState = shapeOps.clearAll();
+    return UseCaseResult.ok(newState, count, "cleared");
   }
 }

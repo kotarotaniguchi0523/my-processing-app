@@ -2,7 +2,7 @@ package com.example.domain.tools;
 
 import com.example.domain.tools.impl.*;
 import com.example.application.usecase.UseCaseFacade;
-import com.example.application.services.StateService;
+import com.example.infrastructure.ServiceInitializer;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,9 +12,7 @@ import java.util.logging.Logger;
  * Registry for managing and accessing available tools
  */
 public class ToolRegistry {
-
   private static final Logger LOGGER = Logger.getLogger(ToolRegistry.class.getName());
-
   private static ToolRegistry instance;
   private final Map<String, IAgentTool> tools;
   private boolean initialized = false;
@@ -38,41 +36,43 @@ public class ToolRegistry {
    * Initialize the registry with all available tools
    */
   private void initialize() {
-    if (initialized) {
+    if (initialized)
       return;
-    }
-
-    // Register all implemented tools
-    registerTool(new CreateCircleTool());
-    // Create facade once (best-effort; may be null during early bootstrap)
-    UseCaseFacade facade = null;
-    try {
-      facade = new UseCaseFacade(StateService.getInstance());
-    } catch (Exception ignored) {
-    }
-
+    // Ensure full service graph initialized (StateService, ShapeOps, Facade, etc.)
+    ServiceInitializer.initialize();
+    UseCaseFacade facade = ServiceInitializer.getUseCaseFacade();
+    CreateCircleTool circleTool = new CreateCircleTool();
+    CreateLineTool lineTool = new CreateLineTool();
     CreateRectangleTool rectTool = new CreateRectangleTool();
     MoveShapeTool moveTool = new MoveShapeTool();
     ChangeColorTool colorTool = new ChangeColorTool();
     DeleteShapeTool deleteTool = new DeleteShapeTool();
     ClearCanvasTool clearTool = new ClearCanvasTool();
+    ResizeShapeTool resizeTool = new ResizeShapeTool();
+    AlignShapesTool alignTool = new AlignShapesTool();
+    GroupShapesTool groupTool = new GroupShapesTool();
     if (facade != null) {
+      circleTool.withFacade(facade);
+      lineTool.withFacade(facade);
       rectTool.withFacade(facade);
       moveTool.withFacade(facade);
       colorTool.withFacade(facade);
       deleteTool.withFacade(facade);
       clearTool.withFacade(facade);
+      resizeTool.withFacade(facade);
+      alignTool.withFacade(facade);
+      groupTool.withFacade(facade);
     }
+    registerTool(circleTool);
+    registerTool(lineTool);
     registerTool(rectTool);
-    registerTool(new CreateLineTool());
+    registerTool(moveTool);
+    registerTool(colorTool);
     registerTool(deleteTool);
     registerTool(clearTool);
-    registerTool(moveTool);
-    registerTool(new ResizeShapeTool());
-    registerTool(colorTool);
-    registerTool(new GroupShapesTool());
-    registerTool(new AlignShapesTool());
-
+    registerTool(resizeTool);
+    registerTool(groupTool);
+    registerTool(alignTool);
     initialized = true;
     LOGGER.info("ToolRegistry initialized with " + tools.size() + " tools");
   }
@@ -81,19 +81,13 @@ public class ToolRegistry {
    * Register a tool in the registry
    */
   public void registerTool(IAgentTool tool) {
-    if (tool == null) {
+    if (tool == null)
       throw new IllegalArgumentException("Tool cannot be null");
-    }
-
     String name = tool.name();
-    if (name == null || name.isEmpty()) {
+    if (name == null || name.isEmpty())
       throw new IllegalArgumentException("Tool name cannot be null or empty");
-    }
-
-    if (tools.containsKey(name)) {
+    if (tools.containsKey(name))
       LOGGER.warning("Tool with name '" + name + "' already registered, replacing");
-    }
-
     tools.put(name, tool);
     LOGGER.fine("Registered tool: " + name);
   }
@@ -102,9 +96,8 @@ public class ToolRegistry {
    * Get a tool by name
    */
   public IAgentTool getTool(String name) {
-    if (name == null || name.isEmpty()) {
+    if (name == null || name.isEmpty())
       return null;
-    }
     return tools.get(name);
   }
 
@@ -142,8 +135,8 @@ public class ToolRegistry {
    */
   public Map<String, Map<String, Object>> getAllSchemas() {
     Map<String, Map<String, Object>> schemas = new HashMap<>();
-    for (Map.Entry<String, IAgentTool> entry : tools.entrySet()) {
-      schemas.put(entry.getKey(), entry.getValue().schema());
+    for (Map.Entry<String, IAgentTool> e : tools.entrySet()) {
+      schemas.put(e.getKey(), e.getValue().schema());
     }
     return schemas;
   }
@@ -161,23 +154,17 @@ public class ToolRegistry {
    * Get tool information for AI consumption
    */
   public List<Map<String, Object>> getToolsInfo() {
-    List<Map<String, Object>> toolsInfo = new ArrayList<>();
-
+    List<Map<String, Object>> list = new ArrayList<>();
     for (IAgentTool tool : tools.values()) {
       Map<String, Object> info = new HashMap<>();
       info.put("name", tool.name());
       info.put("schema", tool.schema());
-
-      // Add description from schema if available
       Map<String, Object> schema = tool.schema();
-      if (schema != null && schema.containsKey("description")) {
+      if (schema != null && schema.containsKey("description"))
         info.put("description", schema.get("description"));
-      }
-
-      toolsInfo.add(info);
+      list.add(info);
     }
-
-    return toolsInfo;
+    return list;
   }
 
   /**

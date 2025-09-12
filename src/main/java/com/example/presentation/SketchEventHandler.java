@@ -3,6 +3,8 @@ package com.example.presentation;
 import processing.core.PApplet;
 import processing.core.PConstants;
 
+import com.example.application.services.AIAgentService;
+
 
 /**
  * SketchEventHandler handles all input events for the SimpleSketch application. This class follows
@@ -22,16 +24,18 @@ public class SketchEventHandler {
   private final SketchUIRenderer uiRenderer;
   private final ChatManager chatManager;
   private final InputManager inputManager;
+  private final AIAgentService aiAgentService;
 
   // Drawing Canvas State
   private boolean shiftDown;
 
   public SketchEventHandler(PApplet sketch, SketchUIRenderer uiRenderer, ChatManager chatManager,
-      InputManager inputManager) {
+      InputManager inputManager, AIAgentService aiAgentService) {
     this.sketch = sketch;
     this.uiRenderer = uiRenderer;
     this.chatManager = chatManager;
     this.inputManager = inputManager;
+    this.aiAgentService = aiAgentService;
   }
 
   public void handleMousePressed() {
@@ -39,10 +43,11 @@ public class SketchEventHandler {
       chatManager.setInputFocused(true);
       inputManager.showJapaneseInput();
     } else if (uiRenderer.isInSendButtonArea(sketch.mouseX, sketch.mouseY)) {
-      // Send functionality disabled - just add to chat
       if (!chatManager.getCurrentInput().isBlank()) {
-        chatManager.addMessage("User: " + chatManager.getCurrentInput());
+        String text = chatManager.getCurrentInput();
+        chatManager.addMessage("User: " + text);
         chatManager.setCurrentInput("");
+        triggerAi(text);
       }
     } else {
       chatManager.setInputFocused(false);
@@ -106,11 +111,11 @@ public class SketchEventHandler {
         chatManager.addToCurrentInput('\n');
       }
     } else {
-      // Send message functionality is disabled (implementation removed)
-      // Clear input on Enter press
       if (!chatManager.getCurrentInput().isBlank()) {
-        chatManager.addMessage("User: " + chatManager.getCurrentInput());
+        String text = chatManager.getCurrentInput();
+        chatManager.addMessage("User: " + text);
         chatManager.setCurrentInput("");
+        triggerAi(text);
       }
     }
   }
@@ -134,6 +139,20 @@ public class SketchEventHandler {
         || key >= MIN_EXTENDED_CODEPOINT;
   }
 
+  private void triggerAi(String text) {
+    new Thread(() -> {
+      try {
+        var reply = aiAgentService.handleUserPrompt(text);
+        // Update chat on UI thread
+        javax.swing.SwingUtilities.invokeLater(() -> {
+          chatManager.addMessage("Assistant: " + reply.message);
+        });
+      } catch (Exception e) {
+        javax.swing.SwingUtilities
+            .invokeLater(() -> chatManager.addMessage("Assistant: (エラーが発生しました)"));
+      }
+    }, "AI-Call-Input").start();
+  }
 
 
 }

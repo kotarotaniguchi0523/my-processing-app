@@ -1,24 +1,26 @@
 package com.example.application.usecase;
 
 import com.example.application.services.StateService;
+import com.example.domain.services.ShapeOps;
 import com.example.application.usecase.api.IChangeColor;
 import com.example.application.usecase.dto.ChangeColorInput;
 import com.example.application.usecase.dto.UseCaseResult;
 import com.example.domain.models.Shape;
 import com.example.domain.values.Style;
-import com.example.domain.models.DrawingState;
 
 /** UseCase: change shape colors (fill/stroke) */
 public class ChangeColorUseCase implements IChangeColor {
   private final StateService stateService;
+  private final ShapeOps shapeOps;
 
-  public ChangeColorUseCase(StateService stateService) {
+  public ChangeColorUseCase(StateService stateService, ShapeOps shapeOps) {
     this.stateService = stateService;
+    this.shapeOps = shapeOps;
   }
 
   @Override
   public UseCaseResult<String> execute(ChangeColorInput input) {
-    Shape shape = stateService.findShapeById(input.shapeId());
+    Shape shape = shapeOps.findById(input.shapeId()).orElse(null);
     if (shape == null) {
       return UseCaseResult.fail(stateService.getCurrentState(), "shape not found");
     }
@@ -29,16 +31,7 @@ public class ChangeColorUseCase implements IChangeColor {
         .strokeWeight(base.getStrokeWeight()).hasFill(base.hasFill()).hasStroke(base.hasStroke())
         .build();
     var newShape = shape.withStyle(newStyle);
-    var current = stateService.getCurrentState();
-    var newShapes = current.getShapes();
-    for (int i = 0; i < newShapes.size(); i++) {
-      if (newShapes.get(i).getId().equals(shape.getId())) {
-        newShapes.set(i, newShape);
-        break;
-      }
-    }
-    DrawingState updated = current.withShapes(newShapes);
-    stateService.updateState(updated);
-    return UseCaseResult.ok(stateService.getCurrentState(), shape.getId(), "style_changed");
+    var newState = shapeOps.replace(shape.getId(), newShape);
+    return UseCaseResult.ok(newState, shape.getId(), "style_changed");
   }
 }

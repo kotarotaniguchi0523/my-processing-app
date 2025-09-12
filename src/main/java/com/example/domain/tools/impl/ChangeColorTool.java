@@ -8,10 +8,15 @@ import com.example.domain.values.Color;
 import com.example.domain.values.Style;
 import com.example.application.usecase.UseCaseFacade;
 import com.example.application.usecase.dto.ChangeColorInput;
+import com.example.application.usecase.dto.UseCaseResult;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import static com.example.domain.tools.support.ToolPreconditions.requireFacade;
+import static com.example.domain.tools.support.ToolStyleUtil.*;
+import static com.example.domain.tools.support.ToolSchemas.colorSchema;
+import static com.example.domain.tools.support.ToolShapeLookup.findByIdOrIndex;
 
 /**
  * Tool for changing the color and style of shapes
@@ -46,18 +51,8 @@ public class ChangeColorTool implements IAgentTool {
         "Index of the shape to modify (0-based)", "minimum", 0));
 
     // New stroke color (optional)
-    Map<String, Object> color = new HashMap<>();
-    color.put("type", "object");
-    Map<String, Object> colorProps = new HashMap<>();
-    colorProps.put("r", Map.of("type", "integer", "minimum", 0, "maximum", 255));
-    colorProps.put("g", Map.of("type", "integer", "minimum", 0, "maximum", 255));
-    colorProps.put("b", Map.of("type", "integer", "minimum", 0, "maximum", 255));
-    colorProps.put("a", Map.of("type", "integer", "minimum", 0, "maximum", 255, "default", 255));
-    color.put("properties", colorProps);
-    properties.put("strokeColor", color);
-
-    // New fill color (optional)
-    properties.put("fillColor", color);
+    properties.put("strokeColor", colorSchema());
+    properties.put("fillColor", colorSchema());
 
     // Stroke weight (optional)
     properties.put("strokeWeight",
@@ -80,39 +75,12 @@ public class ChangeColorTool implements IAgentTool {
   }
 
   @Override
-  public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
+  public UseCaseResult<String> execute(Map<String, Object> parameters, DrawingState state) {
     String shapeId = (String) parameters.get("shapeId");
     Number index = (Number) parameters.get("index");
 
-    if (shapeId == null && index == null) {
-      throw new IllegalArgumentException("Either shapeId or index must be provided");
-    }
-
     List<Shape> shapes = state.getShapes();
-    Shape targetShape = null;
-
-    if (shapeId != null) {
-      // Find shape by ID
-      for (int i = 0; i < shapes.size(); i++) {
-        if (shapes.get(i).getId().equals(shapeId)) {
-          targetShape = shapes.get(i);
-          break;
-        }
-      }
-
-      if (targetShape == null) {
-        throw new IllegalArgumentException("Shape with ID '" + shapeId + "' not found");
-      }
-    } else {
-      // Get shape by index
-      int idx = index.intValue();
-      if (idx < 0 || idx >= shapes.size()) {
-        throw new IllegalArgumentException(
-            "Index " + idx + " is out of bounds. Valid range: 0-" + (shapes.size() - 1));
-      }
-      targetShape = shapes.get(idx);
-      // index no longer needed after refactor
-    }
+    Shape targetShape = findByIdOrIndex(shapes, shapeId, index, "change_color");
 
     // Build new style based on current style and modifications
     Style currentStyle = targetShape.getStyle();
@@ -158,29 +126,14 @@ public class ChangeColorTool implements IAgentTool {
 
     Style newStyle = styleBuilder.build();
 
-    if (facade == null) {
-      throw new IllegalStateException("UseCaseFacade not injected");
-    }
+    requireFacade(facade);
     var result = facade.changeColor(new ChangeColorInput(targetShape.getId(),
         newStyle.getFillColor(), newStyle.getStrokeColor()));
-    return result.success() ? facade.getCurrentState() : state;
+    if (result.success()) {
+      return UseCaseResult.ok(result.newState(), result.payload(), result.message());
+    }
+    return UseCaseResult.fail(state, result.message());
   }
 
-  private Color extractColor(Map<String, Object> map) {
-    Number r = Parameters.num(map, "r", false);
-    if (r == null)
-      r = 0;
-    Number g = Parameters.num(map, "g", false);
-    if (g == null)
-      g = 0;
-    Number b = Parameters.num(map, "b", false);
-    if (b == null)
-      b = 0;
-    Number a = Parameters.num(map, "a", false);
-    if (a == null)
-      a = 255;
-    return new Color(r.intValue(), g.intValue(), b.intValue(), a.intValue());
-  }
-
-  // local helpers removed (centralized)
+  // color extraction centralized in ToolStyleUtil
 }

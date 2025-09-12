@@ -7,6 +7,7 @@ import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Position;
 import com.example.application.usecase.UseCaseFacade;
 import com.example.application.usecase.dto.MoveShapeInput;
+import com.example.application.usecase.dto.UseCaseResult;
 
 import java.util.HashMap;
 import java.util.List;
@@ -68,7 +69,7 @@ public class MoveShapeTool implements IAgentTool {
   }
 
   @Override
-  public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
+  public UseCaseResult<String> execute(Map<String, Object> parameters, DrawingState state) {
     String shapeId = (String) parameters.get("shapeId");
     Number index = (Number) parameters.get("index");
     Map<String, Object> newPosMap = Parameters.obj(parameters, "newPosition", true);
@@ -131,7 +132,10 @@ public class MoveShapeTool implements IAgentTool {
     }
     var result = facade
         .moveShape(new MoveShapeInput(targetShape.getId(), newPosition.getX(), newPosition.getY()));
-    return result.success() ? facade.getCurrentState() : state;
+    if (result.success()) {
+      return UseCaseResult.ok(result.newState(), result.payload(), result.message());
+    }
+    return UseCaseResult.fail(state, result.message());
   }
 
   // local helpers removed (centralized)

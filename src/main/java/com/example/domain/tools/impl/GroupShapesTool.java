@@ -1,8 +1,10 @@
 package com.example.domain.tools.impl;
 
 import com.example.domain.models.DrawingState;
-import com.example.domain.models.Shape;
+import com.example.application.usecase.dto.UseCaseResult;
 import com.example.domain.tools.IAgentTool;
+import com.example.application.usecase.dto.GroupShapesInput;
+import com.example.application.usecase.UseCaseFacade;
 
 import java.util.*;
 
@@ -11,6 +13,12 @@ import java.util.*;
  * arrays
  */
 public class GroupShapesTool implements IAgentTool {
+  private UseCaseFacade facade;
+
+  public GroupShapesTool withFacade(UseCaseFacade facade) {
+    this.facade = facade;
+    return this;
+  }
 
   @Override
   public String name() {
@@ -52,7 +60,8 @@ public class GroupShapesTool implements IAgentTool {
   }
 
   @Override
-  public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
+  public UseCaseResult<Map<String, Object>> execute(Map<String, Object> parameters,
+      DrawingState state) {
     Object shapeIdsRaw = parameters.get("shapeIds");
     Object indicesRaw = parameters.get("indices");
     String groupName = (String) parameters.get("groupName");
@@ -87,66 +96,40 @@ public class GroupShapesTool implements IAgentTool {
       throw new IllegalArgumentException("Either shapeIds or indices must be provided");
     }
 
-    List<Shape> shapes = state.getShapes();
-    List<String> groupedShapeIds = new ArrayList<>();
-
+    // Build target ids list
+    List<String> groupedShapeIds;
     if (shapeIds != null) {
-      // Validate all shape IDs exist
-      for (String id : shapeIds) {
-        boolean found = false;
-        for (Shape shape : shapes) {
-          if (shape.getId().equals(id)) {
-            groupedShapeIds.add(id);
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          throw new IllegalArgumentException("Shape with ID '" + id + "' not found");
-        }
-      }
+      groupedShapeIds = shapeIds;
     } else {
-      // Group by indices
-      if (indices == null) {
-        throw new IllegalArgumentException("indices must not be null");
+      // indices path (already validated numbers)
+      if (indices == null || indices.isEmpty()) {
+        return UseCaseResult.fail(state, "indices must not be empty");
       }
-      for (Number indexNum : indices) {
-        int idx = indexNum.intValue();
+      List<String> byIndex = new ArrayList<>();
+      List<com.example.domain.models.Shape> shapes = state.getShapes();
+      for (Number n : indices) {
+        int idx = n.intValue();
         if (idx < 0 || idx >= shapes.size()) {
-          throw new IllegalArgumentException(
-              "Index " + idx + " is out of bounds. Valid range: 0-" + (shapes.size() - 1));
+          return UseCaseResult.fail(state, "index out of bounds: " + idx);
         }
-        groupedShapeIds.add(shapes.get(idx).getId());
+        byIndex.add(shapes.get(idx).getId());
       }
+      groupedShapeIds = byIndex;
     }
 
-    if (groupedShapeIds.size() < 2) {
-      throw new IllegalArgumentException("At least 2 shapes are required to form a group");
+    if (facade == null) {
+      // Fallback (should not happen once facade wiring is complete)
+      return UseCaseResult.fail(state, "facade not initialized for grouping");
     }
 
-    // Generate group name if not provided
-    if (groupName == null || groupName.isEmpty()) {
-      groupName = "group_" + System.currentTimeMillis();
+    try {
+      var result = facade.groupShapes(new GroupShapesInput(groupedShapeIds, groupName));
+      if (result.success()) {
+        return result; // already contains new state & payload
+      }
+      return UseCaseResult.fail(state, result.message());
+    } catch (IllegalArgumentException ex) {
+      return UseCaseResult.fail(state, ex.getMessage());
     }
-
-    // Get current groups from state
-    Map<String, List<Object>> arrays = new HashMap<>(state.getArrays());
-    List<Object> groups = arrays.getOrDefault("shape_groups", new ArrayList<>());
-
-    // Create new group
-    Map<String, Object> newGroup = new HashMap<>();
-    newGroup.put("name", groupName);
-    newGroup.put("shapeIds", groupedShapeIds);
-    newGroup.put("created", new Date().toString());
-
-    // Add to groups list
-    List<Object> updatedGroups = new ArrayList<>(groups);
-    updatedGroups.add(newGroup);
-
-    // Update arrays in state
-    arrays.put("shape_groups", updatedGroups);
-
-    // Create new state with updated groups
-    return new DrawingState(state.getSettings(), state.getShapes(), arrays, state.getLists());
   }
 }

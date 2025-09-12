@@ -1,6 +1,7 @@
 package com.example.domain.tools.impl;
 
 import com.example.domain.models.DrawingState;
+import com.example.application.usecase.dto.UseCaseResult;
 import com.example.domain.tools.IAgentTool;
 
 import java.util.HashMap;
@@ -35,11 +36,14 @@ public class ClearCanvasTool implements IAgentTool {
   }
 
   @Override
-  public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
+  public UseCaseResult<Void> execute(Map<String, Object> parameters, DrawingState state) {
     if (facade == null) {
       throw new IllegalStateException("UseCaseFacade not injected");
     }
     var result = facade.clearCanvas();
-    return result.success() ? facade.getCurrentState() : state;
+    if (result.success()) {
+      return UseCaseResult.ok(result.newState(), null, result.message());
+    }
+    return UseCaseResult.fail(state, result.message());
   }
 }

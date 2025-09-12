@@ -7,7 +7,8 @@ import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Color;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
-import com.example.application.usecase.UseCaseFacade; // Phase A1 central mutation
+import com.example.application.usecase.UseCaseFacade; // central mutation
+import com.example.application.usecase.dto.UseCaseResult;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,6 +17,12 @@ import java.util.Map;
  * Tool for creating lines in the drawing
  */
 public class CreateLineTool implements IAgentTool {
+  private UseCaseFacade facade;
+
+  public CreateLineTool withFacade(UseCaseFacade facade) {
+    this.facade = facade;
+    return this;
+  }
 
   @Override
   public String name() {
@@ -71,7 +78,7 @@ public class CreateLineTool implements IAgentTool {
   }
 
   @Override
-  public DrawingState execute(Map<String, Object> parameters, DrawingState state) {
+  public UseCaseResult<String> execute(Map<String, Object> parameters, DrawingState state) {
     // ---- 型安全な取得と検証 ----
     Map<String, Object> startMap = Parameters.obj(parameters, "start", true);
     Map<String, Object> endMap = Parameters.obj(parameters, "end", true);
@@ -107,7 +114,10 @@ public class CreateLineTool implements IAgentTool {
     Style style = styleBuilder.build();
 
     Line line = new Line(startPos, endPos, style);
-    return UseCaseFacade.addShape(state, line);
+    if (facade == null)
+      throw new IllegalStateException("UseCaseFacade not injected");
+    DrawingState newState = facade.addShape(line);
+    return UseCaseResult.ok(newState, line.getId(), "created");
   }
 
   private Color extractColor(Map<String, Object> colorMap) {

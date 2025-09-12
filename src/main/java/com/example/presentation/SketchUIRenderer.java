@@ -6,6 +6,10 @@ import processing.core.PFont;
 
 import java.util.List;
 
+import com.example.application.services.AIAgentService;
+import com.example.infrastructure.rendering.DrawingEngine;
+import com.example.infrastructure.rendering.DrawingEngine.DrawingException;
+
 
 /**
  * SketchUIRenderer handles all UI drawing responsibilities for the SimpleSketch application. This
@@ -31,6 +35,8 @@ public class SketchUIRenderer {
 
   private final PApplet sketch;
   private final ChatManager chatManager;
+  private final AIAgentService aiAgentService;
+  private final DrawingEngine drawingEngine;
 
   // UI Areas
   private int canvasAreaY;
@@ -45,9 +51,11 @@ public class SketchUIRenderer {
   private PFont font;
   private PFont smallFont;
 
-  public SketchUIRenderer(PApplet sketch, ChatManager chatManager) {
+  public SketchUIRenderer(PApplet sketch, ChatManager chatManager, AIAgentService aiAgentService) {
     this.sketch = sketch;
     this.chatManager = chatManager;
+    this.aiAgentService = aiAgentService;
+    this.drawingEngine = new DrawingEngine(sketch);
   }
 
   public void setFonts(PFont font, PFont smallFont) {
@@ -88,6 +96,15 @@ public class SketchUIRenderer {
       }
       sketch.textAlign(PApplet.LEFT, PApplet.TOP);
       sketch.text("Drawing Canvas", MARGIN + 10, canvasAreaY + 10);
+
+      // Render shapes using current state from AI agent
+      if (aiAgentService != null) {
+        try {
+          drawingEngine.renderState(aiAgentService.getCurrentState());
+        } catch (DrawingException ignored) {
+          // ignore rendering errors to avoid UI crash
+        }
+      }
     } finally {
       sketch.popStyle();
     }
