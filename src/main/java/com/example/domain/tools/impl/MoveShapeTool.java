@@ -5,7 +5,7 @@ import com.example.domain.models.DrawingState;
 import com.example.domain.models.Shape;
 import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Position;
-import com.example.application.usecase.UseCaseFacade;
+import com.example.application.usecase.api.ToolUseCasePort;
 import com.example.application.usecase.dto.MoveShapeInput;
 import com.example.application.usecase.dto.UseCaseResult;
 
@@ -19,10 +19,10 @@ import java.util.Map;
 public class MoveShapeTool implements IAgentTool {
 
   // Feature flag removed: always use facade
-  private UseCaseFacade facade;
+  private ToolUseCasePort port;
 
-  public MoveShapeTool withFacade(UseCaseFacade facade) {
-    this.facade = facade;
+  public MoveShapeTool withPort(ToolUseCasePort port) {
+    this.port = port;
     return this;
   }
 
@@ -127,10 +127,10 @@ public class MoveShapeTool implements IAgentTool {
       newPosition = new Position(newX.floatValue(), newY.floatValue());
     }
 
-    if (facade == null) {
-      throw new IllegalStateException("UseCaseFacade not injected");
+    if (port == null) {
+      throw new IllegalStateException("ToolUseCasePort not injected");
     }
-    var result = facade
+    var result = port
         .moveShape(new MoveShapeInput(targetShape.getId(), newPosition.getX(), newPosition.getY()));
     if (result.success()) {
       return UseCaseResult.ok(result.newState(), result.payload(), result.message());

@@ -4,10 +4,12 @@ import com.example.domain.models.DrawingState;
 import com.example.domain.models.Shape;
 import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Position;
-import com.example.application.usecase.UseCaseFacade; // central mutation
+import com.example.application.usecase.api.ToolUseCasePort; // port
 import com.example.application.usecase.dto.UseCaseResult;
 
 import java.util.*;
+import static com.example.domain.tools.support.ToolSchemas.commonShapeIdsArraySchema;
+import static com.example.domain.tools.support.ToolSchemas.commonOneOfRequired;
 
 /**
  * Tool for aligning multiple shapes
@@ -17,10 +19,10 @@ public class AlignShapesTool implements IAgentTool {
     LEFT, RIGHT, CENTER_HORIZONTAL, TOP, BOTTOM, CENTER_VERTICAL, CENTER_BOTH
   }
 
-  private UseCaseFacade facade;
+  private ToolUseCasePort port;
 
-  public AlignShapesTool withFacade(UseCaseFacade facade) {
-    this.facade = facade;
+  public AlignShapesTool withPort(ToolUseCasePort port) {
+    this.port = port;
     return this;
   }
 
@@ -34,12 +36,7 @@ public class AlignShapesTool implements IAgentTool {
     Map<String, Object> schema = new HashMap<>();
     schema.put("type", "object");
     Map<String, Object> properties = new HashMap<>();
-    Map<String, Object> shapeIds = new HashMap<>();
-    shapeIds.put("type", "array");
-    shapeIds.put("items", Map.of("type", "string"));
-    shapeIds.put("minItems", 2);
-    shapeIds.put("description", "IDs of shapes to align");
-    properties.put("shapeIds", shapeIds);
+    properties.put("shapeIds", commonShapeIdsArraySchema(2, "IDs of shapes to align"));
     Map<String, Object> indices = new HashMap<>();
     indices.put("type", "array");
     indices.put("items", Map.of("type", "integer", "minimum", 0));
@@ -57,8 +54,8 @@ public class AlignShapesTool implements IAgentTool {
         "Index of the shape to align others to", "minimum", 0));
     schema.put("properties", properties);
     schema.put("required", new String[] {"alignment"});
-    schema.put("oneOf", new Map[] {Map.of("required", new String[] {"shapeIds", "alignment"}),
-        Map.of("required", new String[] {"indices", "alignment"})});
+    schema.put("oneOf", commonOneOfRequired(new String[] {"shapeIds", "alignment"},
+        new String[] {"indices", "alignment"}));
     return schema;
   }
 
@@ -146,15 +143,15 @@ public class AlignShapesTool implements IAgentTool {
     float referenceX = getReferenceX(referenceShape, alignment);
     float referenceY = getReferenceY(referenceShape, alignment);
     DrawingState currentState = state;
-    if (facade == null)
-      throw new IllegalStateException("UseCaseFacade not injected");
+    if (port == null)
+      throw new IllegalStateException("ToolUseCasePort not injected");
     for (Shape shape : targetShapes) {
       if (shape == referenceShape)
         continue;
       Position newPosition = calculateAlignedPosition(shape, alignment, referenceX, referenceY);
       if (!shape.getPosition().equals(newPosition)) {
         Shape alignedShape = shape.moveTo(newPosition);
-        currentState = facade.replaceShape(shape.getId(), alignedShape);
+        currentState = port.replaceShape(shape.getId(), alignedShape);
       }
     }
     return UseCaseResult.ok(currentState, null, "aligned");

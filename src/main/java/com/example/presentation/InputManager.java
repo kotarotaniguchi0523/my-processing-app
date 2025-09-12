@@ -56,21 +56,9 @@ public class InputManager {
           public void actionPerformed(ActionEvent e) {
             String text = japaneseInputField.getText();
             if (!text.isBlank()) {
-              chatManager.addMessage("User: " + text);
+              AiChatHelper.sendAndAppendAsync(aiAgentService, chatManager, text, "AI-Call-JPInput");
               japaneseInputField.setText("");
               chatManager.setCurrentInput("");
-              // Call AI asynchronously to avoid blocking EDT
-              new Thread(() -> {
-                try {
-                  AIAgentService.AgentReply reply = aiAgentService.handleUserPrompt(text);
-                  SwingUtilities.invokeLater(() -> {
-                    chatManager.addMessage("Assistant: " + reply.message);
-                  });
-                } catch (Exception ex) {
-                  SwingUtilities
-                      .invokeLater(() -> chatManager.addMessage("Assistant: (エラーが発生しました)"));
-                }
-              }, "AI-Call-JPInput").start();
             }
           }
         });

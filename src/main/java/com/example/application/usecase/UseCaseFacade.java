@@ -8,7 +8,7 @@ import com.example.domain.models.Shape;
 import com.example.domain.services.ShapeOps;
 
 
-public class UseCaseFacade {
+public class UseCaseFacade implements com.example.application.usecase.api.ToolUseCasePort {
   private final ICreateRectangle createRectangleUseCase;
   private final IMoveShape moveShapeUseCase;
   private final IChangeColor changeColorUseCase;

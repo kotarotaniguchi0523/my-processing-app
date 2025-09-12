@@ -6,16 +6,17 @@ import com.example.domain.models.Shape;
 import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Color;
 import com.example.domain.values.Style;
-import com.example.application.usecase.UseCaseFacade;
+import com.example.application.usecase.api.ToolUseCasePort;
 import com.example.application.usecase.dto.ChangeColorInput;
 import com.example.application.usecase.dto.UseCaseResult;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import static com.example.domain.tools.support.ToolPreconditions.requireFacade;
+import static com.example.domain.tools.support.ToolPreconditions.requirePort;
 import static com.example.domain.tools.support.ToolStyleUtil.*;
-import static com.example.domain.tools.support.ToolSchemas.colorSchema;
+import static com.example.domain.tools.support.ToolSchemas.commonColorSchema;
+import static com.example.domain.tools.support.ToolSchemas.commonOneOfRequired;
 import static com.example.domain.tools.support.ToolShapeLookup.findByIdOrIndex;
 
 /**
@@ -24,10 +25,10 @@ import static com.example.domain.tools.support.ToolShapeLookup.findByIdOrIndex;
 public class ChangeColorTool implements IAgentTool {
 
   // Feature flag removed: always facade
-  private UseCaseFacade facade;
+  private ToolUseCasePort port;
 
-  public ChangeColorTool withFacade(UseCaseFacade facade) {
-    this.facade = facade;
+  public ChangeColorTool withPort(ToolUseCasePort port) {
+    this.port = port;
     return this;
   }
 
@@ -51,8 +52,8 @@ public class ChangeColorTool implements IAgentTool {
         "Index of the shape to modify (0-based)", "minimum", 0));
 
     // New stroke color (optional)
-    properties.put("strokeColor", colorSchema());
-    properties.put("fillColor", colorSchema());
+    properties.put("strokeColor", commonColorSchema());
+    properties.put("fillColor", commonColorSchema());
 
     // Stroke weight (optional)
     properties.put("strokeWeight",
@@ -68,8 +69,7 @@ public class ChangeColorTool implements IAgentTool {
 
     schema.put("properties", properties);
     // Must have either shapeId or index
-    schema.put("oneOf", new Map[] {Map.of("required", new String[] {"shapeId"}),
-        Map.of("required", new String[] {"index"})});
+    schema.put("oneOf", commonOneOfRequired(new String[] {"shapeId"}, new String[] {"index"}));
 
     return schema;
   }
@@ -126,9 +126,9 @@ public class ChangeColorTool implements IAgentTool {
 
     Style newStyle = styleBuilder.build();
 
-    requireFacade(facade);
-    var result = facade.changeColor(new ChangeColorInput(targetShape.getId(),
-        newStyle.getFillColor(), newStyle.getStrokeColor()));
+    requirePort(port);
+    var result = port.changeColor(new ChangeColorInput(targetShape.getId(), newStyle.getFillColor(),
+        newStyle.getStrokeColor()));
     if (result.success()) {
       return UseCaseResult.ok(result.newState(), result.payload(), result.message());
     }

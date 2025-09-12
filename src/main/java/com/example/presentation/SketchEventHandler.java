@@ -45,9 +45,8 @@ public class SketchEventHandler {
     } else if (uiRenderer.isInSendButtonArea(sketch.mouseX, sketch.mouseY)) {
       if (!chatManager.getCurrentInput().isBlank()) {
         String text = chatManager.getCurrentInput();
-        chatManager.addMessage("User: " + text);
         chatManager.setCurrentInput("");
-        triggerAi(text);
+        AiChatHelper.sendAndAppendAsync(aiAgentService, chatManager, text, "AI-Call-Input");
       }
     } else {
       chatManager.setInputFocused(false);
@@ -113,9 +112,8 @@ public class SketchEventHandler {
     } else {
       if (!chatManager.getCurrentInput().isBlank()) {
         String text = chatManager.getCurrentInput();
-        chatManager.addMessage("User: " + text);
         chatManager.setCurrentInput("");
-        triggerAi(text);
+        AiChatHelper.sendAndAppendAsync(aiAgentService, chatManager, text, "AI-Call-Input");
       }
     }
   }
@@ -139,20 +137,7 @@ public class SketchEventHandler {
         || key >= MIN_EXTENDED_CODEPOINT;
   }
 
-  private void triggerAi(String text) {
-    new Thread(() -> {
-      try {
-        var reply = aiAgentService.handleUserPrompt(text);
-        // Update chat on UI thread
-        javax.swing.SwingUtilities.invokeLater(() -> {
-          chatManager.addMessage("Assistant: " + reply.message);
-        });
-      } catch (Exception e) {
-        javax.swing.SwingUtilities
-            .invokeLater(() -> chatManager.addMessage("Assistant: (エラーが発生しました)"));
-      }
-    }, "AI-Call-Input").start();
-  }
+  // AI trigger logic is centralized in AiChatHelper
 
 
 }

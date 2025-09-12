@@ -4,7 +4,7 @@ import com.example.adapter.tools.Parameters;
 import com.example.domain.models.*;
 import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Position;
-import com.example.application.usecase.UseCaseFacade; // central mutation
+import com.example.application.usecase.api.ToolUseCasePort; // port
 import com.example.application.usecase.dto.UseCaseResult;
 
 import java.util.HashMap;
@@ -15,10 +15,10 @@ import java.util.Map;
  * Tool for resizing shapes
  */
 public class ResizeShapeTool implements IAgentTool {
-  private UseCaseFacade facade;
+  private ToolUseCasePort port;
 
-  public ResizeShapeTool withFacade(UseCaseFacade facade) {
-    this.facade = facade;
+  public ResizeShapeTool withPort(ToolUseCasePort port) {
+    this.port = port;
     return this;
   }
 
@@ -62,8 +62,8 @@ public class ResizeShapeTool implements IAgentTool {
 
     schema.put("properties", properties);
     // Must have either shapeId or index
-    schema.put("oneOf", new Map[] {Map.of("required", new String[] {"shapeId"}),
-        Map.of("required", new String[] {"index"})});
+    schema.put("oneOf", com.example.domain.tools.support.ToolSchemas
+        .commonOneOfRequired(new String[] {"shapeId"}, new String[] {"index"}));
 
     return schema;
   }
@@ -184,10 +184,10 @@ public class ResizeShapeTool implements IAgentTool {
           "Unsupported shape type for resizing: " + targetShape.getClass().getSimpleName());
     }
 
-    if (facade == null)
-      throw new IllegalStateException("UseCaseFacade not injected");
-    // Centralized replacement
-    DrawingState newState = facade.replaceShape(targetShape.getId(), resizedShape);
+    if (port == null)
+      throw new IllegalStateException("ToolUseCasePort not injected");
+    // Centralized replacement via port
+    DrawingState newState = port.replaceShape(targetShape.getId(), resizedShape);
     return UseCaseResult.ok(newState, targetShape.getId(), "resized");
   }
 

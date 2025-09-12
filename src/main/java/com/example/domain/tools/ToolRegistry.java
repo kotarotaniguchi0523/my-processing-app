@@ -1,8 +1,7 @@
 package com.example.domain.tools;
 
 import com.example.domain.tools.impl.*;
-import com.example.application.usecase.UseCaseFacade;
-import com.example.infrastructure.ServiceInitializer;
+import com.example.application.usecase.api.ToolUseCasePort;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,6 +15,7 @@ public class ToolRegistry {
   private static ToolRegistry instance;
   private final Map<String, IAgentTool> tools;
   private boolean initialized = false;
+  private ToolUseCasePort port;
 
   private ToolRegistry() {
     this.tools = new ConcurrentHashMap<>();
@@ -27,7 +27,7 @@ public class ToolRegistry {
   public static synchronized ToolRegistry getInstance() {
     if (instance == null) {
       instance = new ToolRegistry();
-      instance.initialize();
+      // Defer initialization until an explicit initializeWithPort is called
     }
     return instance;
   }
@@ -35,12 +35,10 @@ public class ToolRegistry {
   /**
    * Initialize the registry with all available tools
    */
-  private void initialize() {
+  private void initializeInternal(ToolUseCasePort port) {
     if (initialized)
       return;
-    // Ensure full service graph initialized (StateService, ShapeOps, Facade, etc.)
-    ServiceInitializer.initialize();
-    UseCaseFacade facade = ServiceInitializer.getUseCaseFacade();
+    this.port = port;
     CreateCircleTool circleTool = new CreateCircleTool();
     CreateLineTool lineTool = new CreateLineTool();
     CreateRectangleTool rectTool = new CreateRectangleTool();
@@ -51,17 +49,17 @@ public class ToolRegistry {
     ResizeShapeTool resizeTool = new ResizeShapeTool();
     AlignShapesTool alignTool = new AlignShapesTool();
     GroupShapesTool groupTool = new GroupShapesTool();
-    if (facade != null) {
-      circleTool.withFacade(facade);
-      lineTool.withFacade(facade);
-      rectTool.withFacade(facade);
-      moveTool.withFacade(facade);
-      colorTool.withFacade(facade);
-      deleteTool.withFacade(facade);
-      clearTool.withFacade(facade);
-      resizeTool.withFacade(facade);
-      alignTool.withFacade(facade);
-      groupTool.withFacade(facade);
+    if (port != null) {
+      circleTool.withPort(port);
+      lineTool.withPort(port);
+      rectTool.withPort(port);
+      moveTool.withPort(port);
+      colorTool.withPort(port);
+      deleteTool.withPort(port);
+      clearTool.withPort(port);
+      resizeTool.withPort(port);
+      alignTool.withPort(port);
+      groupTool.withPort(port);
     }
     registerTool(circleTool);
     registerTool(lineTool);
@@ -75,6 +73,15 @@ public class ToolRegistry {
     registerTool(alignTool);
     initialized = true;
     LOGGER.info("ToolRegistry initialized with " + tools.size() + " tools");
+  }
+
+  /**
+   * Explicitly initialize registry with a provided ToolUseCasePort.
+   */
+  public synchronized void initializeWithPort(ToolUseCasePort port) {
+    if (initialized && this.port != null)
+      return;
+    initializeInternal(port);
   }
 
   /**
@@ -147,6 +154,7 @@ public class ToolRegistry {
   public void clear() {
     tools.clear();
     initialized = false;
+    port = null;
     LOGGER.info("ToolRegistry cleared");
   }
 

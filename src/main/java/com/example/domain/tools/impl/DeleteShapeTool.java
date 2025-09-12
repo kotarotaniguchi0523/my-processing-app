@@ -15,10 +15,10 @@ import java.util.Map;
 public class DeleteShapeTool implements IAgentTool {
 
   // Feature flag removed: always facade
-  private com.example.application.usecase.UseCaseFacade facade;
+  private com.example.application.usecase.api.ToolUseCasePort port;
 
-  public DeleteShapeTool withFacade(com.example.application.usecase.UseCaseFacade facade) {
-    this.facade = facade;
+  public DeleteShapeTool withPort(com.example.application.usecase.api.ToolUseCasePort port) {
+    this.port = port;
     return this;
   }
 
@@ -43,8 +43,8 @@ public class DeleteShapeTool implements IAgentTool {
 
     schema.put("properties", properties);
     // At least one of shapeId or index is required
-    schema.put("oneOf", new Map[] {Map.of("required", new String[] {"shapeId"}),
-        Map.of("required", new String[] {"index"})});
+    schema.put("oneOf", com.example.domain.tools.support.ToolSchemas
+        .commonOneOfRequired(new String[] {"shapeId"}, new String[] {"index"}));
 
     return schema;
   }
@@ -81,11 +81,11 @@ public class DeleteShapeTool implements IAgentTool {
       shapeId = shapes.get(idx).getId();
     }
 
-    if (facade == null) {
-      throw new IllegalStateException("UseCaseFacade not injected");
+    if (port == null) {
+      throw new IllegalStateException("ToolUseCasePort not injected");
     }
     var result =
-        facade.deleteShape(new com.example.application.usecase.dto.DeleteShapeInput(shapeId));
+        port.deleteShape(new com.example.application.usecase.dto.DeleteShapeInput(shapeId));
     if (result.success()) {
       return UseCaseResult.ok(result.newState(), result.payload(), result.message());
     }

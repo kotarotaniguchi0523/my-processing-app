@@ -7,20 +7,21 @@ import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Color;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
-import com.example.application.usecase.UseCaseFacade; // central mutation
+import com.example.application.usecase.api.ToolUseCasePort; // port injection
 import com.example.application.usecase.dto.UseCaseResult;
 
 import java.util.HashMap;
 import java.util.Map;
+import static com.example.domain.tools.support.ToolSchemas.commonColorSchema;
 
 /**
  * Tool for creating lines in the drawing
  */
 public class CreateLineTool implements IAgentTool {
-  private UseCaseFacade facade;
+  private ToolUseCasePort port;
 
-  public CreateLineTool withFacade(UseCaseFacade facade) {
-    this.facade = facade;
+  public CreateLineTool withPort(ToolUseCasePort port) {
+    this.port = port;
     return this;
   }
 
@@ -56,16 +57,8 @@ public class CreateLineTool implements IAgentTool {
     end.put("required", new String[] {"x", "y"});
     properties.put("end", end);
 
-    // Stroke color (optional)
-    Map<String, Object> color = new HashMap<>();
-    color.put("type", "object");
-    Map<String, Object> colorProps = new HashMap<>();
-    colorProps.put("r", Map.of("type", "integer", "minimum", 0, "maximum", 255));
-    colorProps.put("g", Map.of("type", "integer", "minimum", 0, "maximum", 255));
-    colorProps.put("b", Map.of("type", "integer", "minimum", 0, "maximum", 255));
-    colorProps.put("a", Map.of("type", "integer", "minimum", 0, "maximum", 255, "default", 255));
-    color.put("properties", colorProps);
-    properties.put("strokeColor", color);
+    // Stroke color (optional) - commonized
+    properties.put("strokeColor", commonColorSchema());
 
     // Stroke weight (optional)
     properties.put("strokeWeight",
@@ -114,9 +107,9 @@ public class CreateLineTool implements IAgentTool {
     Style style = styleBuilder.build();
 
     Line line = new Line(startPos, endPos, style);
-    if (facade == null)
-      throw new IllegalStateException("UseCaseFacade not injected");
-    DrawingState newState = facade.addShape(line);
+    if (port == null)
+      throw new IllegalStateException("ToolUseCasePort not injected");
+    DrawingState newState = port.addShape(line);
     return UseCaseResult.ok(newState, line.getId(), "created");
   }
 

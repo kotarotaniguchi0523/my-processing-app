@@ -4,19 +4,21 @@ import com.example.domain.models.DrawingState;
 import com.example.application.usecase.dto.UseCaseResult;
 import com.example.domain.tools.IAgentTool;
 import com.example.application.usecase.dto.GroupShapesInput;
-import com.example.application.usecase.UseCaseFacade;
+import com.example.application.usecase.api.ToolUseCasePort;
 
 import java.util.*;
+import static com.example.domain.tools.support.ToolSchemas.commonShapeIdsArraySchema;
+import static com.example.domain.tools.support.ToolSchemas.commonOneOfRequired;
 
 /**
  * Tool for grouping multiple shapes together Groups are stored as metadata in the DrawingState's
  * arrays
  */
 public class GroupShapesTool implements IAgentTool {
-  private UseCaseFacade facade;
+  private ToolUseCasePort port;
 
-  public GroupShapesTool withFacade(UseCaseFacade facade) {
-    this.facade = facade;
+  public GroupShapesTool withPort(ToolUseCasePort port) {
+    this.port = port;
     return this;
   }
 
@@ -33,12 +35,7 @@ public class GroupShapesTool implements IAgentTool {
     Map<String, Object> properties = new HashMap<>();
 
     // Shape IDs to group
-    Map<String, Object> shapeIds = new HashMap<>();
-    shapeIds.put("type", "array");
-    shapeIds.put("items", Map.of("type", "string"));
-    shapeIds.put("minItems", 2);
-    shapeIds.put("description", "IDs of shapes to group together");
-    properties.put("shapeIds", shapeIds);
+    properties.put("shapeIds", commonShapeIdsArraySchema(2, "IDs of shapes to group together"));
 
     // Alternative: indices to group
     Map<String, Object> indices = new HashMap<>();
@@ -53,8 +50,7 @@ public class GroupShapesTool implements IAgentTool {
 
     schema.put("properties", properties);
     // Must have either shapeIds or indices
-    schema.put("oneOf", new Map[] {Map.of("required", new String[] {"shapeIds"}),
-        Map.of("required", new String[] {"indices"})});
+    schema.put("oneOf", commonOneOfRequired(new String[] {"shapeIds"}, new String[] {"indices"}));
 
     return schema;
   }
@@ -117,13 +113,13 @@ public class GroupShapesTool implements IAgentTool {
       groupedShapeIds = byIndex;
     }
 
-    if (facade == null) {
+    if (port == null) {
       // Fallback (should not happen once facade wiring is complete)
       return UseCaseResult.fail(state, "facade not initialized for grouping");
     }
 
     try {
-      var result = facade.groupShapes(new GroupShapesInput(groupedShapeIds, groupName));
+      var result = port.groupShapes(new GroupShapesInput(groupedShapeIds, groupName));
       if (result.success()) {
         return result; // already contains new state & payload
       }

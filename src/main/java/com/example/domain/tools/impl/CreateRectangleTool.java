@@ -1,7 +1,7 @@
 package com.example.domain.tools.impl;
 
 import com.example.adapter.tools.Parameters;
-import com.example.application.usecase.UseCaseFacade;
+import com.example.application.usecase.api.ToolUseCasePort;
 import com.example.application.usecase.dto.CreateRectangleInput;
 import com.example.application.usecase.dto.UseCaseResult;
 import com.example.domain.models.DrawingState;
@@ -12,7 +12,7 @@ import com.example.domain.values.Style;
 
 import java.util.HashMap;
 import java.util.Map;
-import static com.example.domain.tools.support.ToolPreconditions.requireFacade;
+import static com.example.domain.tools.support.ToolPreconditions.requirePort;
 import static com.example.domain.tools.support.ToolStyleUtil.*;
 import static com.example.domain.tools.support.ToolSchemas.colorSchema;
 
@@ -21,10 +21,10 @@ import static com.example.domain.tools.support.ToolSchemas.colorSchema;
  */
 public class CreateRectangleTool implements IAgentTool {
 
-  private UseCaseFacade facade; // lazily injected to avoid circular init
+  private ToolUseCasePort port; // lazily injected to avoid circular init
 
-  public CreateRectangleTool withFacade(UseCaseFacade facade) {
-    this.facade = facade;
+  public CreateRectangleTool withPort(ToolUseCasePort port) {
+    this.port = port;
     return this;
   }
 
@@ -102,8 +102,8 @@ public class CreateRectangleTool implements IAgentTool {
 
     Style style = styleBuilder.build();
 
-    requireFacade(facade);
-    var result = facade.createRectangle(new CreateRectangleInput(position.getX(), position.getY(),
+    requirePort(port);
+    var result = port.createRectangle(new CreateRectangleInput(position.getX(), position.getY(),
         width.floatValue(), height.floatValue(), style.getFillColor(), style.getStrokeColor(),
         style.getStrokeWeight(), style.hasFill(), style.hasStroke()));
     if (result.success()) {

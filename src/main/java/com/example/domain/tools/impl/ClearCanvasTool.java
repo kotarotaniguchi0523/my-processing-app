@@ -13,10 +13,10 @@ import java.util.Map;
 public class ClearCanvasTool implements IAgentTool {
 
   // Feature flag removed: always facade
-  private com.example.application.usecase.UseCaseFacade facade;
+  private com.example.application.usecase.api.ToolUseCasePort port;
 
-  public ClearCanvasTool withFacade(com.example.application.usecase.UseCaseFacade facade) {
-    this.facade = facade;
+  public ClearCanvasTool withPort(com.example.application.usecase.api.ToolUseCasePort port) {
+    this.port = port;
     return this;
   }
 
@@ -37,10 +37,10 @@ public class ClearCanvasTool implements IAgentTool {
 
   @Override
   public UseCaseResult<Void> execute(Map<String, Object> parameters, DrawingState state) {
-    if (facade == null) {
-      throw new IllegalStateException("UseCaseFacade not injected");
+    if (port == null) {
+      throw new IllegalStateException("ToolUseCasePort not injected");
     }
-    var result = facade.clearCanvas();
+    var result = port.clearCanvas();
     if (result.success()) {
       return UseCaseResult.ok(result.newState(), null, result.message());
     }

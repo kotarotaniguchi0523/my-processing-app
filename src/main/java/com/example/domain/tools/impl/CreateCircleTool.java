@@ -6,12 +6,12 @@ import com.example.domain.tools.IAgentTool;
 import com.example.domain.values.Color;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
-import com.example.application.usecase.UseCaseFacade; // central mutation
+import com.example.application.usecase.api.ToolUseCasePort; // port
 import com.example.application.usecase.dto.UseCaseResult;
 
 import java.util.HashMap;
 import java.util.Map;
-import static com.example.domain.tools.support.ToolPreconditions.requireFacade;
+import static com.example.domain.tools.support.ToolPreconditions.requirePort;
 import static com.example.domain.tools.support.ToolStyleUtil.*;
 import static com.example.domain.tools.support.ToolSchemas.colorSchema;
 
@@ -20,10 +20,10 @@ import static com.example.domain.tools.support.ToolSchemas.colorSchema;
  */
 public class CreateCircleTool implements IAgentTool {
   // Inject facade to use instance helpers
-  private UseCaseFacade facade;
+  private ToolUseCasePort port;
 
-  public CreateCircleTool withFacade(UseCaseFacade facade) {
-    this.facade = facade;
+  public CreateCircleTool withPort(ToolUseCasePort port) {
+    this.port = port;
     return this;
   }
 
@@ -98,9 +98,9 @@ public class CreateCircleTool implements IAgentTool {
     Style style = styleBuilder.build();
 
     Circle circle = new Circle(center, radius.floatValue(), style);
-    requireFacade(facade);
-    // Centralized mutation via facade helper
-    DrawingState newState = facade.addShape(circle);
+    requirePort(port);
+    // Centralized mutation via port helper
+    DrawingState newState = port.addShape(circle);
     return UseCaseResult.ok(newState, circle.getId(), "created");
   }
 

@@ -5,6 +5,7 @@ import com.example.infrastructure.ai.GeminiClient;
 import com.example.infrastructure.services.ToolInvoker;
 import com.example.domain.values.ToolExecutionResult;
 import com.example.domain.tools.ToolRegistry;
+import com.example.infrastructure.ServiceInitializer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -50,6 +51,9 @@ public class AIAgentService {
 
   public AIAgentService(DrawingState initialState) {
     this.geminiClient = GeminiClient.getInstance();
+    // Ensure underlying services are ready and inject port into ToolRegistry
+    ServiceInitializer.initialize();
+    ToolRegistry.getInstance().initializeWithPort(ServiceInitializer.getUseCaseFacade());
     this.toolInvoker = new ToolInvoker(ToolRegistry.getInstance());
     this.currentState = initialState != null ? initialState : DrawingState.defaultState();
     // Seed system message
