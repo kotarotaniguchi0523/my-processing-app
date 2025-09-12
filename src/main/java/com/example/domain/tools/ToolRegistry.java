@@ -40,8 +40,10 @@ public class ToolRegistry {
       return;
     this.port = port;
     CreateCircleTool circleTool = new CreateCircleTool();
+    CreateEllipseTool ellipseTool = new CreateEllipseTool();
     CreateLineTool lineTool = new CreateLineTool();
     CreateRectangleTool rectTool = new CreateRectangleTool();
+    CreateTriangleTool triangleTool = new CreateTriangleTool();
     MoveShapeTool moveTool = new MoveShapeTool();
     ChangeColorTool colorTool = new ChangeColorTool();
     DeleteShapeTool deleteTool = new DeleteShapeTool();
@@ -51,8 +53,10 @@ public class ToolRegistry {
     GroupShapesTool groupTool = new GroupShapesTool();
     if (port != null) {
       circleTool.withPort(port);
+      ellipseTool.withPort(port);
       lineTool.withPort(port);
       rectTool.withPort(port);
+      triangleTool.withPort(port);
       moveTool.withPort(port);
       colorTool.withPort(port);
       deleteTool.withPort(port);
@@ -62,8 +66,10 @@ public class ToolRegistry {
       groupTool.withPort(port);
     }
     registerTool(circleTool);
+    registerTool(ellipseTool);
     registerTool(lineTool);
     registerTool(rectTool);
+    registerTool(triangleTool);
     registerTool(moveTool);
     registerTool(colorTool);
     registerTool(deleteTool);

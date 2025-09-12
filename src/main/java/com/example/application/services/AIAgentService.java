@@ -1,66 +1,43 @@
 package com.example.application.services;
 
 import com.example.domain.models.DrawingState;
-import com.example.domain.models.Circle;
-import com.example.domain.models.Rectangle;
-import com.example.domain.models.Line;
-import com.example.domain.models.Text;
 import com.example.infrastructure.ai.GeminiClient;
 import com.example.infrastructure.services.ToolInvoker;
 import com.example.domain.values.ToolExecutionResult;
 import com.example.domain.tools.ToolRegistry;
-import com.example.infrastructure.ai.DrawingFunctions;
 import com.example.domain.events.*;
+import com.example.domain.models.AgentHistory;
 import com.google.genai.types.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
-// (Using default safe Yaml loader; avoid explicit constructor for compatibility)
-// (Logging removed for minimal initial implementation)
 
 /**
- * AIAgentService orchestrates chat -> LLM -> (optional) tool execution -> new state + reply.
- * Minimum viable implementation: single-turn text prompt, optional single tool call JSON.
+ * Refactored AIAgentService orchestrates chat -> LLM -> tool execution -> new state + reply.
+ * Now uses separate service classes for better separation of concerns.
  */
 public class AIAgentService {
   private final GeminiClient geminiClient;
   private final ToolInvoker toolInvoker;
   private DrawingState currentState;
 
+  // --- Separated Service Components ---
+  private final ConversationService conversationService;
+  private final PromptBuilder promptBuilder;
+  private final JsonHistoryRepository historyRepository;
+  private final ToolCoordinator toolCoordinator;
+
   // --- Event System ---
   private final List<IAIProcessingListener> listeners = new CopyOnWriteArrayList<>();
-  private final String sessionId = UUID.randomUUID().toString();
   private final AtomicLong sequenceCounter = new AtomicLong(0);
-
-  // --- Conversation History (Step 1) ---
-  private static final String SYSTEM_PROMPT = String.join("\n", "You are an AI drawing assistant.",
-      "User interacts with a vector drawing canvas (shapes: circle, rectangle, line, text).",
-      "Keep answers concise. If a drawing action is requested, you may later emit a tool call (not yet implemented).",
-      "Ask clarifying questions when parameters are ambiguous.");
-
-  private static final int MAX_HISTORY = 20; // Store up to 20 messages for better context
-  private static final Path HISTORY_FILE = Path.of(".agent_history.json");
-  private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
-  private long historyPersistCounter = 0; // persist every N changes
-  private static final int PERSIST_INTERVAL = 2;
-  private final List<ChatMessage> history = new ArrayList<>();
-  // Flags to control history behavior
+  
+  // --- Session Management ---
+  private AgentHistory.Session currentSession;
   private final boolean loadHistoryOnStartup;
-  private final boolean persistEnabled;
 
   /**
    * Default constructor keeps previous behavior: load history on startup and enable persistence.
@@ -79,21 +56,28 @@ public class AIAgentService {
   public AIAgentService(DrawingState initialState, boolean loadHistoryOnStartup,
       boolean persistHistory) {
     this.geminiClient = GeminiClient.getInstance();
-    // Initialize DrawingFunctions with UseCaseFacade
-    DrawingFunctions.initialize();
-    // Get the initialized ToolInvoker from ToolRegistry
     this.toolInvoker = new ToolInvoker(ToolRegistry.getInstance());
     this.currentState = initialState != null ? initialState : DrawingState.defaultState();
-    // Seed system message
-    history.add(ChatMessage.system(SYSTEM_PROMPT));
+    
+    // Initialize separated service components
+    this.conversationService = new ConversationService();
+    this.promptBuilder = new PromptBuilder(conversationService);
+    this.historyRepository = new JsonHistoryRepository(persistHistory);
+    this.toolCoordinator = new ToolCoordinator();
+    
     this.loadHistoryOnStartup = loadHistoryOnStartup;
-    this.persistEnabled = persistHistory;
+    
     if (this.loadHistoryOnStartup) {
       loadHistoryIfExists();
+    } else {
+      // Create new session if not loading from file
+      this.currentSession = new AgentHistory.Session(conversationService.getSessionId());
+      this.currentSession.addMessage(new AgentHistory.Message("system", conversationService.getSystemPrompt()));
     }
+    
     // Create initial history file if persistence is enabled and file doesn't exist
-    if (this.persistEnabled && !Files.exists(HISTORY_FILE)) {
-      persistHistoryImmediately();
+    if (persistHistory && !historyRepository.historyFileExists()) {
+      historyRepository.persistHistoryImmediately(currentSession, currentState);
     }
   }
 
@@ -122,7 +106,7 @@ public class AIAgentService {
   // --- Event Firing Methods ---
 
   private void fireProcessingStarted(String userPrompt, String requestId) {
-    EventMeta meta = new EventMeta(sessionId, requestId, sequenceCounter.incrementAndGet());
+    EventMeta meta = new EventMeta(conversationService.getSessionId(), requestId, sequenceCounter.incrementAndGet());
     ProcessingStartedEvent event = new ProcessingStartedEvent(meta, userPrompt);
     listeners.forEach(l -> {
       try {
@@ -134,7 +118,7 @@ public class AIAgentService {
   }
 
   private void firePromptAnalyzing(String analysis, String requestId) {
-    EventMeta meta = new EventMeta(sessionId, requestId, sequenceCounter.incrementAndGet());
+    EventMeta meta = new EventMeta(conversationService.getSessionId(), requestId, sequenceCounter.incrementAndGet());
     PromptAnalyzingEvent event = new PromptAnalyzingEvent(meta, analysis);
     listeners.forEach(l -> {
       try {
@@ -147,7 +131,7 @@ public class AIAgentService {
 
   private void fireToolSelecting(String toolName, String reason, Map<String, Object> parameters,
       String requestId, UUID toolCallId) {
-    EventMeta meta = new EventMeta(sessionId, requestId, sequenceCounter.incrementAndGet());
+    EventMeta meta = new EventMeta(conversationService.getSessionId(), requestId, sequenceCounter.incrementAndGet());
     ToolSelectingEvent event =
         new ToolSelectingEvent(meta, toolName, reason, parameters, toolCallId);
     listeners.forEach(l -> {
@@ -161,7 +145,7 @@ public class AIAgentService {
 
   private void fireToolExecuting(String toolName, ToolStatus status, String requestId,
       UUID toolCallId) {
-    EventMeta meta = new EventMeta(sessionId, requestId, sequenceCounter.incrementAndGet());
+    EventMeta meta = new EventMeta(conversationService.getSessionId(), requestId, sequenceCounter.incrementAndGet());
     ToolExecutingEvent event = new ToolExecutingEvent(meta, toolName, status, toolCallId);
     listeners.forEach(l -> {
       try {
@@ -173,7 +157,7 @@ public class AIAgentService {
   }
 
   private void fireProcessingCompleted(String result, DrawingState newState, String requestId) {
-    EventMeta meta = new EventMeta(sessionId, requestId, sequenceCounter.incrementAndGet());
+    EventMeta meta = new EventMeta(conversationService.getSessionId(), requestId, sequenceCounter.incrementAndGet());
     String stateVersion = "v-" + System.currentTimeMillis();
     UUID toolCallId = null; // Non-tool response
     ProcessingCompletedEvent event =
@@ -189,7 +173,7 @@ public class AIAgentService {
 
   private void fireProcessingFailed(String errorMessage, FailurePoint failurePoint,
       String requestId) {
-    EventMeta meta = new EventMeta(sessionId, requestId, sequenceCounter.incrementAndGet());
+    EventMeta meta = new EventMeta(conversationService.getSessionId(), requestId, sequenceCounter.incrementAndGet());
     ProcessingFailedEvent event = new ProcessingFailedEvent(meta, errorMessage, failurePoint);
     listeners.forEach(l -> {
       try {
@@ -201,10 +185,6 @@ public class AIAgentService {
   }
 
   /**
-   * Execute a user natural language request. Strategy (temporary): 1. Send prompt as-is to Gemini.
-   * 2. Return raw model text (no automatic JSON tool calling yet).
-   */
-  /**
    * Handle user prompt using Gemini Automatic Function Calling (AFC). Allows natural language
    * commands to trigger drawing operations.
    */
@@ -215,28 +195,29 @@ public class AIAgentService {
     // Fire analyzing event to show we're working on it
     firePromptAnalyzing("プロンプトを解析中...", requestId);
 
-    // Record user turn
-    history.add(ChatMessage.user(userPrompt));
-    trimHistory();
-    persistHistoryMaybe();
+    // Record user turn using ConversationService
+    conversationService.addUserMessage(userPrompt);
+    
+    // Also add to AgentHistory session
+    if (currentSession != null) {
+      currentSession.addMessage(new AgentHistory.Message("user", userPrompt));
+    }
+    
+    // Persist history using JsonHistoryRepository
+    historyRepository.persistHistoryMaybe(currentSession, currentState);
 
     try {
-      // Update DrawingFunctions with current state
-      DrawingFunctions.setCurrentState(currentState);
+      // Update ToolCoordinator with current state
+      toolCoordinator.updateCurrentState(currentState);
 
-      // Build conversation context
-      String contextPrompt = buildContextPrompt(userPrompt);
+      // Build conversation context using PromptBuilder
+      String contextPrompt = promptBuilder.buildContextPrompt(userPrompt);
 
       // Fire analyzing event
       firePromptAnalyzing("描画関数を準備中...", requestId);
 
-      // Get drawing function methods for automatic execution
-      List<java.lang.reflect.Method> methods = getDrawingMethods();
-
-      // Configure with automatic function calling
-      GenerateContentConfig config = GenerateContentConfig.builder()
-          .tools(Tool.builder().functions(methods.toArray(new java.lang.reflect.Method[0])))
-          .build();
+      // Get drawing function configuration from ToolCoordinator
+      GenerateContentConfig config = toolCoordinator.createToolConfig();
 
       // Call Gemini with Function Calling support
       Optional<GenerateContentResponse> responseOpt =
@@ -253,58 +234,54 @@ public class AIAgentService {
       // Get the text response
       String textResponse = response.text();
 
-      // Check if automatic function calling occurred
-      // The SDK handles function execution automatically
-      // We just need to update our state after execution
+      // Check if automatic function calling occurred using ToolCoordinator
       DrawingState previousState = currentState;
-      currentState = DrawingFunctions.getCurrentState();
+      currentState = toolCoordinator.getCurrentState();
 
-      // Track tool calls for history
-      List<ToolCall> toolCalls = new ArrayList<>();
-
-      // If state changed, we know functions were called
-      if (!currentState.equals(previousState)) {
-        // Calculate what changed
-        int shapesBefore = previousState.getShapes().size();
-        int shapesAfter = currentState.getShapes().size();
-
-        if (shapesAfter > shapesBefore) {
-          // Infer which function was likely called based on changes
-          for (int i = shapesBefore; i < shapesAfter; i++) {
-            com.example.domain.models.Shape shape = currentState.getShapes().get(i);
-            String toolName = getToolNameFromShape(shape);
-            UUID toolCallId = UUID.randomUUID();
-
-            // Create tool call record
-            Map<String, Object> args = inferArgumentsFromShape(shape);
-            toolCalls.add(new ToolCall(toolName, args, "Success"));
-
-            fireToolSelecting(toolName, "Automatic Function Calling", args, requestId, toolCallId);
-            fireToolExecuting(toolName, ToolStatus.COMPLETED, requestId, toolCallId);
-          }
-        } else if (shapesAfter == 0 && shapesBefore > 0) {
-          // Canvas was cleared
-          toolCalls.add(new ToolCall("clearCanvas", new java.util.HashMap<>(), "Success"));
-          fireToolSelecting("clearCanvas", "Automatic Function Calling", null, requestId,
-              UUID.randomUUID());
-          fireToolExecuting("clearCanvas", ToolStatus.COMPLETED, requestId, UUID.randomUUID());
-        }
+      // Infer tool calls from state changes using ToolCoordinator
+      List<ToolCall> toolCalls = toolCoordinator.inferToolCallsFromStateChange(previousState, currentState);
+      
+      // Fire events for detected tool calls
+      for (ToolCall tc : toolCalls) {
+        UUID toolCallId = UUID.randomUUID();
+        fireToolSelecting(tc.name, "Automatic Function Calling", tc.arguments, requestId, toolCallId);
+        fireToolExecuting(tc.name, ToolStatus.COMPLETED, requestId, toolCallId);
       }
 
       // Use response text or default message
       String finalMessage =
           textResponse != null && !textResponse.isBlank() ? textResponse : "操作を完了しました。";
 
-      // Record assistant response with tool calls if any
+      // Record assistant response using ConversationService
       if (!toolCalls.isEmpty()) {
-        history.add(ChatMessage.assistantWithTools(finalMessage, toolCalls));
+        conversationService.addAssistantMessageWithTools(finalMessage, toolCalls);
+        
+        // Also add to AgentHistory session
+        if (currentSession != null) {
+          AgentHistory.Message msg = new AgentHistory.Message("assistant", finalMessage);
+          for (ToolCall tc : toolCalls) {
+            msg.getToolCalls().add(new AgentHistory.ToolCall(tc.name, tc.arguments, tc.result));
+          }
+          currentSession.addMessage(msg);
+        }
       } else {
-        history.add(ChatMessage.assistant(finalMessage));
+        conversationService.addAssistantMessage(finalMessage);
+        
+        // Also add to AgentHistory session
+        if (currentSession != null) {
+          currentSession.addMessage(new AgentHistory.Message("assistant", finalMessage));
+        }
       }
-      trimHistory();
-      persistHistoryMaybe();
+      
+      // Update session's final state and persist using JsonHistoryRepository
+      if (currentSession != null) {
+        currentSession.setFinalState(currentState);
+      }
+      
+      historyRepository.persistHistoryMaybe(currentSession, currentState);
 
       fireProcessingCompleted(finalMessage, currentState, requestId);
+      System.out.println("AIAgentService returning state with " + currentState.getShapes().size() + " shapes");
       return new AgentReply(finalMessage, currentState, null);
 
     } catch (Exception e) {
@@ -314,149 +291,9 @@ public class AIAgentService {
     }
   }
 
-  /**
-   * Build conversation context from history.
-   * Only include recent messages to avoid exceeding API limits.
-   */
-  private String buildContextPrompt(String currentPrompt) {
-    StringBuilder prompt = new StringBuilder();
 
-    // Add system prompt
-    prompt.append(SYSTEM_PROMPT).append("\n\n");
 
-    // Only include last 5 messages to avoid prompt size issues
-    // Even though we store 20 messages, we only send recent 5 to API
-    int startIndex = Math.max(1, history.size() - 5);
-    
-    if (startIndex < history.size()) {
-      prompt.append("会話履歴:\n");
-      for (int i = startIndex; i < history.size(); i++) {
-        ChatMessage msg = history.get(i);
-        if (msg.role == Role.USER) {
-          prompt.append("ユーザー: ").append(msg.content).append("\n");
-        } else if (msg.role == Role.ASSISTANT) {
-          // Truncate long assistant messages to avoid prompt size issues
-          String content = msg.content;
-          if (content.length() > 200) {
-            content = content.substring(0, 200) + "...";
-          }
-          prompt.append("アシスタント: ").append(content).append("\n");
-        }
-      }
-    }
 
-    // Add current prompt
-    prompt.append("\n現在のリクエスト: ").append(currentPrompt);
-
-    return prompt.toString();
-  }
-
-  /**
-   * Get tool name from shape type.
-   */
-  private String getToolNameFromShape(com.example.domain.models.Shape shape) {
-    if (shape instanceof com.example.domain.models.Circle) {
-      return "createCircle";
-    } else if (shape instanceof com.example.domain.models.Rectangle) {
-      return "createRectangle";
-    } else if (shape instanceof com.example.domain.models.Line) {
-      return "createLine";
-    } else if (shape instanceof com.example.domain.models.Text) {
-      return "createText";
-    }
-    return "unknown";
-  }
-
-  /**
-   * Infer arguments from shape properties.
-   */
-  private Map<String, Object> inferArgumentsFromShape(com.example.domain.models.Shape shape) {
-    Map<String, Object> args = new java.util.HashMap<>();
-
-    if (shape instanceof Circle) {
-      Circle circle = (Circle) shape;
-      args.put("x", (int) circle.getPosition().getX());
-      args.put("y", (int) circle.getPosition().getY());
-      args.put("radius", (int) circle.getRadius());
-      if (circle.getStyle() != null && circle.getStyle().getFillColor() != null) {
-        args.put("color", circle.getStyle().getFillColor().toHex());
-      }
-    } else if (shape instanceof Rectangle) {
-      Rectangle rect = (Rectangle) shape;
-      args.put("x", (int) rect.getPosition().getX());
-      args.put("y", (int) rect.getPosition().getY());
-      args.put("width", (int) rect.getWidth());
-      args.put("height", (int) rect.getHeight());
-      if (rect.getStyle() != null && rect.getStyle().getFillColor() != null) {
-        args.put("color", rect.getStyle().getFillColor().toHex());
-      }
-    } else if (shape instanceof Line) {
-      Line line = (Line) shape;
-      args.put("x1", (int) line.getStartPosition().getX());
-      args.put("y1", (int) line.getStartPosition().getY());
-      args.put("x2", (int) line.getEndPosition().getX());
-      args.put("y2", (int) line.getEndPosition().getY());
-      if (line.getStyle() != null && line.getStyle().getStrokeColor() != null) {
-        args.put("color", line.getStyle().getStrokeColor().toHex());
-      }
-    } else if (shape instanceof Text) {
-      Text text = (Text) shape;
-      args.put("x", (int) text.getPosition().getX());
-      args.put("y", (int) text.getPosition().getY());
-      args.put("text", text.getContent());
-      args.put("size", text.getFontSize());
-    }
-
-    return args;
-  }
-
-  /**
-   * Get drawing function methods for automatic function calling.
-   */
-  private List<java.lang.reflect.Method> getDrawingMethods() {
-    List<java.lang.reflect.Method> methods = new ArrayList<>();
-
-    try {
-      // Get methods from DrawingFunctions class
-      Class<?> clazz = DrawingFunctions.class;
-
-      // Add createRectangle method
-      methods.add(clazz.getMethod("createRectangle", int.class, int.class, int.class, int.class,
-          String.class));
-
-      // Add createCircle method
-      methods.add(clazz.getMethod("createCircle", int.class, int.class, int.class, String.class));
-
-      // Add createLine method
-      methods.add(
-          clazz.getMethod("createLine", int.class, int.class, int.class, int.class, String.class));
-
-      // Add clearCanvas method
-      methods.add(clazz.getMethod("clearCanvas"));
-
-      // Add moveShape method
-      methods.add(clazz.getMethod("moveShape", String.class, int.class, int.class));
-
-      // Add deleteShape method
-      methods.add(clazz.getMethod("deleteShape", String.class));
-
-      // Add changeColor method
-      methods.add(clazz.getMethod("changeColor", String.class, String.class));
-
-      // Add resizeShape method
-      methods.add(clazz.getMethod("resizeShape", String.class, Integer.class, Integer.class,
-          Integer.class));
-
-      // Add loadHistory method
-      methods.add(clazz.getMethod("loadHistory"));
-
-    } catch (NoSuchMethodException e) {
-      // Log error but continue with available methods
-      System.err.println("Failed to load some drawing methods: " + e.getMessage());
-    }
-
-    return methods;
-  }
 
 
   /**
@@ -471,154 +308,49 @@ public class AIAgentService {
     return new AgentReply("Tool failed: " + res.getErrorMessage(), currentState, res.getMetadata());
   }
 
-  // --- History helpers ---
-  private void trimHistory() {
-    if (history.size() > MAX_HISTORY) {
-      int remove = history.size() - MAX_HISTORY;
-      // keep system message at index 0
-      int idx = 1;
-      while (remove > 0 && idx < history.size()) {
-        history.remove(idx);
-        remove--;
-      }
-    }
-  }
-
-  private void persistHistoryMaybe() {
-    historyPersistCounter++;
-    if (!persistEnabled || historyPersistCounter % PERSIST_INTERVAL != 0) {
-      return;
-    }
-    persistHistoryImmediately();
-  }
-
-  /**
-   * Persist history immediately to file.
-   */
-  private void persistHistoryImmediately() {
-    if (!persistEnabled) {
-      return;
-    }
-    try {
-      List<Map<String, Object>> list = new ArrayList<>();
-      for (ChatMessage m : history) {
-        Map<String, Object> entry = new LinkedHashMap<>();
-        entry.put("role", m.role.name().toLowerCase());
-        entry.put("content", m.content);
-
-        // Add tool calls if present
-        if (m.toolCalls != null && !m.toolCalls.isEmpty()) {
-          List<Map<String, Object>> tools = new ArrayList<>();
-          for (ToolCall tc : m.toolCalls) {
-            Map<String, Object> tool = new LinkedHashMap<>();
-            tool.put("name", tc.name);
-            tool.put("arguments", tc.arguments);
-            tool.put("result", tc.result);
-            tools.add(tool);
-          }
-          entry.put("toolCalls", tools);
-        }
-
-        list.add(entry);
-      }
-      String json = GSON.toJson(list);
-      Files.writeString(HISTORY_FILE, json, StandardOpenOption.CREATE,
-          StandardOpenOption.TRUNCATE_EXISTING);
-    } catch (Exception e) {
-      /* Log error for debugging */
-      System.err.println("Failed to persist history: " + e.getMessage());
-    }
-  }
 
   /**
    * Clear persisted history file (if exists) and reset in-memory history to seeded system prompt.
    * Best-effort: exceptions are swallowed to avoid affecting agent runtime.
    */
   public void clearHistoryFile() {
-    try {
-      if (Files.exists(HISTORY_FILE)) {
-        Files.delete(HISTORY_FILE);
-      }
-    } catch (Exception ignored) {
-      // best-effort
-    }
-    resetHistory();
+    historyRepository.clearHistoryFile();
+    conversationService.resetHistory();
   }
 
   private void loadHistoryIfExists() {
-    if (!Files.exists(HISTORY_FILE))
-      return;
-    try {
-      String json = Files.readString(HISTORY_FILE);
-      @SuppressWarnings("unchecked")
-      List<Map<String, Object>> list = GSON.fromJson(json, List.class);
-      if (list == null)
-        return;
-      // keep the seed system message at index 0, append the rest
-      for (Map<String, Object> e : list) {
-        Object r = e.get("role");
-        Object c = e.get("content");
-        Object toolCallsObj = e.get("toolCalls");
-        if (!(c instanceof String))
-          continue;
-        String roleStr = r instanceof String ? (String) r : "assistant";
-        
-        // Parse tool calls if present
-        List<ToolCall> toolCalls = null;
-        if (toolCallsObj instanceof List) {
-          @SuppressWarnings("unchecked")
-          List<Map<String, Object>> toolCallsList = (List<Map<String, Object>>) toolCallsObj;
-          toolCalls = new ArrayList<>();
-          for (Map<String, Object> tc : toolCallsList) {
-            String name = (String) tc.get("name");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> args = (Map<String, Object>) tc.get("arguments");
-            String result = (String) tc.get("result");
-            if (name != null) {
-              toolCalls.add(new ToolCall(name, args != null ? args : new HashMap<>(), result));
-            }
-          }
-        }
-        
-        switch (roleStr.toLowerCase()) {
-          case "system":
-            // replace initial system with loaded if different
-            if (!history.isEmpty() && history.get(0).role == Role.SYSTEM) {
-              history.set(0, ChatMessage.system((String) c));
-            }
-            break;
-          case "user":
-            history.add(ChatMessage.user((String) c));
-            break;
-          default:
-            if (toolCalls != null && !toolCalls.isEmpty()) {
-              history.add(ChatMessage.assistantWithTools((String) c, toolCalls));
-            } else {
-              history.add(ChatMessage.assistant((String) c));
-            }
-            break;
-        }
+    AgentHistory.Session loadedSession = historyRepository.loadHistoryFromFile();
+    
+    if (loadedSession != null) {
+      // Load the session and update conversation service
+      this.currentSession = loadedSession;
+      conversationService.loadFromAgentHistory(loadedSession);
+      
+      // Load final state if available
+      if (currentSession.getFinalState() != null) {
+        currentState = currentSession.getFinalState();
       }
-      trimHistory();
-    } catch (Exception ignored) {
-      /* ignore corrupt */ }
+    } else {
+      // Create new session if no history loaded
+      this.currentSession = new AgentHistory.Session(conversationService.getSessionId());
+      this.currentSession.addMessage(new AgentHistory.Message("system", conversationService.getSystemPrompt()));
+    }
   }
 
   /** Public wrapper to allow UI to trigger history loading on demand. */
   public boolean loadHistoryOnDemand() {
-    int before = history.size();
+    int before = conversationService.getHistory().size();
     loadHistoryIfExists();
-    return history.size() > before;
+    return conversationService.getHistory().size() > before;
   }
 
 
   public List<ChatMessage> getHistory() {
-    return Collections.unmodifiableList(history);
+    return conversationService.getHistory();
   }
 
   public void resetHistory() {
-    history.clear();
-    history.add(ChatMessage.system(SYSTEM_PROMPT));
+    conversationService.resetHistory();
   }
 
   // --- ChatMessage DTO ---

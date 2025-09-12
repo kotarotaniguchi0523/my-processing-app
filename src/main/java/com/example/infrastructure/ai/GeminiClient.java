@@ -3,7 +3,6 @@ package com.example.infrastructure.ai;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.GenerateContentConfig;
-import com.google.genai.types.Tool;
 import io.github.cdimascio.dotenv.Dotenv;
 
 import com.google.common.util.concurrent.RateLimiter;

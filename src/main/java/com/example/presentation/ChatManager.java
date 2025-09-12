@@ -56,7 +56,9 @@ public class ChatManager implements IAIProcessingListener {
   }
 
   public void addMessage(String message) {
-    chatMessages.add(message);
+    // Use the thread-safe queue instead of directly adding to chatMessages
+    // This ensures messages from background threads are properly handled
+    uiMessageQueue.offer(message);
   }
 
   public List<String> getChatMessages() {

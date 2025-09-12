@@ -1,0 +1,136 @@
+{
+  "sessions": [
+    {
+      "sessionId": "550e8400-e29b-41d4-a716-446655440001",
+      "createdAt": "2025-09-12T20:00:00",
+      "lastAccessed": "2025-09-12T20:15:00",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are an AI drawing assistant.",
+          "toolCalls": [],
+          "timestamp": "2025-09-12T20:00:00"
+        },
+        {
+          "role": "user",
+          "content": "円を3つ描いて",
+          "toolCalls": [],
+          "timestamp": "2025-09-12T20:01:00"
+        },
+        {
+          "role": "assistant",
+          "content": "3つの円を描画しました。",
+          "toolCalls": [
+            {
+              "name": "createCircle",
+              "arguments": {
+                "x": 100.0,
+                "y": 100.0,
+                "radius": 30.0,
+                "color": "#FF0000"
+              },
+              "result": "Success"
+            },
+            {
+              "name": "createCircle",
+              "arguments": {
+                "x": 200.0,
+                "y": 100.0,
+                "radius": 30.0,
+                "color": "#00FF00"
+              },
+              "result": "Success"
+            },
+            {
+              "name": "createCircle",
+              "arguments": {
+                "x": 300.0,
+                "y": 100.0,
+                "radius": 30.0,
+                "color": "#0000FF"
+              },
+              "result": "Success"
+            }
+          ],
+          "timestamp": "2025-09-12T20:01:30"
+        }
+      ],
+      "finalState": {
+        "shapes": [
+          {
+            "type": "circle",
+            "x": 100.0,
+            "y": 100.0,
+            "radius": 30.0,
+            "color": "#FF0000"
+          },
+          {
+            "type": "circle",
+            "x": 200.0,
+            "y": 100.0,
+            "radius": 30.0,
+            "color": "#00FF00"
+          },
+          {
+            "type": "circle",
+            "x": 300.0,
+            "y": 100.0,
+            "radius": 30.0,
+            "color": "#0000FF"
+          }
+        ]
+      }
+    },
+    {
+      "sessionId": "550e8400-e29b-41d4-a716-446655440002",
+      "createdAt": "2025-09-12T20:20:00",
+      "lastAccessed": "2025-09-12T20:30:00",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are an AI drawing assistant.",
+          "toolCalls": [],
+          "timestamp": "2025-09-12T20:20:00"
+        },
+        {
+          "role": "user",
+          "content": "四角形を描いて",
+          "toolCalls": [],
+          "timestamp": "2025-09-12T20:21:00"
+        },
+        {
+          "role": "assistant",
+          "content": "四角形を描画しました。",
+          "toolCalls": [
+            {
+              "name": "createRectangle",
+              "arguments": {
+                "x": 150.0,
+                "y": 150.0,
+                "width": 100.0,
+                "height": 60.0,
+                "color": "#FF00FF"
+              },
+              "result": "Success"
+            }
+          ],
+          "timestamp": "2025-09-12T20:21:30"
+        }
+      ],
+      "finalState": {
+        "shapes": [
+          {
+            "type": "rectangle",
+            "x": 150.0,
+            "y": 150.0,
+            "width": 100.0,
+            "height": 60.0,
+            "color": "#FF00FF"
+          }
+        ]
+      }
+    }
+  ],
+  "version": "2.0",
+  "lastUpdated": "2025-09-12T20:30:00"
+}

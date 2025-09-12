@@ -1,7 +1,6 @@
 package com.example.infrastructure.ai;
 
 import com.example.domain.models.DrawingState;
-import com.example.domain.models.Shape;
 import com.example.domain.tools.ToolRegistry;
 import com.example.infrastructure.services.ToolInvoker;
 import com.example.domain.values.ToolExecutionResult;
@@ -164,6 +163,40 @@ public class DrawingFunctions {
   }
   
   /**
+   * Create an ellipse on the canvas.
+   * 
+   * @param x The x-coordinate of the ellipse center
+   * @param y The y-coordinate of the ellipse center
+   * @param radiusX The horizontal radius of the ellipse
+   * @param radiusY The vertical radius of the ellipse
+   * @param color The color of the ellipse (optional, defaults to black)
+   * @return Description of the action taken
+   */
+  public static String createEllipse(int x, int y, int radiusX, int radiusY, String color) {
+    Map<String, Object> args = new HashMap<>();
+    Map<String, Object> center = new HashMap<>();
+    center.put("x", x);
+    center.put("y", y);
+    args.put("center", center);
+    args.put("radiusX", radiusX);
+    args.put("radiusY", radiusY);
+    
+    // Convert color string to Map object
+    Map<String, Object> colorMap = parseColorString(color);
+    if (colorMap != null) {
+      args.put("fillColor", colorMap);
+    }
+    
+    ToolExecutionResult result = toolInvoker.invokeTool("create_ellipse", args, currentState);
+    if (result.isSuccess()) {
+      currentState = result.getResultState();
+      return String.format("楕円を作成しました (中心: %d,%d, 半径: %dx%d)", x, y, radiusX, radiusY);
+    } else {
+      return "楕円の作成に失敗しました: " + result.getErrorMessage();
+    }
+  }
+  
+  /**
    * Create a circle on the canvas.
    * 
    * @param x The x-coordinate of the circle center
@@ -192,6 +225,48 @@ public class DrawingFunctions {
       return String.format("円を作成しました (中心: %d,%d, 半径: %d)", x, y, radius);
     } else {
       return "円の作成に失敗しました: " + result.getErrorMessage();
+    }
+  }
+  
+  /**
+   * Create a triangle on the canvas.
+   * 
+   * @param x1 The x-coordinate of the first vertex
+   * @param y1 The y-coordinate of the first vertex
+   * @param x2 The x-coordinate of the second vertex
+   * @param y2 The y-coordinate of the second vertex
+   * @param x3 The x-coordinate of the third vertex
+   * @param y3 The y-coordinate of the third vertex
+   * @param color The color of the triangle (optional, defaults to black)
+   * @return Description of the action taken
+   */
+  public static String createTriangle(int x1, int y1, int x2, int y2, int x3, int y3, String color) {
+    Map<String, Object> args = new HashMap<>();
+    Map<String, Object> p1 = new HashMap<>();
+    p1.put("x", x1);
+    p1.put("y", y1);
+    args.put("p1", p1);
+    Map<String, Object> p2 = new HashMap<>();
+    p2.put("x", x2);
+    p2.put("y", y2);
+    args.put("p2", p2);
+    Map<String, Object> p3 = new HashMap<>();
+    p3.put("x", x3);
+    p3.put("y", y3);
+    args.put("p3", p3);
+    
+    // Convert color string to Map object
+    Map<String, Object> colorMap = parseColorString(color);
+    if (colorMap != null) {
+      args.put("fillColor", colorMap);
+    }
+    
+    ToolExecutionResult result = toolInvoker.invokeTool("create_triangle", args, currentState);
+    if (result.isSuccess()) {
+      currentState = result.getResultState();
+      return String.format("三角形を作成しました (頂点: %d,%d / %d,%d / %d,%d)", x1, y1, x2, y2, x3, y3);
+    } else {
+      return "三角形の作成に失敗しました: " + result.getErrorMessage();
     }
   }
   

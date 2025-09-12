@@ -2,6 +2,7 @@ package com.example.infrastructure.rendering;
 
 import com.example.domain.models.Circle;
 import com.example.domain.models.DrawingState;
+import com.example.domain.models.Ellipse;
 import com.example.domain.models.Line;
 import com.example.domain.models.Rectangle;
 import com.example.domain.models.Shape;
@@ -25,6 +26,12 @@ public final class DrawingEngine {
 
     private final PApplet sketch;
     private PGraphics canvas;
+    
+    // Specialized renderers for different shape types
+    private CircleRenderer circleRenderer;
+    private RectangleRenderer rectangleRenderer;
+    private LineRenderer lineRenderer;
+    private TextRenderer textRenderer;
 
     /**
      * Creates a new DrawingEngine with the specified Processing sketch
@@ -34,6 +41,7 @@ public final class DrawingEngine {
     public DrawingEngine(PApplet sketch) {
         this.sketch = Objects.requireNonNull(sketch, "PApplet sketch cannot be null");
         this.canvas = sketch.g; // Default to main graphics context
+        initializeRenderers();
     }
 
     /**
@@ -45,6 +53,7 @@ public final class DrawingEngine {
     public DrawingEngine(PApplet sketch, PGraphics canvas) {
         this.sketch = Objects.requireNonNull(sketch, "PApplet sketch cannot be null");
         this.canvas = Objects.requireNonNull(canvas, "PGraphics canvas cannot be null");
+        initializeRenderers();
     }
 
     /**
@@ -54,6 +63,17 @@ public final class DrawingEngine {
      */
     public void setCanvas(PGraphics canvas) {
         this.canvas = Objects.requireNonNull(canvas, "PGraphics canvas cannot be null");
+        initializeRenderers(); // Re-initialize renderers with new canvas
+    }
+    
+    /**
+     * Initializes all specialized renderers with the current canvas
+     */
+    private void initializeRenderers() {
+        this.circleRenderer = new CircleRenderer(canvas);
+        this.rectangleRenderer = new RectangleRenderer(canvas);
+        this.lineRenderer = new LineRenderer(canvas);
+        this.textRenderer = new TextRenderer(canvas);
     }
 
     /**
@@ -148,198 +168,76 @@ public final class DrawingEngine {
      * @throws DrawingException if shape type is not supported
      */
     private void renderShapeByType(Shape shape) throws DrawingException {
-        switch (shape.getType()) {
-            case CIRCLE:
-                if (shape instanceof Circle) {
-                    renderCircle((Circle) shape);
-                } else {
-                    throw new DrawingException(
-                            "Shape type mismatch: expected Circle but got "
-                                    + shape.getClass().getSimpleName());
-                }
-                break;
+        try {
+            switch (shape.getType()) {
+                case CIRCLE:
+                    if (shape instanceof Circle) {
+                        circleRenderer.renderCircle((Circle) shape);
+                    } else {
+                        throw new DrawingException(
+                                "Shape type mismatch: expected Circle but got "
+                                        + shape.getClass().getSimpleName());
+                    }
+                    break;
 
-            case RECTANGLE:
-                if (shape instanceof Rectangle) {
-                    renderRectangle((Rectangle) shape);
-                } else {
-                    throw new DrawingException(
-                            "Shape type mismatch: expected Rectangle but got "
-                                    + shape.getClass().getSimpleName());
-                }
-                break;
+                case RECTANGLE:
+                    if (shape instanceof Rectangle) {
+                        rectangleRenderer.renderRectangle((Rectangle) shape);
+                    } else {
+                        throw new DrawingException(
+                                "Shape type mismatch: expected Rectangle but got "
+                                        + shape.getClass().getSimpleName());
+                    }
+                    break;
 
-            case LINE:
-                if (shape instanceof Line) {
-                    renderLine((Line) shape);
-                } else {
-                    throw new DrawingException(
-                            "Shape type mismatch: expected Line but got "
-                                    + shape.getClass().getSimpleName());
-                }
-                break;
+                case LINE:
+                    if (shape instanceof Line) {
+                        lineRenderer.renderLine((Line) shape);
+                    } else {
+                        throw new DrawingException(
+                                "Shape type mismatch: expected Line but got "
+                                        + shape.getClass().getSimpleName());
+                    }
+                    break;
 
-            case TEXT:
-                if (shape instanceof Text) {
-                    renderText((Text) shape);
-                } else {
-                    throw new DrawingException(
-                            "Shape type mismatch: expected Text but got "
-                                    + shape.getClass().getSimpleName());
-                }
-                break;
+                case TEXT:
+                    if (shape instanceof Text) {
+                        textRenderer.renderText((Text) shape);
+                    } else {
+                        throw new DrawingException(
+                                "Shape type mismatch: expected Text but got "
+                                        + shape.getClass().getSimpleName());
+                    }
+                    break;
 
-            case TRIANGLE:
-                if (shape instanceof Triangle) {
-                    renderTriangle((Triangle) shape);
-                } else {
-                    throw new DrawingException(
-                            "Shape type mismatch: expected Triangle but got "
-                                    + shape.getClass().getSimpleName());
-                }
-                break;
+                case TRIANGLE:
+                    if (shape instanceof Triangle) {
+                        rectangleRenderer.renderTriangle((Triangle) shape);
+                    } else {
+                        throw new DrawingException(
+                                "Shape type mismatch: expected Triangle but got "
+                                        + shape.getClass().getSimpleName());
+                    }
+                    break;
 
-            default:
-                throw new DrawingException("Unsupported shape type: " + shape.getType());
+                case ELLIPSE:
+                    if (shape instanceof Ellipse) {
+                        circleRenderer.renderEllipse((Ellipse) shape);
+                    } else {
+                        throw new DrawingException(
+                                "Shape type mismatch: expected Ellipse but got "
+                                        + shape.getClass().getSimpleName());
+                    }
+                    break;
+
+                default:
+                    throw new DrawingException("Unsupported shape type: " + shape.getType());
+            }
+        } catch (ShapeRenderer.RenderingException e) {
+            throw new DrawingException(e.getMessage(), e);
         }
     }
 
-    /**
-     * Renders a circle shape
-     *
-     * @param circle the circle to render
-     */
-    private void renderCircle(Circle circle) {
-        applyStyle(circle.getStyle());
-
-        canvas.ellipse(
-                circle.getPosition().getX(),
-                circle.getPosition().getY(),
-                circle.getDiameter(),
-                circle.getDiameter());
-    }
-
-    /**
-     * Renders a rectangle shape
-     *
-     * @param rectangle the rectangle to render
-     */
-    private void renderRectangle(Rectangle rectangle) {
-        applyStyle(rectangle.getStyle());
-
-        canvas.rect(
-                rectangle.getPosition().getX(),
-                rectangle.getPosition().getY(),
-                rectangle.getWidth(),
-                rectangle.getHeight());
-    }
-
-    /**
-     * Renders a line shape
-     *
-     * @param line the line to render
-     */
-    private void renderLine(Line line) {
-        applyStyle(line.getStyle());
-
-        canvas.line(
-                line.getStartPosition().getX(),
-                line.getStartPosition().getY(),
-                line.getEndPosition().getX(),
-                line.getEndPosition().getY());
-    }
-
-    /**
-     * Renders a text shape
-     *
-     * @param text the text to render
-     */
-    private void renderText(Text text) {
-        applyStyle(text.getStyle());
-
-        // Respect Text model font size and alignment
-        canvas.textSize(text.getFontSize());
-
-        int hAlign = processing.core.PConstants.LEFT;
-        switch (text.getHorizontalAlign()) {
-            case CENTER:
-                hAlign = processing.core.PConstants.CENTER;
-                break;
-            case RIGHT:
-                hAlign = processing.core.PConstants.RIGHT;
-                break;
-            case LEFT:
-            default:
-                hAlign = processing.core.PConstants.LEFT;
-                break;
-        }
-
-        int vAlign = processing.core.PConstants.TOP;
-        switch (text.getVerticalAlign()) {
-            case CENTER:
-                vAlign = processing.core.PConstants.CENTER;
-                break;
-            case BOTTOM:
-                vAlign = processing.core.PConstants.BOTTOM;
-                break;
-            case TOP:
-            default:
-                vAlign = processing.core.PConstants.TOP;
-                break;
-        }
-
-        canvas.textAlign(hAlign, vAlign);
-        canvas.text(text.getContent(), text.getPosition().getX(), text.getPosition().getY());
-    }
-
-    /**
-     * Renders a triangle shape
-     *
-     * @param triangle the triangle to render
-     */
-    private void renderTriangle(Triangle triangle) {
-        applyStyle(triangle.getStyle());
-
-        canvas.triangle(
-                triangle.getP1().getX(),
-                triangle.getP1().getY(),
-                triangle.getP2().getX(),
-                triangle.getP2().getY(),
-                triangle.getP3().getX(),
-                triangle.getP3().getY());
-    }
-
-    /**
-     * Applies a style to the current graphics context
-     *
-     * @param style the style to apply
-     */
-    private void applyStyle(com.example.domain.values.Style style) {
-        // Apply fill
-        if (style.hasFill()) {
-            Color fillColor = style.getFillColor();
-            canvas.fill(
-                    fillColor.getRed(),
-                    fillColor.getGreen(),
-                    fillColor.getBlue(),
-                    fillColor.getAlpha());
-        } else {
-            canvas.noFill();
-        }
-
-        // Apply stroke
-        if (style.hasStroke()) {
-            Color strokeColor = style.getStrokeColor();
-            canvas.stroke(
-                    strokeColor.getRed(),
-                    strokeColor.getGreen(),
-                    strokeColor.getBlue(),
-                    strokeColor.getAlpha());
-            canvas.strokeWeight(style.getStrokeWeight());
-        } else {
-            canvas.noStroke();
-        }
-    }
 
     /**
      * Applies canvas settings from DrawingState
@@ -406,23 +304,7 @@ public final class DrawingEngine {
      * @return the bounding box containing all shapes, or null if no shapes
      */
     public Shape.BoundingBox getDrawingBounds(DrawingState drawingState) {
-        Objects.requireNonNull(drawingState, "DrawingState cannot be null");
-
-        List<Shape> visibleShapes =
-                drawingState.getShapes().stream()
-                        .filter(Shape::isVisible)
-                        .collect(Collectors.toList());
-
-        if (visibleShapes.isEmpty()) {
-            return null;
-        }
-
-        Shape.BoundingBox totalBounds = visibleShapes.get(0).getBounds();
-        for (int i = 1; i < visibleShapes.size(); i++) {
-            totalBounds = totalBounds.union(visibleShapes.get(i).getBounds());
-        }
-
-        return totalBounds;
+        return CoordinateTransformer.getDrawingBounds(drawingState);
     }
 
     /** Custom exception for drawing errors */
