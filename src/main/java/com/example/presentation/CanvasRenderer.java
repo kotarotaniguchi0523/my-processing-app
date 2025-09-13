@@ -20,18 +20,17 @@ public class CanvasRenderer {
     private final PApplet sketch;
     private final ThemeManager themeManager;
     private final AIAgentService aiAgentService;
-    private final DrawingEngine drawingEngine;
-    private final DiffOverlayRenderer diffOverlayRenderer;
+  private final DrawingEngine drawingEngine;
+  private processing.core.PGraphics offscreen;
     
     private PFont font;
     
     public CanvasRenderer(PApplet sketch, ThemeManager themeManager, 
-            AIAgentService aiAgentService, DiffOverlayRenderer diffOverlayRenderer) {
+            AIAgentService aiAgentService) {
         this.sketch = sketch;
         this.themeManager = themeManager;
         this.aiAgentService = aiAgentService;
         this.drawingEngine = new DrawingEngine(sketch);
-        this.diffOverlayRenderer = diffOverlayRenderer;
     }
     
     public void setFont(PFont font) {
@@ -41,11 +40,11 @@ public class CanvasRenderer {
     /**
      * Draws the canvas area including shapes and diff overlays
      */
-    public void drawCanvasArea(int canvasAreaY, int canvasAreaHeight) {
-        sketch.pushStyle();
-        try {
-            // Canvas card with soft shadow
-            drawCard(MARGIN, canvasAreaY, sketch.width - MARGIN * 2, canvasAreaHeight, CARD_RADIUS);
+  public void drawCanvasArea(int canvasAreaY, int canvasAreaHeight) {
+    sketch.pushStyle();
+    try {
+      // Canvas card with soft shadow
+      drawCard(MARGIN, canvasAreaY, sketch.width - MARGIN * 2, canvasAreaHeight, CARD_RADIUS);
 
             // Canvas title
             sketch.fill(themeManager.getColorTextSecondary());
@@ -55,23 +54,46 @@ public class CanvasRenderer {
             sketch.textAlign(PApplet.LEFT, PApplet.TOP);
             sketch.text("Drawing Canvas", MARGIN + 14, canvasAreaY + TITLE_Y_OFFSET);
 
-            // Render shapes using current state from AI agent
-            if (aiAgentService != null) {
-                try {
-                    DrawingState current = aiAgentService.getCurrentState();
-                    drawingEngine.renderState(current);
-                    
-                    // Handle diff overlay rendering
-                    diffOverlayRenderer.updateDiff(current, canvasAreaY, canvasAreaHeight);
-                    
-                } catch (DrawingEngine.DrawingException ignored) {
-                    // Ignore rendering errors to avoid UI crash
-                }
-            }
-        } finally {
-            sketch.popStyle();
+      // Compute inner content area (below title)
+      int contentPadding = 12;
+      int titleReserve = 40; // room for title and spacing
+      int contentX = MARGIN + contentPadding;
+      int contentY = canvasAreaY + titleReserve;
+      int contentW = sketch.width - MARGIN * 2 - contentPadding * 2;
+      int contentH = canvasAreaHeight - titleReserve - contentPadding;
+      if (contentW < 10 || contentH < 10) return;
+
+      // Render shapes to offscreen buffer clipped to logical canvas size
+      if (aiAgentService != null) {
+        try {
+          DrawingState current = aiAgentService.getCurrentState();
+          int logicalW = Math.max(1, current.getIntSetting("width", 800));
+          int logicalH = Math.max(1, current.getIntSetting("height", 600));
+
+          // Recreate buffer if size changed
+          if (offscreen == null || offscreen.width != logicalW || offscreen.height != logicalH) {
+            offscreen = sketch.createGraphics(logicalW, logicalH);
+          }
+
+          offscreen.beginDraw();
+          try {
+            drawingEngine.setCanvas(offscreen);
+            drawingEngine.renderState(current);
+          } finally {
+            offscreen.endDraw();
+          }
+
+          // Draw scaled buffer into content area (clipped by card)
+          sketch.image(offscreen, contentX, contentY, contentW, contentH);
+
+        } catch (DrawingEngine.DrawingException ignored) {
+          // Ignore rendering errors to avoid UI crash
         }
+      }
+    } finally {
+      sketch.popStyle();
     }
+  }
     
     private void drawCard(float x, float y, float w, float h, float r) {
         drawShadow(x, y, w, h, r, 12, SHADOW_ALPHA);

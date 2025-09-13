@@ -15,7 +15,7 @@ public class PromptBuilder {
     }
     
     /**
-     * Build conversation context from history.
+     * Build conversation context from history with a compact tooling reminder.
      * Only include recent messages to avoid exceeding API limits.
      */
     public String buildContextPrompt(String currentPrompt) {
@@ -25,10 +25,19 @@ public class PromptBuilder {
         // Add system prompt
         prompt.append(conversationService.getSystemPrompt()).append("\n\n");
 
+        // Compact tooling reminder (kept short; repeated each turn for reliability)
+        prompt.append(String.join("\n",
+                "[Tooling Reminder]",
+                "関数は: createRectangle(x,y,width,height,color), createCircle(x,y,radius,color),",
+                "createEllipse(x,y,radiusX,radiusY,color), createTriangle(x1,y1,x2,y2,x3,y3,color),",
+                "createLine(x1,y1,x2,y2,color), moveShape(id,x,y), deleteShape(id),",
+                "changeColor(id,color), resizeShape(id,newWidth,newHeight,newRadius), clearCanvas().",
+                "まずDesign Planを1〜3行で書き、その後に必要な関数を呼び出す。",
+                "整数座標、20..980/20..620付近に収める。",
+                "")).append('\n');
+
         // Only include last 5 messages to avoid prompt size issues
-        // Even though we store 20 messages, we only send recent 5 to API
         int startIndex = Math.max(1, history.size() - 5);
-        
         if (startIndex < history.size()) {
             prompt.append("会話履歴:\n");
             for (int i = startIndex; i < history.size(); i++) {
@@ -50,5 +59,15 @@ public class PromptBuilder {
         prompt.append("\n現在のリクエスト: ").append(currentPrompt);
 
         return prompt.toString();
+    }
+
+    /**
+     * Overload that additionally embeds current canvas size for better relative placement.
+     */
+    public String buildContextPrompt(String currentPrompt, com.example.domain.models.DrawingState state) {
+        String base = buildContextPrompt(currentPrompt);
+        int w = state != null ? state.getIntSetting("width", 800) : 800;
+        int h = state != null ? state.getIntSetting("height", 600) : 600;
+        return base + "\n\n[Canvas] width=" + w + ", height=" + h + " (相対配置の基準)";
     }
 }

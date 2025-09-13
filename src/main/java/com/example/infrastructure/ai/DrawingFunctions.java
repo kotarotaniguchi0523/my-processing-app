@@ -21,6 +21,7 @@ public class DrawingFunctions {
   private static final Logger LOGGER = Logger.getLogger(DrawingFunctions.class.getName());
   private static DrawingState currentState = DrawingState.defaultState();
   private static ToolInvoker toolInvoker;
+  private static final int SAFE_MARGIN = 2; // minimal margin to avoid edge bleed
   
   /**
    * Initialize the DrawingFunctions with UseCaseFacade.
@@ -50,6 +51,37 @@ public class DrawingFunctions {
    */
   public static DrawingState getCurrentState() {
     return currentState;
+  }
+
+  private static int canvasW() { return currentState != null ? currentState.getIntSetting("width", 800) : 800; }
+  private static int canvasH() { return currentState != null ? currentState.getIntSetting("height", 600) : 600; }
+
+  private static int clamp(int v, int min, int max) {
+    return Math.max(min, Math.min(max, v));
+  }
+
+  private static int clampXForRect(int x, int width) {
+    return clamp(x, SAFE_MARGIN, Math.max(SAFE_MARGIN, canvasW() - width - SAFE_MARGIN));
+  }
+
+  private static int clampYForRect(int y, int height) {
+    return clamp(y, SAFE_MARGIN, Math.max(SAFE_MARGIN, canvasH() - height - SAFE_MARGIN));
+  }
+
+  private static int clampXForRadius(int cx, int radius) {
+    return clamp(cx, radius + SAFE_MARGIN, Math.max(radius + SAFE_MARGIN, canvasW() - radius - SAFE_MARGIN));
+  }
+
+  private static int clampYForRadius(int cy, int radius) {
+    return clamp(cy, radius + SAFE_MARGIN, Math.max(radius + SAFE_MARGIN, canvasH() - radius - SAFE_MARGIN));
+  }
+
+  private static int clampXForEllipse(int cx, int rx) {
+    return clamp(cx, rx + SAFE_MARGIN, Math.max(rx + SAFE_MARGIN, canvasW() - rx - SAFE_MARGIN));
+  }
+
+  private static int clampYForEllipse(int cy, int ry) {
+    return clamp(cy, ry + SAFE_MARGIN, Math.max(ry + SAFE_MARGIN, canvasH() - ry - SAFE_MARGIN));
   }
   
   /**
@@ -139,6 +171,11 @@ public class DrawingFunctions {
    * @return Description of the action taken
    */
   public static String createRectangle(int x, int y, int width, int height, String color) {
+    // clamp to canvas
+    width = Math.max(1, Math.min(width, canvasW() - SAFE_MARGIN * 2));
+    height = Math.max(1, Math.min(height, canvasH() - SAFE_MARGIN * 2));
+    x = clampXForRect(x, width);
+    y = clampYForRect(y, height);
     Map<String, Object> args = new HashMap<>();
     Map<String, Object> position = new HashMap<>();
     position.put("x", x);
@@ -173,6 +210,10 @@ public class DrawingFunctions {
    * @return Description of the action taken
    */
   public static String createEllipse(int x, int y, int radiusX, int radiusY, String color) {
+    radiusX = Math.max(1, Math.min(radiusX, (canvasW() - SAFE_MARGIN * 2) / 2));
+    radiusY = Math.max(1, Math.min(radiusY, (canvasH() - SAFE_MARGIN * 2) / 2));
+    x = clampXForEllipse(x, radiusX);
+    y = clampYForEllipse(y, radiusY);
     Map<String, Object> args = new HashMap<>();
     Map<String, Object> center = new HashMap<>();
     center.put("x", x);
@@ -206,6 +247,9 @@ public class DrawingFunctions {
    * @return Description of the action taken
    */
   public static String createCircle(int x, int y, int radius, String color) {
+    radius = Math.max(1, Math.min(radius, Math.min(canvasW(), canvasH()) / 2 - SAFE_MARGIN));
+    x = clampXForRadius(x, radius);
+    y = clampYForRadius(y, radius);
     Map<String, Object> args = new HashMap<>();
     Map<String, Object> center = new HashMap<>();
     center.put("x", x);
@@ -241,6 +285,13 @@ public class DrawingFunctions {
    * @return Description of the action taken
    */
   public static String createTriangle(int x1, int y1, int x2, int y2, int x3, int y3, String color) {
+    // Clamp each vertex inside canvas
+    x1 = clamp(x1, SAFE_MARGIN, canvasW() - SAFE_MARGIN);
+    y1 = clamp(y1, SAFE_MARGIN, canvasH() - SAFE_MARGIN);
+    x2 = clamp(x2, SAFE_MARGIN, canvasW() - SAFE_MARGIN);
+    y2 = clamp(y2, SAFE_MARGIN, canvasH() - SAFE_MARGIN);
+    x3 = clamp(x3, SAFE_MARGIN, canvasW() - SAFE_MARGIN);
+    y3 = clamp(y3, SAFE_MARGIN, canvasH() - SAFE_MARGIN);
     Map<String, Object> args = new HashMap<>();
     Map<String, Object> p1 = new HashMap<>();
     p1.put("x", x1);
@@ -281,6 +332,10 @@ public class DrawingFunctions {
    * @return Description of the action taken
    */
   public static String createLine(int x1, int y1, int x2, int y2, String color) {
+    x1 = clamp(x1, SAFE_MARGIN, canvasW() - SAFE_MARGIN);
+    y1 = clamp(y1, SAFE_MARGIN, canvasH() - SAFE_MARGIN);
+    x2 = clamp(x2, SAFE_MARGIN, canvasW() - SAFE_MARGIN);
+    y2 = clamp(y2, SAFE_MARGIN, canvasH() - SAFE_MARGIN);
     Map<String, Object> args = new HashMap<>();
     Map<String, Object> start = new HashMap<>();
     start.put("x", x1);
@@ -377,7 +432,11 @@ public class DrawingFunctions {
   public static String changeColor(String shapeId, String newColor) {
     Map<String, Object> args = new HashMap<>();
     args.put("shapeId", shapeId);
-    args.put("newColor", newColor);
+    // Align with ChangeColorTool schema: provide fillColor (and optionally strokeColor)
+    Map<String, Object> colorMap = parseColorString(newColor);
+    if (colorMap != null) {
+      args.put("fillColor", colorMap);
+    }
     
     ToolExecutionResult result = toolInvoker.invokeTool("change_color", args, currentState);
     if (result.isSuccess()) {

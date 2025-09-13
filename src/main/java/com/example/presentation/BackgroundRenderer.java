@@ -38,13 +38,15 @@ public class BackgroundRenderer {
                 sketch.line(0, y, sketch.width, y);
             }
             
-            // Draw application title
+            // Draw application title (smaller to avoid overlap with canvas)
             if (font != null) {
-                sketch.textFont(font);
+                // Override font size locally to keep title compact
+                sketch.textFont(font, 14);
             }
             sketch.fill(themeManager.getColorTextSecondary());
             sketch.textAlign(PApplet.LEFT, PApplet.TOP);
-            sketch.text("AI Processing Studio", MARGIN + 2, 8);
+            // Slightly raise the title so it doesn't collide with canvas area
+            sketch.text("AI Processing Studio", MARGIN + 2, MARGIN - 6);
             
         } finally {
             sketch.popStyle();

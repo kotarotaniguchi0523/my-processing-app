@@ -78,43 +78,9 @@ public abstract class Shape {
         return layerOrder;
     }
 
-    // Common transformation methods
-    public Shape withVisibility(boolean visible) {
-        if (this.visible == visible) {
-            return this;
-        }
-        return createWithProperties(id, position, style, visible, layerOrder);
-    }
-
-    public Shape withLayerOrder(int layerOrder) {
-        if (this.layerOrder == layerOrder) {
-            return this;
-        }
-        return createWithProperties(id, position, style, visible, layerOrder);
-    }
-
-    public Shape withId(String newId) {
-        if (Objects.equals(this.id, newId)) {
-            return this;
-        }
-        return createWithProperties(newId, position, style, visible, layerOrder);
-    }
-
     // Abstract method for creating new instances with different properties
     protected abstract Shape createWithProperties(
             String id, Position position, Style style, boolean visible, int layerOrder);
-
-    // Distance calculation between two positions
-    public double distanceTo(Position point) {
-        float dx = position.getX() - point.getX();
-        float dy = position.getY() - point.getY();
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    // Check if this shape overlaps with another shape's bounds
-    public boolean overlaps(Shape other) {
-        return getBounds().overlaps(other.getBounds());
-    }
 
     @Override
     public boolean equals(Object obj) {

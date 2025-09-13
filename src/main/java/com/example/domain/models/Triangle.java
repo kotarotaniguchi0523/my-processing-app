@@ -65,26 +65,6 @@ public final class Triangle extends Shape {
     return new Position(centerX, centerY);
   }
 
-  public float getArea() {
-    // Using the cross product formula: Area = 0.5 * |AB x AC|
-    float dx1 = p2.getX() - p1.getX();
-    float dy1 = p2.getY() - p1.getY();
-    float dx2 = p3.getX() - p1.getX();
-    float dy2 = p3.getY() - p1.getY();
-    return Math.abs(dx1 * dy2 - dx2 * dy1) / 2.0f;
-  }
-
-  public float getPerimeter() {
-    return distanceBetweenPoints(p1, p2) + distanceBetweenPoints(p2, p3)
-        + distanceBetweenPoints(p3, p1);
-  }
-
-  private float distanceBetweenPoints(Position a, Position b) {
-    float dx = a.getX() - b.getX();
-    float dy = a.getY() - b.getY();
-    return (float) Math.sqrt(dx * dx + dy * dy);
-  }
-
   @Override
   public ShapeType getType() {
     return ShapeType.TRIANGLE;
@@ -172,13 +152,6 @@ public final class Triangle extends Shape {
       // Draw triangle using Processing's triangle function
       pg.triangle(p1.getX(), p1.getY(), p2.getX(), p2.getY(), p3.getX(), p3.getY());
     }
-  }
-
-  // Check if this triangle intersects with another triangle
-  public boolean intersects(Triangle other) {
-    return getBounds().overlaps(other.getBounds())
-        && (this.contains(other.p1) || this.contains(other.p2) || this.contains(other.p3)
-            || other.contains(this.p1) || other.contains(this.p2) || other.contains(this.p3));
   }
 
   // Scale triangle from its centroid

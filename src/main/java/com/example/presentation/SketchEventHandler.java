@@ -79,13 +79,14 @@ public class SketchEventHandler {
   }
 
   public void handleMouseWheel(processing.event.MouseEvent event) {
-    // Check if mouse is over chat log area
-    if (sketch.mouseX >= MARGIN + INNER_GAP_SMALL
-        && sketch.mouseX <= sketch.width - MARGIN - INNER_GAP_SMALL
-        && sketch.mouseY >= uiRenderer.getChatLogY()
-        && sketch.mouseY <= uiRenderer.getChatLogY() + uiRenderer.getChatLogHeight()) {
+    // Allow scrolling when the cursor is anywhere inside the chat card area,
+    // not just the chat log box. This fixes the issue where scrolling over
+    // the title or input field didn't move the chat.
+    int chatTop = uiRenderer.getChatAreaY();
+    int chatBottom = uiRenderer.getChatAreaY() + uiRenderer.getChatAreaHeight();
 
-      float scrollAmount = event.getCount() * CHAT_SCROLL_SPEED; // Scroll speed
+    if (sketch.mouseY >= chatTop && sketch.mouseY <= chatBottom) {
+      float scrollAmount = event.getCount() * CHAT_SCROLL_SPEED; // down: positive
       chatManager.adjustScrollOffset(scrollAmount);
     }
   }

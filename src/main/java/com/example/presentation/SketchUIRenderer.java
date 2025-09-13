@@ -36,7 +36,7 @@ public class SketchUIRenderer {
   private final CanvasRenderer canvasRenderer;
   private final ChatRenderer chatRenderer;
   private final InputRenderer inputRenderer;
-  private final DiffOverlayRenderer diffOverlayRenderer;
+  private final DiffApprovalRenderer diffApprovalRenderer;
 
   public SketchUIRenderer(PApplet sketch, ChatManager chatManager, AIAgentService aiAgentService) {
     this.sketch = sketch;
@@ -46,8 +46,8 @@ public class SketchUIRenderer {
     // Initialize specialized renderers
     this.themeManager = new ThemeManager(sketch);
     this.backgroundRenderer = new BackgroundRenderer(sketch, themeManager);
-    this.diffOverlayRenderer = new DiffOverlayRenderer(sketch, themeManager);
-    this.canvasRenderer = new CanvasRenderer(sketch, themeManager, aiAgentService, diffOverlayRenderer);
+    this.diffApprovalRenderer = new DiffApprovalRenderer(sketch, themeManager);
+    this.canvasRenderer = new CanvasRenderer(sketch, themeManager, aiAgentService);
     this.chatRenderer = new ChatRenderer(sketch, themeManager, chatManager);
     this.inputRenderer = new InputRenderer(sketch, themeManager, chatManager);
   }
@@ -58,12 +58,12 @@ public class SketchUIRenderer {
     canvasRenderer.setFont(font);
     chatRenderer.setFonts(font, smallFont);
     inputRenderer.setFont(smallFont);
-    diffOverlayRenderer.setFonts(font, smallFont);
+    diffApprovalRenderer.setFonts(font, smallFont);
   }
 
   public void calculateLayout() {
     canvasAreaY = MARGIN + 8; // ヘッダー余白風
-    canvasAreaHeight = (int) ((sketch.height - MARGIN * 2) * 0.54); // 54% for canvas
+    canvasAreaHeight = (int) ((sketch.height - MARGIN * 2) * 0.45); // 45% for canvas (reduced to make chat area larger)
 
     chatAreaY = canvasAreaY + canvasAreaHeight + MARGIN;
     chatAreaHeight = sketch.height - chatAreaY - MARGIN; // Rest for chat
@@ -108,6 +108,14 @@ public class SketchUIRenderer {
   public void drawChatInput() {
     inputRenderer.drawChatInput(chatInputY);
   }
+  
+  public void drawDiffApproval() {
+    diffApprovalRenderer.render();
+  }
+  
+  public DiffApprovalRenderer getDiffApprovalRenderer() {
+    return diffApprovalRenderer;
+  }
 
 
   public void drawUIBorders() {
@@ -137,6 +145,15 @@ public class SketchUIRenderer {
 
   public int getChatLogHeight() {
     return chatLogHeight;
+  }
+
+  // Expose chat area bounds for input/scroll handling
+  public int getChatAreaY() {
+    return chatAreaY;
+  }
+
+  public int getChatAreaHeight() {
+    return chatAreaHeight;
   }
 
   public int getChatInputY() {

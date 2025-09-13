@@ -139,38 +139,6 @@ public final class Ellipse extends Shape {
     }
   }
 
-  // Check if this ellipse intersects with another ellipse
-  public boolean intersects(Ellipse other) {
-    // Simple bounding box check first
-    if (!getBounds().overlaps(other.getBounds())) {
-      return false;
-    }
-    
-    // For exact ellipse-ellipse intersection, we'd need complex math
-    // For now, use bounding box approximation
-    return true;
-  }
-
-  // Check if this ellipse intersects with a circle
-  public boolean intersectsCircle(Circle circle) {
-    // Convert circle to ellipse and check
-    Ellipse circleAsEllipse = createCircle(circle.getPosition(), circle.getRadius(), circle.getStyle());
-    return intersects(circleAsEllipse);
-  }
-
-  // Calculate area
-  public float getArea() {
-    return (float) (Math.PI * radiusX * radiusY);
-  }
-
-  // Calculate perimeter (approximation using Ramanujan's formula)
-  public float getPerimeter() {
-    float a = radiusX;
-    float b = radiusY;
-    float h = (float) Math.pow((a - b) / (a + b), 2);
-    return (float) (Math.PI * (a + b) * (1 + (3 * h) / (10 + Math.sqrt(4 - 3 * h))));
-  }
-
   // YAML Serialization
   @Override
   public Map<String, Object> toYamlMap() {

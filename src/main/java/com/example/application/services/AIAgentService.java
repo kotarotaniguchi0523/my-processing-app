@@ -38,6 +38,9 @@ public class AIAgentService {
   // --- Session Management ---
   private AgentHistory.Session currentSession;
   private final boolean loadHistoryOnStartup;
+  
+  // --- Diff Approval ---
+  private ApprovalCallback approvalCallback;
 
   /**
    * Default constructor keeps previous behavior: load history on startup and enable persistence.
@@ -185,6 +188,40 @@ public class AIAgentService {
   }
 
   /**
+   * Interface for approval/rejection callbacks
+   */
+  public interface ApprovalCallback {
+    void onApprove(DrawingState newState, String message);
+    void onReject();
+  }
+  
+  /**
+   * Set the approval callback for state changes
+   */
+  public void setApprovalCallback(ApprovalCallback callback) {
+    this.approvalCallback = callback;
+  }
+  
+  /**
+   * Apply approved state changes
+   */
+  public void applyApprovedState(DrawingState newState, String message) {
+    this.currentState = newState;
+    
+    // Record the approved change in conversation history
+    conversationService.addAssistantMessage(message);
+    if (currentSession != null) {
+      currentSession.addMessage(new AgentHistory.Message("assistant", message));
+      currentSession.setFinalState(currentState);
+    }
+    
+    // Persist history
+    historyRepository.persistHistoryMaybe(currentSession, currentState);
+    
+    // State has been applied and approved
+  }
+  
+  /**
    * Handle user prompt using Gemini Automatic Function Calling (AFC). Allows natural language
    * commands to trigger drawing operations.
    */
@@ -210,8 +247,8 @@ public class AIAgentService {
       // Update ToolCoordinator with current state
       toolCoordinator.updateCurrentState(currentState);
 
-      // Build conversation context using PromptBuilder
-      String contextPrompt = promptBuilder.buildContextPrompt(userPrompt);
+      // Build conversation context using PromptBuilder (include canvas size)
+      String contextPrompt = promptBuilder.buildContextPrompt(userPrompt, currentState);
 
       // Fire analyzing event
       firePromptAnalyzing("描画関数を準備中...", requestId);
@@ -236,10 +273,10 @@ public class AIAgentService {
 
       // Check if automatic function calling occurred using ToolCoordinator
       DrawingState previousState = currentState;
-      currentState = toolCoordinator.getCurrentState();
+      DrawingState proposedState = toolCoordinator.getCurrentState();
 
       // Infer tool calls from state changes using ToolCoordinator
-      List<ToolCall> toolCalls = toolCoordinator.inferToolCallsFromStateChange(previousState, currentState);
+      List<ToolCall> toolCalls = toolCoordinator.inferToolCallsFromStateChange(previousState, proposedState);
       
       // Fire events for detected tool calls
       for (ToolCall tc : toolCalls) {
@@ -252,37 +289,53 @@ public class AIAgentService {
       String finalMessage =
           textResponse != null && !textResponse.isBlank() ? textResponse : "操作を完了しました。";
 
-      // Record assistant response using ConversationService
-      if (!toolCalls.isEmpty()) {
-        conversationService.addAssistantMessageWithTools(finalMessage, toolCalls);
+      // Check if state has changed and requires approval
+      boolean stateChanged = !previousState.equals(proposedState);
+      
+      if (stateChanged && approvalCallback != null) {
+        // Trigger approval dialog with the proposed state and message
+        approvalCallback.onApprove(proposedState, finalMessage);
         
-        // Also add to AgentHistory session
-        if (currentSession != null) {
-          AgentHistory.Message msg = new AgentHistory.Message("assistant", finalMessage);
-          for (ToolCall tc : toolCalls) {
-            msg.getToolCalls().add(new AgentHistory.ToolCall(tc.name, tc.arguments, tc.result));
-          }
-          currentSession.addMessage(msg);
-        }
+        // Return current state (not the proposed one) until approved
+        fireProcessingCompleted("変更の承認待ち...", currentState, requestId);
+        return new AgentReply("変更の承認待ち...", currentState, null);
+        
       } else {
-        conversationService.addAssistantMessage(finalMessage);
+        // No state change or no approval callback - apply immediately
+        currentState = proposedState;
         
-        // Also add to AgentHistory session
-        if (currentSession != null) {
-          currentSession.addMessage(new AgentHistory.Message("assistant", finalMessage));
+        // Record assistant response using ConversationService
+        if (!toolCalls.isEmpty()) {
+          conversationService.addAssistantMessageWithTools(finalMessage, toolCalls);
+          
+          // Also add to AgentHistory session
+          if (currentSession != null) {
+            AgentHistory.Message msg = new AgentHistory.Message("assistant", finalMessage);
+            for (ToolCall tc : toolCalls) {
+              msg.getToolCalls().add(new AgentHistory.ToolCall(tc.name, tc.arguments, tc.result));
+            }
+            currentSession.addMessage(msg);
+          }
+        } else {
+          conversationService.addAssistantMessage(finalMessage);
+          
+          // Also add to AgentHistory session
+          if (currentSession != null) {
+            currentSession.addMessage(new AgentHistory.Message("assistant", finalMessage));
+          }
         }
-      }
-      
-      // Update session's final state and persist using JsonHistoryRepository
-      if (currentSession != null) {
-        currentSession.setFinalState(currentState);
-      }
-      
-      historyRepository.persistHistoryMaybe(currentSession, currentState);
+        
+        // Update session's final state and persist using JsonHistoryRepository
+        if (currentSession != null) {
+          currentSession.setFinalState(currentState);
+        }
+        
+        historyRepository.persistHistoryMaybe(currentSession, currentState);
 
-      fireProcessingCompleted(finalMessage, currentState, requestId);
-      System.out.println("AIAgentService returning state with " + currentState.getShapes().size() + " shapes");
-      return new AgentReply(finalMessage, currentState, null);
+        fireProcessingCompleted(finalMessage, currentState, requestId);
+        System.out.println("AIAgentService returning state with " + currentState.getShapes().size() + " shapes");
+        return new AgentReply(finalMessage, currentState, null);
+      }
 
     } catch (Exception e) {
       String error = "エラーが発生しました: " + e.getMessage();

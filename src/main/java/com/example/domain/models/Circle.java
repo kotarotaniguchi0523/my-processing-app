@@ -46,14 +46,6 @@ public final class Circle extends Shape {
         return radius * 2;
     }
 
-    public float getArea() {
-        return (float) (Math.PI * radius * radius);
-    }
-
-    public float getCircumference() {
-        return (float) (2 * Math.PI * radius);
-    }
-
     @Override
     public ShapeType getType() {
         return ShapeType.CIRCLE;
@@ -69,13 +61,11 @@ public final class Circle extends Shape {
         return new Circle(id, position, radius, newStyle, visible, layerOrder);
     }
 
-    public Circle withRadius(float newRadius) {
-        return new Circle(id, position, newRadius, style, visible, layerOrder);
-    }
-
     @Override
     public boolean contains(Position point) {
-        double distance = distanceTo(point);
+        float dx = position.getX() - point.getX();
+        float dy = position.getY() - point.getY();
+        double distance = Math.sqrt(dx * dx + dy * dy);
         return distance <= radius;
     }
 
@@ -115,34 +105,6 @@ public final class Circle extends Shape {
             // Draw circle
             pg.ellipse(position.getX(), position.getY(), getDiameter(), getDiameter());
         }
-    }
-
-    // Check if this circle intersects with another circle
-    public boolean intersects(Circle other) {
-        double distance = distanceTo(other.getCenter());
-        return distance <= (this.radius + other.radius);
-    }
-
-    // Check if this circle contains another circle completely
-    public boolean contains(Circle other) {
-        double distance = distanceTo(other.getCenter());
-        return distance + other.radius <= this.radius;
-    }
-
-    // Get the point on the circle's circumference closest to a given point
-    public Position getClosestPointOnCircumference(Position point) {
-        double distance = distanceTo(point);
-        if (distance == 0) {
-            // Point is at center, return any point on circumference
-            return new Position(position.getX() + radius, position.getY());
-        }
-
-        // Calculate direction vector and normalize
-        float dx = point.getX() - position.getX();
-        float dy = point.getY() - position.getY();
-        float factor = radius / (float) distance;
-
-        return new Position(position.getX() + dx * factor, position.getY() + dy * factor);
     }
 
     @Override

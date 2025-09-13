@@ -5,6 +5,7 @@ import com.example.presentation.SketchUIRenderer;
 import com.example.presentation.SketchEventHandler;
 import com.example.presentation.ChatManager;
 import com.example.presentation.InputManager;
+import com.example.presentation.DiffApprovalRenderer;
 import com.example.application.services.AIAgentService;
 import com.example.domain.models.DrawingState;
 import com.example.infrastructure.ServiceInitializer;
@@ -105,6 +106,9 @@ public class SimpleSketch extends PApplet {
     // This enables real-time display of AI thinking process
     if (aiAgentService != null) {
       aiAgentService.addProcessingListener(chatManager);
+
+      // Set up approval callback for DiffApprovalRenderer
+      setupApprovalCallback();
     }
   }
 
@@ -143,11 +147,21 @@ public class SimpleSketch extends PApplet {
     // Draw UI borders for clarity
     uiRenderer.drawUIBorders();
 
+    // Draw diff approval dialog if active
+    uiRenderer.drawDiffApproval();
+
   }
 
   // Event handlers - delegate to EventHandler
   @Override
   public void mousePressed() {
+    // Check if diff approval dialog is handling the click
+    if (uiRenderer.getDiffApprovalRenderer().isShowingApproval()) {
+      if (uiRenderer.getDiffApprovalRenderer().handleMousePressed(mouseX, mouseY)) {
+        return; // Click was handled by diff approval
+      }
+    }
+
     eventHandler.handleMousePressed();
     // 送信ボタン押下アニメ
     if (uiRenderer.isInSendButtonArea(mouseX, mouseY)) {
@@ -173,7 +187,52 @@ public class SimpleSketch extends PApplet {
 
   @Override
   public void mouseWheel(processing.event.MouseEvent event) {
+    // If diff approval modal is open and wants to consume the wheel, do not propagate
+    if (uiRenderer.getDiffApprovalRenderer().isShowingApproval()) {
+      boolean handled = uiRenderer.getDiffApprovalRenderer().handleMouseWheel(event);
+      if (handled)
+        return;
+    }
     eventHandler.handleMouseWheel(event);
+  }
+
+  private void setupApprovalCallback() {
+    // Create approval callback implementation
+    AIAgentService.ApprovalCallback approvalCallback = new AIAgentService.ApprovalCallback() {
+      @Override
+      public void onApprove(DrawingState newState, String message) {
+        // Show approval dialog
+        DrawingState currentState = aiAgentService.getCurrentState();
+        uiRenderer.getDiffApprovalRenderer().showApproval(currentState, newState);
+
+        // Set up the renderer's approval callback
+        uiRenderer.getDiffApprovalRenderer()
+            .setApprovalCallback(new DiffApprovalRenderer.ApprovalCallback() {
+              @Override
+              public void onApprove() {
+                // Apply the approved state
+                aiAgentService.applyApprovedState(newState, message);
+                chatManager.addMessage("AI: " + message);
+                chatManager.addMessage("System: 変更が承認されました");
+              }
+
+              @Override
+              public void onReject() {
+                // Just add a rejection message
+                chatManager.addMessage("System: 変更が拒否されました");
+              }
+            });
+      }
+
+      @Override
+      public void onReject() {
+        // This is called when AI decides not to make changes
+        // Not typically used in our flow
+      }
+    };
+
+    // Set the callback in AIAgentService
+    aiAgentService.setApprovalCallback(approvalCallback);
   }
 
 

@@ -47,36 +47,8 @@ public final class Rectangle extends Shape {
         return height;
     }
 
-    public Position getTopLeft() {
-        return position;
-    }
-
-    public Position getTopRight() {
-        return new Position(position.getX() + width, position.getY());
-    }
-
-    public Position getBottomLeft() {
-        return new Position(position.getX(), position.getY() + height);
-    }
-
-    public Position getBottomRight() {
-        return new Position(position.getX() + width, position.getY() + height);
-    }
-
     public Position getCenter() {
         return new Position(position.getX() + width / 2, position.getY() + height / 2);
-    }
-
-    public float getArea() {
-        return width * height;
-    }
-
-    public float getPerimeter() {
-        return 2 * (width + height);
-    }
-
-    public boolean isSquare() {
-        return Float.compare(width, height) == 0;
     }
 
     @Override
@@ -92,18 +64,6 @@ public final class Rectangle extends Shape {
     @Override
     public Rectangle withStyle(Style newStyle) {
         return new Rectangle(id, position, width, height, newStyle, visible, layerOrder);
-    }
-
-    public Rectangle withDimensions(float newWidth, float newHeight) {
-        return new Rectangle(id, position, newWidth, newHeight, style, visible, layerOrder);
-    }
-
-    public Rectangle withWidth(float newWidth) {
-        return new Rectangle(id, position, newWidth, height, style, visible, layerOrder);
-    }
-
-    public Rectangle withHeight(float newHeight) {
-        return new Rectangle(id, position, width, newHeight, style, visible, layerOrder);
     }
 
     @Override
@@ -149,63 +109,6 @@ public final class Rectangle extends Shape {
             // Draw rectangle
             pg.rect(position.getX(), position.getY(), width, height);
         }
-    }
-
-    // Check if this rectangle intersects with another rectangle
-    public boolean intersects(Rectangle other) {
-        return getBounds().overlaps(other.getBounds());
-    }
-
-    // Check if this rectangle contains another rectangle completely
-    public boolean contains(Rectangle other) {
-        return contains(other.getTopLeft()) && contains(other.getBottomRight());
-    }
-
-    // Get the closest point on the rectangle's perimeter to a given point
-    public Position getClosestPointOnPerimeter(Position point) {
-        float px = point.getX();
-        float py = point.getY();
-
-        // Clamp point to rectangle bounds
-        float clampedX = Math.max(position.getX(), Math.min(px, position.getX() + width));
-        float clampedY = Math.max(position.getY(), Math.min(py, position.getY() + height));
-
-        // If point is inside rectangle, find closest edge
-        if (contains(point)) {
-            float distToLeft = px - position.getX();
-            float distToRight = (position.getX() + width) - px;
-            float distToTop = py - position.getY();
-            float distToBottom = (position.getY() + height) - py;
-
-            float minDist =
-                    Math.min(Math.min(distToLeft, distToRight), Math.min(distToTop, distToBottom));
-
-            if (Float.compare(minDist, distToLeft) == 0) {
-                return new Position(position.getX(), py);
-            } else if (Float.compare(minDist, distToRight) == 0) {
-                return new Position(position.getX() + width, py);
-            } else if (Float.compare(minDist, distToTop) == 0) {
-                return new Position(px, position.getY());
-            } else {
-                return new Position(px, position.getY() + height);
-            }
-        }
-
-        return new Position(clampedX, clampedY);
-    }
-
-    // Scale rectangle from center
-    public Rectangle scale(float scaleX, float scaleY) {
-        Position center = getCenter();
-        float newWidth = width * Math.abs(scaleX);
-        float newHeight = height * Math.abs(scaleY);
-        Position newPosition =
-                new Position(center.getX() - newWidth / 2, center.getY() - newHeight / 2);
-        return new Rectangle(id, newPosition, newWidth, newHeight, style, visible, layerOrder);
-    }
-
-    public Rectangle scale(float scale) {
-        return scale(scale, scale);
     }
 
     @Override
