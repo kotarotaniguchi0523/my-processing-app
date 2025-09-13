@@ -17,8 +17,6 @@ public class SketchEventHandler {
   private static final int MIN_EXTENDED_CODEPOINT = 128;
   private static final int MAX_MESSAGE_LENGTH = 500;
   private static final int CHAT_SCROLL_SPEED = 20;
-  private static final int MARGIN = 10;
-  private static final int INNER_GAP_SMALL = 5;
 
   private final PApplet sketch;
   private final SketchUIRenderer uiRenderer;
