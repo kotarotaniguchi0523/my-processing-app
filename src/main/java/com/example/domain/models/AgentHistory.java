@@ -13,13 +13,9 @@ public class AgentHistory {
   private static final int MAX_MESSAGES_PER_SESSION = 20;
 
   private List<Session> sessions;
-  private String version;
-  private LocalDateTime lastUpdated;
 
   public AgentHistory() {
     this.sessions = new ArrayList<>();
-    this.version = "2.0";
-    this.lastUpdated = LocalDateTime.now();
   }
 
   /**
@@ -27,14 +23,12 @@ public class AgentHistory {
    */
   public static class Session {
     private String sessionId;
-    private LocalDateTime createdAt;
     private LocalDateTime lastAccessed;
     private List<Message> messages;
     private DrawingState finalState;
 
     public Session(String sessionId) {
       this.sessionId = sessionId;
-      this.createdAt = LocalDateTime.now();
       this.lastAccessed = LocalDateTime.now();
       this.messages = new ArrayList<>();
     }
@@ -54,10 +48,6 @@ public class AgentHistory {
     }
 
 
-    public LocalDateTime getCreatedAt() {
-      return createdAt;
-    }
-
     public LocalDateTime getLastAccessed() {
       return lastAccessed;
     }
@@ -66,9 +56,6 @@ public class AgentHistory {
       return messages;
     }
 
-    public void setMessages(List<Message> messages) {
-      this.messages = messages;
-    }
 
     public DrawingState getFinalState() {
       return finalState;
@@ -86,13 +73,11 @@ public class AgentHistory {
     private String role; // "system", "user", "assistant"
     private String content;
     private List<ToolCall> toolCalls;
-    private LocalDateTime timestamp;
 
     public Message(String role, String content) {
       this.role = role;
       this.content = content;
       this.toolCalls = new ArrayList<>();
-      this.timestamp = LocalDateTime.now();
     }
 
     // Getters and Setters
@@ -104,9 +89,6 @@ public class AgentHistory {
       return content;
     }
 
-    public void setContent(String content) {
-      this.content = content;
-    }
 
     public List<ToolCall> getToolCalls() {
       return toolCalls;
@@ -160,7 +142,6 @@ public class AgentHistory {
     for (int i = 0; i < sessions.size(); i++) {
       if (sessions.get(i).getSessionId().equals(session.getSessionId())) {
         sessions.set(i, session);
-        this.lastUpdated = LocalDateTime.now();
         return;
       }
     }
@@ -178,7 +159,6 @@ public class AgentHistory {
     }
 
     sessions.add(session);
-    this.lastUpdated = LocalDateTime.now();
   }
 
 
