@@ -72,17 +72,4 @@ public class CreateLineADKTool implements ADKTool {
     }
   }
 
-
-  @Override
-  public Map<String, Object> getSchema() {
-    return Map.of("name", "createLine", "description", "Create a line on the canvas", "parameters",
-        Map.of("type", "object", "properties",
-            Map.of("x1", Map.of("type", "number", "description", "Start X coordinate"), "y1",
-                Map.of("type", "number", "description", "Start Y coordinate"), "x2",
-                Map.of("type", "number", "description", "End X coordinate"), "y2",
-                Map.of("type", "number", "description", "End Y coordinate"), "color",
-                Map.of("type", "string", "description", "Line color (hex, rgb, or name)"),
-                "strokeWeight", Map.of("type", "number", "description", "Line thickness")),
-            "required", java.util.List.of("x1", "y1", "x2", "y2")));
-  }
 }

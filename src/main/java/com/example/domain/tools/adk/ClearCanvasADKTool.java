@@ -30,9 +30,4 @@ public class ClearCanvasADKTool implements ADKTool {
     }
   }
 
-  @Override
-  public Map<String, Object> getSchema() {
-    return Map.of("name", "clearCanvas", "description", "Clear all shapes from the canvas",
-        "parameters", Map.of("type", "object", "properties", Map.of()));
-  }
 }

@@ -118,21 +118,4 @@ public class CreateRectangleADKTool implements ADKTool {
     }
   }
 
-
-  @Override
-  public Map<String, Object> getSchema() {
-    return Map.of("name", "createRectangle", "description",
-        "Create a rectangle shape on the canvas", "parameters",
-        Map.of("type", "object", "properties",
-            Map.of("x", Map.of("type", "number", "description", "X coordinate"), "y",
-                Map.of("type", "number", "description", "Y coordinate"), "width",
-                Map.of("type", "number", "description", "Rectangle width"), "height",
-                Map.of("type", "number", "description", "Rectangle height"), "color",
-                Map.of("type", "string", "description", "Fill color (hex, rgb, or name)"),
-                "strokeColor", Map.of("type", "string", "description", "Stroke color (optional)"),
-                "strokeWeight", Map.of("type", "number", "description", "Stroke width (optional)"),
-                "filled",
-                Map.of("type", "boolean", "description", "Whether to fill the rectangle")),
-            "required", java.util.List.of("x", "y", "width", "height")));
-  }
 }

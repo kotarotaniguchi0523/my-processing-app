@@ -86,14 +86,4 @@ public class ChangeColorADKTool implements ADKTool {
   }
 
 
-  @Override
-  public Map<String, Object> getSchema() {
-    return Map.of("name", "changeColor", "description", "Change the color of an existing shape",
-        "parameters",
-        Map.of("type", "object", "properties",
-            Map.of("shapeId", Map.of("type", "string", "description", "ID of the shape to change"),
-                "newColor",
-                Map.of("type", "string", "description", "New color (hex, rgb, or name)")),
-            "required", java.util.List.of("shapeId", "newColor")));
-  }
 }

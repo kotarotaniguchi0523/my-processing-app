@@ -19,12 +19,7 @@ public interface ADKTool {
    */
   ToolResult execute(Map<String, Object> parameters, DrawingState state);
 
-  /**
-   * Get the schema defining this tool's parameters.
-   *
-   * @return Map containing tool metadata and parameter definitions
-   */
-  Map<String, Object> getSchema();
+
 
   /**
    * Result of tool execution

@@ -73,18 +73,4 @@ public class CreateCircleADKTool implements ADKTool {
     }
   }
 
-
-  @Override
-  public Map<String, Object> getSchema() {
-    return Map.of("name", "createCircle", "description", "Create a circle shape on the canvas",
-        "parameters",
-        Map.of("type", "object", "properties",
-            Map.of("x", Map.of("type", "number", "description", "X coordinate of center"), "y",
-                Map.of("type", "number", "description", "Y coordinate of center"), "radius",
-                Map.of("type", "number", "description", "Circle radius"), "color",
-                Map.of("type", "string", "description", "Fill color (hex, rgb, or name)"),
-                "strokeWeight", Map.of("type", "number", "description", "Stroke width (optional)"),
-                "filled", Map.of("type", "boolean", "description", "Whether to fill the circle")),
-            "required", java.util.List.of("x", "y", "radius")));
-  }
 }

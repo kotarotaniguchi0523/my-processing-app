@@ -59,11 +59,6 @@ public final class Style {
       return this;
     }
 
-    public Builder noStroke() {
-      this.hasStroke = false;
-      return this;
-    }
-
     public Style build() {
       return new Style(fillColor, strokeColor, strokeWeight, hasFill, hasStroke);
     }
@@ -93,43 +88,6 @@ public final class Style {
     return hasStroke;
   }
 
-  public Style withFillColor(Color fillColor) {
-    return new Style(fillColor, strokeColor, strokeWeight, hasFill, hasStroke);
-  }
-
-  public Style withStrokeColor(Color strokeColor) {
-    return new Style(fillColor, strokeColor, strokeWeight, hasFill, hasStroke);
-  }
-
-  public Style withStrokeWeight(float strokeWeight) {
-    return new Style(fillColor, strokeColor, strokeWeight, hasFill, hasStroke);
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (!(obj instanceof Style)) {
-      return false;
-    }
-    Style style = (Style) obj;
-    return Float.compare(style.strokeWeight, strokeWeight) == 0 && hasFill == style.hasFill
-        && hasStroke == style.hasStroke
-        && (fillColor != null ? fillColor.equals(style.fillColor) : style.fillColor == null)
-        && (strokeColor != null ? strokeColor.equals(style.strokeColor)
-            : style.strokeColor == null);
-  }
-
-  @Override
-  public int hashCode() {
-    int result = fillColor != null ? fillColor.hashCode() : 0;
-    result = 31 * result + (strokeColor != null ? strokeColor.hashCode() : 0);
-    result = 31 * result + (strokeWeight != +0.0f ? Float.floatToIntBits(strokeWeight) : 0);
-    result = 31 * result + (hasFill ? 1 : 0);
-    result = 31 * result + (hasStroke ? 1 : 0);
-    return result;
-  }
 
   @Override
   public String toString() {
@@ -143,10 +101,5 @@ public final class Style {
   public static final Style NO_STROKE =
       new Style(Color.WHITE, Color.TRANSPARENT, 0.0f, true, false);
 
-  /**
-   * デフォルトスタイルを返すメソッド
-   */
-  public static Style defaultStyle() {
-    return DEFAULT;
-  }
+
 }
