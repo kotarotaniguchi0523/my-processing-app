@@ -1,34 +1,56 @@
 package com.example.infrastructure;
 
-import com.example.application.services.StateService;
 import com.example.application.services.AIAgentService;
 import com.example.infrastructure.adapters.StateManagerAdapter;
-import com.example.infrastructure.adapters.HistoryServiceAdapter;
 import com.example.infrastructure.services.StateManager;
+import com.example.infrastructure.services.HistoryService;
 
 /**
  * Initializes domain services with infrastructure implementations.
- * Simplified after removing UseCase layer.
+ * Simplified after removing UseCase layer and StateService.
  */
 public class ServiceInitializer {
 
   private static boolean initialized = false;
   private static AIAgentService aiAgentService;
+  private static StateManager stateManager;
+  private static HistoryService historyService;
 
   /**
    * Initialize all domain services with infrastructure implementations.
+   *
+   * @throws IllegalStateException if initialization fails
    */
-  public static synchronized void initialize() {
+  public static synchronized void initialize() throws IllegalStateException {
     if (!initialized) {
-      // Create infrastructure implementations
-      StateManager stateManager = new StateManager();
-      StateManagerAdapter stateManagerAdapter = new StateManagerAdapter(stateManager);
-      HistoryServiceAdapter historyServiceAdapter = new HistoryServiceAdapter(stateManager);
+      try {
+        // Create infrastructure implementations with null checks
+        stateManager = new StateManager();
+        if (stateManager == null) {
+          throw new IllegalStateException("Failed to create StateManager - instance is null");
+        }
 
-      // Initialize domain service with adapters
-      StateService.initialize(stateManagerAdapter, historyServiceAdapter);
+        StateManagerAdapter stateManagerAdapter = new StateManagerAdapter(stateManager);
+        if (stateManagerAdapter == null) {
+          throw new IllegalStateException("Failed to create StateManagerAdapter - instance is null");
+        }
 
-      initialized = true;
+        historyService = new HistoryService(stateManager);
+        if (historyService == null) {
+          throw new IllegalStateException("Failed to create HistoryService - instance is null");
+        }
+
+        initialized = true;
+
+      } catch (Exception e) {
+        // Reset state on failure
+        stateManager = null;
+        historyService = null;
+        initialized = false;
+
+        String message = "Failed to initialize services: " + e.getMessage();
+        throw new IllegalStateException(message, e);
+      }
     }
   }
 
@@ -42,10 +64,36 @@ public class ServiceInitializer {
   }
 
   public static AIAgentService getAIAgentService() {
+    if (!initialized) {
+      throw new IllegalStateException("ServiceInitializer must be initialized first. Call initialize() before accessing services.");
+    }
     return aiAgentService;
   }
 
   public static void setAIAgentService(AIAgentService service) {
+    if (service == null) {
+      throw new IllegalArgumentException("AIAgentService cannot be null");
+    }
     aiAgentService = service;
+  }
+
+  public static StateManager getStateManager() {
+    if (!initialized) {
+      throw new IllegalStateException("ServiceInitializer must be initialized first. Call initialize() before accessing services.");
+    }
+    if (stateManager == null) {
+      throw new IllegalStateException("StateManager is not available. Initialization may have failed.");
+    }
+    return stateManager;
+  }
+
+  public static HistoryService getHistoryService() {
+    if (!initialized) {
+      throw new IllegalStateException("ServiceInitializer must be initialized first. Call initialize() before accessing services.");
+    }
+    if (historyService == null) {
+      throw new IllegalStateException("HistoryService is not available. Initialization may have failed.");
+    }
+    return historyService;
   }
 }

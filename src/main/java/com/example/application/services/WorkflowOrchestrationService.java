@@ -2,13 +2,10 @@ package com.example.application.services;
 
 import com.example.domain.models.DrawingState;
 import com.example.domain.agents.adk.ADKLlmWorkflowOrchestrator;
-import com.example.domain.events.*;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
@@ -17,7 +14,7 @@ import java.util.logging.Level;
  * Single Responsibility Principle.
  *
  * Responsibilities: - Coordinate workflow execution with ADK LLM - Manage workflow state
- * transitions - Handle workflow events and notifications - Provide workflow metrics and monitoring
+ * transitions - Provide workflow metrics and monitoring
  */
 public class WorkflowOrchestrationService {
 
@@ -25,16 +22,12 @@ public class WorkflowOrchestrationService {
       Logger.getLogger(WorkflowOrchestrationService.class.getName());
 
   private final ADKLlmWorkflowOrchestrator llmWorkflowOrchestrator;
-  private final List<IAIProcessingListener> listeners;
-  private final AtomicLong sequenceCounter;
   private final String sessionId;
   private DrawingState currentState;
 
   public WorkflowOrchestrationService(String sessionId) {
     this.sessionId = sessionId;
     this.llmWorkflowOrchestrator = new ADKLlmWorkflowOrchestrator();
-    this.listeners = new CopyOnWriteArrayList<>();
-    this.sequenceCounter = new AtomicLong(0);
     this.currentState = DrawingState.defaultState();
 
     LOGGER.info("WorkflowOrchestrationService initialized with ADK LLM Workflow");
@@ -63,7 +56,6 @@ public class WorkflowOrchestrationService {
    */
   public CompletableFuture<WorkflowResult> executeWorkflow(String userPrompt) {
     String requestId = UUID.randomUUID().toString();
-    fireProcessingStarted(userPrompt, requestId);
 
     return CompletableFuture.supplyAsync(() -> {
       try {
@@ -79,9 +71,6 @@ public class WorkflowOrchestrationService {
         // Update state if successful
         if (result.isSuccess()) {
           currentState = result.getFinalState();
-          fireProcessingCompleted(result.getMessage(), currentState, requestId);
-        } else {
-          fireProcessingFailed(result.getErrorMessage(), FailurePoint.PROCESSING, requestId);
         }
 
         return result;
@@ -89,7 +78,6 @@ public class WorkflowOrchestrationService {
       } catch (Exception e) {
         LOGGER.log(Level.SEVERE, "Workflow execution failed", e);
         String errorMessage = "Workflow execution error: " + e.getMessage();
-        fireProcessingFailed(errorMessage, FailurePoint.PROCESSING, requestId);
 
         return WorkflowResult.failure(errorMessage, currentState);
       }
@@ -125,64 +113,13 @@ public class WorkflowOrchestrationService {
    */
   public WorkflowMetrics getMetrics() {
     // In a real implementation, these would be tracked over time
-    return new WorkflowMetrics(sequenceCounter.get(), // Total workflows executed
+    return new WorkflowMetrics(0, // Total workflows executed
         0, // Success count (would be tracked)
         0, // Failure count (would be tracked)
         0.0 // Average execution time (would be calculated)
     );
   }
 
-  // Event listener management
-
-  public void addProcessingListener(IAIProcessingListener listener) {
-    if (listener != null) {
-      listeners.add(listener);
-    }
-  }
-
-  public void removeProcessingListener(IAIProcessingListener listener) {
-    listeners.remove(listener);
-  }
-
-  // Event firing methods
-
-  private void fireProcessingStarted(String userPrompt, String requestId) {
-    EventMeta meta = new EventMeta(sessionId, requestId, sequenceCounter.incrementAndGet());
-    ProcessingStartedEvent event = new ProcessingStartedEvent(meta, userPrompt);
-    listeners.forEach(l -> {
-      try {
-        l.onProcessingStarted(event);
-      } catch (Exception e) {
-        LOGGER.log(Level.WARNING, "Listener exception in onProcessingStarted", e);
-      }
-    });
-  }
-
-  private void fireProcessingCompleted(String result, DrawingState newState, String requestId) {
-    EventMeta meta = new EventMeta(sessionId, requestId, sequenceCounter.incrementAndGet());
-    String stateVersion = "v-" + System.currentTimeMillis();
-    ProcessingCompletedEvent event = new ProcessingCompletedEvent(meta, result, stateVersion, null);
-    listeners.forEach(l -> {
-      try {
-        l.onProcessingCompleted(event);
-      } catch (Exception e) {
-        LOGGER.log(Level.WARNING, "Listener exception in onProcessingCompleted", e);
-      }
-    });
-  }
-
-  private void fireProcessingFailed(String errorMessage, FailurePoint failurePoint,
-      String requestId) {
-    EventMeta meta = new EventMeta(sessionId, requestId, sequenceCounter.incrementAndGet());
-    ProcessingFailedEvent event = new ProcessingFailedEvent(meta, errorMessage, failurePoint);
-    listeners.forEach(l -> {
-      try {
-        l.onProcessingFailed(event);
-      } catch (Exception e) {
-        LOGGER.log(Level.WARNING, "Listener exception in onProcessingFailed", e);
-      }
-    });
-  }
 
   // Helper methods
 

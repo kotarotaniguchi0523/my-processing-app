@@ -61,6 +61,17 @@ public class SketchEventHandler {
       return;
     }
 
+    // Undo/Redo shortcuts: Ctrl+Z / Ctrl+Y
+    if (sketch.keyPressed && (sketch.keyCode == PConstants.CONTROL || sketch.keyCode == 157)) { // 157 is right Ctrl on some systems
+      if (sketch.key == 'z' || sketch.key == 'Z') {
+        handleUndo();
+        return;
+      } else if (sketch.key == 'y' || sketch.key == 'Y') {
+        handleRedo();
+        return;
+      }
+    }
+
     // テーマ切替: 'T'
     if (sketch.key == 't' || sketch.key == 'T') {
       uiRenderer.toggleTheme();
@@ -156,6 +167,46 @@ public class SketchEventHandler {
   private boolean isPrintableCharacter(char key) {
     return (key >= ASCII_MIN_PRINTABLE && key <= ASCII_MAX_PRINTABLE)
         || key >= MIN_EXTENDED_CODEPOINT;
+  }
+
+  /**
+   * Handle undo operation (Ctrl+Z).
+   */
+  private void handleUndo() {
+    if (aiAgentService != null) {
+      try {
+        boolean undoPerformed = aiAgentService.getHistoryService().undo();
+        if (undoPerformed) {
+          chatManager.addMessage("System: Undo performed");
+        } else {
+          chatManager.addMessage("System: No more undo actions available");
+        }
+      } catch (Exception e) {
+        chatManager.addMessage("System: Error performing undo - " + e.getMessage());
+      }
+    } else {
+      chatManager.addMessage("System: Undo not available - AI service not initialized");
+    }
+  }
+
+  /**
+   * Handle redo operation (Ctrl+Y).
+   */
+  private void handleRedo() {
+    if (aiAgentService != null) {
+      try {
+        boolean redoPerformed = aiAgentService.getHistoryService().redo();
+        if (redoPerformed) {
+          chatManager.addMessage("System: Redo performed");
+        } else {
+          chatManager.addMessage("System: No more redo actions available");
+        }
+      } catch (Exception e) {
+        chatManager.addMessage("System: Error performing redo - " + e.getMessage());
+      }
+    } else {
+      chatManager.addMessage("System: Redo not available - AI service not initialized");
+    }
   }
 
   // AI trigger logic is centralized in AiChatHelper

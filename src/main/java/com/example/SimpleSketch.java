@@ -102,14 +102,14 @@ public class SimpleSketch extends PApplet {
     uiRenderer.setFonts(font, smallFont);
     uiRenderer.calculateLayout();
 
-    // Register ChatManager as AI processing listener
-    // This enables real-time display of AI thinking process
+    // ADK LLM Workflow is now always enabled by default
     if (aiAgentService != null) {
-      aiAgentService.addProcessingListener(chatManager);
-
-      // ADK LLM Workflow is now always enabled by default
       chatManager.addMessage("System: ADK LLM AI Workflow Enabled - Gemini 2.5 Pro");
       println("ADK LLM Workflow enabled: AI-powered processing with Gemini 2.5 Pro");
+
+      // Register ChatManager as a state change listener
+      aiAgentService.getStateChangeNotifier().addListener(chatManager);
+      println("ChatManager registered as state change listener");
 
       // Set up approval callback for DiffApprovalRenderer
       setupApprovalCallback();

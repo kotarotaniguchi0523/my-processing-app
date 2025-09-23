@@ -1,7 +1,8 @@
 package com.example.presentation;
 
 import processing.core.PApplet;
-import com.example.domain.events.*;
+import com.example.application.services.StateChangeNotifier;
+import com.example.domain.models.DrawingState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,9 +17,10 @@ import java.util.regex.Matcher;
 /**
  * ChatManager handles all chat-related functionality including message management, input handling,
  * and chat display logic. This class follows the Single Responsibility Principle by focusing solely
- * on chat management.
+ * on chat management. It also implements StateChangeListener to receive notifications about drawing
+ * state changes.
  */
-public class ChatManager implements IAIProcessingListener {
+public class ChatManager implements StateChangeNotifier.StateChangeListener {
   private static final int DEFAULT_LINE_HEIGHT = 20;
 
   private final PApplet sketch;
@@ -210,54 +212,6 @@ public class ChatManager implements IAIProcessingListener {
     this.japaneseInputVisible = visible;
   }
 
-  // --- IAIProcessingListener Implementation ---
-
-  @Override
-  public void onProcessingStarted(ProcessingStartedEvent event) {
-    addSystemMessage(AI_THINKING_PREFIX + "処理を開始しています...");
-  }
-
-  @Override
-  public void onPromptAnalyzing(PromptAnalyzingEvent event) {
-    addSystemMessage(ANALYSIS_PREFIX + event.getAnalysis());
-  }
-
-  @Override
-  public void onToolSelecting(ToolSelectingEvent event) {
-    String message = String.format("%sツール選択: %s", TOOL_PREFIX, event.getToolName());
-    addSystemMessage(message);
-
-    // Show reason
-    if (event.getReason() != null && !event.getReason().isEmpty()) {
-      addSystemMessage("  理由: " + event.getReason());
-    }
-
-    // Show parameters
-    if (event.getParameters() != null && !event.getParameters().isEmpty()) {
-      addSystemMessage("  パラメータ: " + formatParameters(event.getParameters()));
-    }
-  }
-
-  @Override
-  public void onToolExecuting(ToolExecutingEvent event) {
-    String statusText =
-        event.getStatus() instanceof ToolStatus ? ((ToolStatus) event.getStatus()).getDisplayName()
-            : event.getStatus().toString();
-    addSystemMessage(TOOL_PREFIX + event.getToolName() + " を" + statusText + "...");
-  }
-
-  @Override
-  public void onProcessingCompleted(ProcessingCompletedEvent event) {
-    addSystemMessage(SUCCESS_PREFIX + "処理完了");
-  }
-
-  @Override
-  public void onProcessingFailed(ProcessingFailedEvent event) {
-    addSystemMessage(ERROR_PREFIX + "エラー: " + event.getErrorMessage());
-    if (event.getFailurePoint() != null) {
-      addSystemMessage("  失敗箇所: " + event.getFailurePoint().getDisplayName());
-    }
-  }
 
   /**
    * Add a system message to the thread-safe queue. Messages will be processed in the UI thread via
@@ -389,5 +343,16 @@ public class ChatManager implements IAIProcessingListener {
     if (message.startsWith("System:"))
       return message.substring(6 + 1).trim();
     return message;
+  }
+
+  /**
+   * Implementation of StateChangeListener interface.
+   * Called when the drawing state changes to update the chat display.
+   */
+  @Override
+  public void onStateChanged(DrawingState newState, String changeDescription) {
+    // Add a system message to notify users about the state change
+    addSystemMessage("Drawing updated: " + changeDescription +
+                    " (Shapes: " + newState.getShapes().size() + ")");
   }
 }

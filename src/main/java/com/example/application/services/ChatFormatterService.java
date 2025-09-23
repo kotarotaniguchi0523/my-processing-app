@@ -36,15 +36,27 @@ public class ChatFormatterService {
    *
    * @param graphics Processing graphics context
    * @param maxBubbleWidth Maximum bubble width in pixels
+   * @throws IllegalArgumentException if graphics is null or maxBubbleWidth is invalid
    */
   public ChatFormatterService(PGraphics graphics, float maxBubbleWidth) {
+    if (graphics == null) {
+      throw new IllegalArgumentException("Graphics context cannot be null");
+    }
+    if (maxBubbleWidth <= 0) {
+      throw new IllegalArgumentException("Maximum bubble width must be positive, got: " + maxBubbleWidth);
+    }
+
     this.graphics = graphics;
     this.maxBubbleWidth = maxBubbleWidth;
 
     // Initialize text wrapping strategies
     this.strategies = new ArrayList<>();
-    this.strategies.add(new JapaneseTextWrapper(graphics));
-    this.strategies.add(new EnglishTextWrapper(graphics));
+    try {
+      this.strategies.add(new JapaneseTextWrapper(graphics));
+      this.strategies.add(new EnglishTextWrapper(graphics));
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to initialize text wrapping strategies: " + e.getMessage(), e);
+    }
   }
 
   /**
@@ -67,8 +79,16 @@ public class ChatFormatterService {
    * @param font Font for text rendering
    * @param contentMaxWidth Maximum width available for the text content (without padding)
    * @return FormattedMessage containing wrapped text and bubble dimensions
+   * @throws IllegalArgumentException if font is null or contentMaxWidth is negative
    */
   public FormattedMessage formatMessage(String text, PFont font, float contentMaxWidth) {
+    if (font == null) {
+      throw new IllegalArgumentException("Font cannot be null");
+    }
+    if (contentMaxWidth < 0) {
+      throw new IllegalArgumentException("Content max width cannot be negative, got: " + contentMaxWidth);
+    }
+
     if (text == null || text.isEmpty()) {
       return new FormattedMessage(new MessageFormat(new String[] {""}, 0, 0),
           new BubbleSize(50, 20));
@@ -124,17 +144,26 @@ public class ChatFormatterService {
    *
    * @param text Text to analyze
    * @return Appropriate text wrapping strategy
+   * @throws IllegalStateException if no strategies are available
    */
   private ITextWrapStrategy selectStrategy(String text) {
+    if (strategies == null || strategies.isEmpty()) {
+      throw new IllegalStateException("No text wrapping strategies available");
+    }
+
     // Check each strategy's canHandle method
     for (ITextWrapStrategy strategy : strategies) {
-      if (strategy.canHandle(text)) {
+      if (strategy != null && strategy.canHandle(text)) {
         return strategy;
       }
     }
 
     // Default to first strategy (Japanese) if no match
-    return strategies.get(0);
+    ITextWrapStrategy defaultStrategy = strategies.get(0);
+    if (defaultStrategy == null) {
+      throw new IllegalStateException("Default text wrapping strategy is null");
+    }
+    return defaultStrategy;
   }
 
   /**

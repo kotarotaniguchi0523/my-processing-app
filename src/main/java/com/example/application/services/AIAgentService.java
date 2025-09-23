@@ -1,16 +1,16 @@
 package com.example.application.services;
 
 import com.example.domain.models.DrawingState;
-import com.example.domain.events.*;
 import com.example.domain.models.AgentHistory;
+import com.example.infrastructure.ServiceInitializer;
+import com.example.infrastructure.services.StateManager;
+import com.example.infrastructure.services.HistoryService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
@@ -29,10 +29,10 @@ public class AIAgentService {
   private final ConversationService conversationService;
   private final JsonHistoryRepository historyRepository;
   private final WorkflowOrchestrationService workflowService;
+  private final StateChangeNotifier stateChangeNotifier;
+  private StateManager stateManager;
+  private HistoryService historyService;
 
-  // --- Event System ---
-  private final List<IAIProcessingListener> listeners = new CopyOnWriteArrayList<>();
-  private final AtomicLong sequenceCounter = new AtomicLong(0);
 
   // --- Session Management ---
   private AgentHistory.Session currentSession;
@@ -63,12 +63,24 @@ public class AIAgentService {
     this.conversationService = new ConversationService();
     this.historyRepository = new JsonHistoryRepository(persistHistory);
     this.workflowService = new WorkflowOrchestrationService(conversationService.getSessionId());
+    this.stateChangeNotifier = new StateChangeNotifier();
 
-    // Set initial state for workflow service
+    // Get StateManager and HistoryService from ServiceInitializer
+    // Initialize ServiceInitializer if not already done
+    ServiceInitializer.initialize();
+    this.stateManager = ServiceInitializer.getStateManager();
+    this.historyService = ServiceInitializer.getHistoryService();
+
+    // Set initial state for workflow service and state manager
     this.workflowService.setCurrentState(this.currentState);
+    this.stateManager.updateState(this.currentState);
 
-    // Forward event listeners to workflow service
-    this.workflowService.addProcessingListener(new ForwardingListener());
+    // Register as a state change listener
+    setupStateChangeListener();
+
+    // Register with StateManager to receive state updates (for undo/redo)
+    setupStateManagerListener();
+
 
     Logger.getLogger(getClass().getName())
         .info("AIAgentService initialized with WorkflowOrchestrationService");
@@ -93,67 +105,87 @@ public class AIAgentService {
     return currentState;
   }
 
-  // --- Event Listener Management ---
-
   /**
-   * Add a listener for AI processing events.
+   * Get the state change notifier for registering listeners.
+   *
+   * @return the state change notifier
    */
-  public void addProcessingListener(IAIProcessingListener listener) {
-    if (listener != null) {
-      listeners.add(listener);
-    }
+  public StateChangeNotifier getStateChangeNotifier() {
+    return stateChangeNotifier;
   }
 
   /**
-   * Remove a listener for AI processing events.
+   * Set up the state change listener to connect StateChangeNotifier with StateManager.
    */
-  public void removeProcessingListener(IAIProcessingListener listener) {
-    listeners.remove(listener);
-  }
-
-  // --- Event Firing Methods ---
-
-  private void fireProcessingStarted(String userPrompt, String requestId) {
-    EventMeta meta = new EventMeta(conversationService.getSessionId(), requestId, sequenceCounter.incrementAndGet());
-    ProcessingStartedEvent event = new ProcessingStartedEvent(meta, userPrompt);
-    listeners.forEach(l -> {
-      try {
-        l.onProcessingStarted(event);
-      } catch (Exception e) {
-        // Prevent listener exceptions from affecting processing
+  private void setupStateChangeListener() {
+    stateChangeNotifier.addListener(new StateChangeNotifier.StateChangeListener() {
+      @Override
+      public void onStateChanged(DrawingState newState, String changeDescription) {
+        // This is already handled in the calling methods, but we can log it
+        Logger.getLogger(getClass().getName())
+            .info("State change processed: " + changeDescription);
       }
     });
   }
 
-  // Removed unused event firing methods - these are now handled by LLM workflow
+  /**
+   * Get the StateManager instance for direct access to state operations.
+   *
+   * @return the state manager
+   */
+  public StateManager getStateManager() {
+    return stateManager;
+  }
 
-  private void fireProcessingCompleted(String result, DrawingState newState, String requestId) {
-    EventMeta meta = new EventMeta(conversationService.getSessionId(), requestId, sequenceCounter.incrementAndGet());
-    String stateVersion = "v-" + System.currentTimeMillis();
-    UUID toolCallId = null; // Non-tool response
-    ProcessingCompletedEvent event =
-        new ProcessingCompletedEvent(meta, result, stateVersion, toolCallId);
-    listeners.forEach(l -> {
-      try {
-        l.onProcessingCompleted(event);
-      } catch (Exception e) {
-        // Prevent listener exceptions from affecting processing
+  /**
+   * Get the HistoryService instance for direct access to undo/redo operations.
+   *
+   * @return the history service
+   */
+  public HistoryService getHistoryService() {
+    return historyService;
+  }
+
+  /**
+   * Set up the StateManager listener to sync state changes back to AIAgentService.
+   * This ensures undo/redo operations update the AI agent's current state.
+   */
+  private void setupStateManagerListener() {
+    stateManager.addListener(new com.example.domain.services.StateChangeListener() {
+      @Override
+      public void onStateChanged(DrawingState oldState, DrawingState newState) {
+        // Sync the state back to AIAgentService without triggering another state update
+        if (!newState.equals(currentState)) {
+          currentState = newState;
+          workflowService.setCurrentState(newState);
+
+          // Update session state if available
+          if (currentSession != null) {
+            currentSession.setFinalState(newState);
+          }
+
+          Logger.getLogger(getClass().getName())
+              .info("AIAgentService state synced from StateManager: " +
+                    stateManager.calculateStateDifference(oldState, newState));
+        }
+      }
+
+      @Override
+      public void onHistoryChanged(DrawingState currentState, boolean canUndo, boolean canRedo) {
+        // Log history status changes
+        Logger.getLogger(getClass().getName())
+            .fine("History status: canUndo=" + canUndo + ", canRedo=" + canRedo);
+      }
+
+      @Override
+      public void onStateValidationError(DrawingState state, String error) {
+        Logger.getLogger(getClass().getName())
+            .warning("State validation error: " + error);
       }
     });
   }
 
-  private void fireProcessingFailed(String errorMessage, FailurePoint failurePoint,
-      String requestId) {
-    EventMeta meta = new EventMeta(conversationService.getSessionId(), requestId, sequenceCounter.incrementAndGet());
-    ProcessingFailedEvent event = new ProcessingFailedEvent(meta, errorMessage, failurePoint);
-    listeners.forEach(l -> {
-      try {
-        l.onProcessingFailed(event);
-      } catch (Exception e) {
-        // Prevent listener exceptions from affecting processing
-      }
-    });
-  }
+
 
   /**
    * Interface for approval/rejection callbacks
@@ -174,19 +206,25 @@ public class AIAgentService {
    * Apply approved state changes
    */
   public void applyApprovedState(DrawingState newState, String message) {
+    DrawingState previousState = this.currentState;
     this.currentState = newState;
-    
+
     // Record the approved change in conversation history
     conversationService.addAssistantMessage(message);
     if (currentSession != null) {
       currentSession.addMessage(new AgentHistory.Message("assistant", message));
       currentSession.setFinalState(currentState);
     }
-    
+
     // Persist history
     historyRepository.persistHistoryMaybe(currentSession, currentState);
-    
-    // State has been applied and approved
+
+    // Update StateManager and HistoryService
+    if (!newState.equals(previousState)) {
+      stateManager.updateState(newState);
+      historyService.addState(newState);
+      stateChangeNotifier.notifyStateChanged(newState, "Approved drawing change: " + message);
+    }
   }
   
 
@@ -208,7 +246,6 @@ public class AIAgentService {
    */
   public AgentReply handleUserPrompt(String userPrompt) {
     String requestId = UUID.randomUUID().toString();
-    fireProcessingStarted(userPrompt, requestId);
 
     try {
       // Add user message to conversation history
@@ -231,6 +268,7 @@ public class AIAgentService {
         }
 
         // Update current state
+        DrawingState previousState = this.currentState;
         this.currentState = newState;
         workflowService.setCurrentState(newState);
 
@@ -241,8 +279,6 @@ public class AIAgentService {
           currentSession.setFinalState(newState);
         }
 
-        fireProcessingCompleted(message, newState, requestId);
-
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("success", true);
         metadata.put("progressLog", result.getProgressLog());
@@ -251,10 +287,16 @@ public class AIAgentService {
         // Persist history
         historyRepository.persistHistoryMaybe(currentSession, currentState);
 
+        // Update StateManager and HistoryService, then notify listeners
+        if (!newState.equals(previousState)) {
+          stateManager.updateState(newState);
+          historyService.addState(newState);
+          stateChangeNotifier.notifyStateChanged(newState, "Workflow execution completed: " + message);
+        }
+
         return new AgentReply(message, newState, metadata);
       } else {
         String errorMessage = result.getErrorMessage();
-        fireProcessingFailed(errorMessage, FailurePoint.PROCESSING, requestId);
 
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("success", false);
@@ -266,8 +308,6 @@ public class AIAgentService {
       String errorMessage = "Workflow execution error: " + e.getMessage();
       Logger.getLogger(getClass().getName())
           .log(Level.SEVERE, "Workflow execution failed", e);
-
-      fireProcessingFailed(errorMessage, FailurePoint.PROCESSING, requestId);
 
       Map<String, Object> metadata = new HashMap<>();
       metadata.put("success", false);
@@ -395,76 +435,6 @@ public class AIAgentService {
 
 
   /** Simple immutable reply DTO */
-  /**
-   * Inner class to forward events from workflow service to local listeners.
-   */
-  private class ForwardingListener implements IAIProcessingListener {
-    @Override
-    public void onProcessingStarted(ProcessingStartedEvent event) {
-      listeners.forEach(l -> {
-        try {
-          l.onProcessingStarted(event);
-        } catch (Exception e) {
-          // Prevent listener exceptions from affecting processing
-        }
-      });
-    }
-
-    @Override
-    public void onPromptAnalyzing(PromptAnalyzingEvent event) {
-      listeners.forEach(l -> {
-        try {
-          l.onPromptAnalyzing(event);
-        } catch (Exception e) {
-          // Prevent listener exceptions from affecting processing
-        }
-      });
-    }
-
-    @Override
-    public void onToolSelecting(ToolSelectingEvent event) {
-      listeners.forEach(l -> {
-        try {
-          l.onToolSelecting(event);
-        } catch (Exception e) {
-          // Prevent listener exceptions from affecting processing
-        }
-      });
-    }
-
-    @Override
-    public void onToolExecuting(ToolExecutingEvent event) {
-      listeners.forEach(l -> {
-        try {
-          l.onToolExecuting(event);
-        } catch (Exception e) {
-          // Prevent listener exceptions from affecting processing
-        }
-      });
-    }
-
-    @Override
-    public void onProcessingCompleted(ProcessingCompletedEvent event) {
-      listeners.forEach(l -> {
-        try {
-          l.onProcessingCompleted(event);
-        } catch (Exception e) {
-          // Prevent listener exceptions from affecting processing
-        }
-      });
-    }
-
-    @Override
-    public void onProcessingFailed(ProcessingFailedEvent event) {
-      listeners.forEach(l -> {
-        try {
-          l.onProcessingFailed(event);
-        } catch (Exception e) {
-          // Prevent listener exceptions from affecting processing
-        }
-      });
-    }
-  }
 
   public static class AgentReply {
     public final boolean success;

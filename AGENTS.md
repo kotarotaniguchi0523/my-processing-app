@@ -5,7 +5,7 @@ This project implements an AI-assisted vector drawing app on Processing (Java) u
 Structure Overview
 - Domain: Pure models and business rules.
   - `src/main/java/com/example/domain/models` — `DrawingState`, shapes (`Circle`, `Ellipse`, `Rectangle`, `Line`, `Text`), immutable value objects, YAML helpers.
-  - `src/main/java/com/example/domain/services` — service interfaces (`IStateManager`, `IHistoryService`, `ShapeOps`, etc.).
+  - `src/main/java/com/example/domain/services` — service interfaces (`IStateManager`, `ShapeOps`, etc.).
   - `src/main/java/com/example/domain/tools` — tool contracts (`IAgentTool`) and `ToolRegistry`.
   - `src/main/java/com/example/domain/events` — processing events and listener interface `IAIProcessingListener`.
 - Application: Use cases and orchestration.

@@ -21,10 +21,48 @@ public final class DrawingState {
 
   public DrawingState(Map<String, Object> settings, List<Shape> shapes,
       Map<String, List<Object>> arrays, Map<String, List<Object>> lists) {
+    // Defensive copy with null safety
     this.settings = settings != null ? new HashMap<>(settings) : new HashMap<>();
-    this.shapes = shapes != null ? new ArrayList<>(shapes) : new ArrayList<>();
-    this.arrays = arrays != null ? new HashMap<>(arrays) : new HashMap<>();
-    this.lists = lists != null ? new HashMap<>(lists) : new HashMap<>();
+
+    // Validate shapes list and ensure no null shapes
+    if (shapes != null) {
+      this.shapes = new ArrayList<>();
+      for (Shape shape : shapes) {
+        if (shape == null) {
+          throw new IllegalArgumentException("Shapes list cannot contain null elements");
+        }
+        this.shapes.add(shape);
+      }
+    } else {
+      this.shapes = new ArrayList<>();
+    }
+
+    // Validate arrays map
+    if (arrays != null) {
+      this.arrays = new HashMap<>();
+      for (Map.Entry<String, List<Object>> entry : arrays.entrySet()) {
+        if (entry.getKey() == null) {
+          throw new IllegalArgumentException("Arrays map cannot contain null keys");
+        }
+        this.arrays.put(entry.getKey(), entry.getValue() != null ? new ArrayList<>(entry.getValue()) : new ArrayList<>());
+      }
+    } else {
+      this.arrays = new HashMap<>();
+    }
+
+    // Validate lists map
+    if (lists != null) {
+      this.lists = new HashMap<>();
+      for (Map.Entry<String, List<Object>> entry : lists.entrySet()) {
+        if (entry.getKey() == null) {
+          throw new IllegalArgumentException("Lists map cannot contain null keys");
+        }
+        this.lists.put(entry.getKey(), entry.getValue() != null ? new ArrayList<>(entry.getValue()) : new ArrayList<>());
+      }
+    } else {
+      this.lists = new HashMap<>();
+    }
+
     this.timestamp = System.currentTimeMillis();
   }
 
@@ -162,6 +200,9 @@ public final class DrawingState {
   }
 
   public DrawingState withAddedShape(Shape shape) {
+    if (shape == null) {
+      throw new IllegalArgumentException("Shape cannot be null");
+    }
     List<Shape> newShapes = new ArrayList<>(shapes);
     newShapes.add(shape);
     return new DrawingState(settings, newShapes, arrays, lists);
@@ -172,9 +213,12 @@ public final class DrawingState {
   }
 
   public DrawingState withoutShape(String shapeId) {
+    if (shapeId == null) {
+      throw new IllegalArgumentException("Shape ID cannot be null");
+    }
     List<Shape> newShapes = new ArrayList<>();
     for (Shape shape : shapes) {
-      if (!shape.getId().equals(shapeId)) {
+      if (shape != null && !shapeId.equals(shape.getId())) {
         newShapes.add(shape);
       }
     }
@@ -191,6 +235,9 @@ public final class DrawingState {
   }
 
   public DrawingState withReplacedShape(int index, Shape shape) {
+    if (shape == null) {
+      throw new IllegalArgumentException("Replacement shape cannot be null");
+    }
     if (index < 0 || index >= shapes.size()) {
       return this; // Return unchanged if index is invalid
     }
