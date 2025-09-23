@@ -97,7 +97,7 @@ public class InputRenderer {
       btnFill = sketch.lerpColor(btnFill, sketch.color(0), 0.15f);
     }
 
-    drawShadow(sendButtonLeft, chatInputY, SEND_BUTTON_WIDTH, INPUT_HEIGHT, CARD_RADIUS, 8,
+    UIRenderingUtils.drawShadow(sketch, sendButtonLeft, chatInputY, SEND_BUTTON_WIDTH, INPUT_HEIGHT, CARD_RADIUS, 8,
         SHADOW_ALPHA);
     sketch.fill(btnFill);
     sketch.noStroke();
@@ -209,20 +209,6 @@ public class InputRenderer {
     return displayText;
   }
 
-  private void drawShadow(float x, float y, float w, float h, float r, int layers, float alpha) {
-    sketch.pushStyle();
-    try {
-      for (int i = layers; i >= 1; i--) {
-        float spread = i * 1.5f;
-        int a = (int) (alpha * (i / (float) layers));
-        sketch.noStroke();
-        sketch.fill(0, 0, 0, a);
-        sketch.rect(x + 0.5f * i, y + 0.8f * i, w, h, r + spread);
-      }
-    } finally {
-      sketch.popStyle();
-    }
-  }
 
   // Getters for layout information needed by other components
   public boolean isInChatInputArea(int x, int y, int chatInputY) {

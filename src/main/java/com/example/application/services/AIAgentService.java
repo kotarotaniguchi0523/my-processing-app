@@ -1,44 +1,43 @@
 package com.example.application.services;
 
 import com.example.domain.models.DrawingState;
-import com.example.infrastructure.ai.GeminiClient;
-import com.example.infrastructure.services.ToolInvoker;
-import com.example.domain.values.ToolExecutionResult;
-import com.example.domain.tools.ToolRegistry;
 import com.example.domain.events.*;
 import com.example.domain.models.AgentHistory;
-import com.google.genai.types.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 
 /**
- * Refactored AIAgentService orchestrates chat -> LLM -> tool execution -> new state + reply.
- * Now uses separate service classes for better separation of concerns.
+ * Refactored AIAgentService for managing AI agent interactions.
+ * Delegates workflow orchestration to WorkflowOrchestrationService for better separation of concerns.
+ * Follows Single Responsibility Principle by focusing on:
+ * - Managing conversation history
+ * - Coordinating between services
+ * - Handling approval workflows
  */
 public class AIAgentService {
-  private final GeminiClient geminiClient;
-  private final ToolInvoker toolInvoker;
   private DrawingState currentState;
 
   // --- Separated Service Components ---
   private final ConversationService conversationService;
-  private final PromptBuilder promptBuilder;
   private final JsonHistoryRepository historyRepository;
-  private final ToolCoordinator toolCoordinator;
+  private final WorkflowOrchestrationService workflowService;
 
   // --- Event System ---
   private final List<IAIProcessingListener> listeners = new CopyOnWriteArrayList<>();
   private final AtomicLong sequenceCounter = new AtomicLong(0);
-  
+
   // --- Session Management ---
   private AgentHistory.Session currentSession;
   private final boolean loadHistoryOnStartup;
-  
+
   // --- Diff Approval ---
   private ApprovalCallback approvalCallback;
 
@@ -58,15 +57,21 @@ public class AIAgentService {
    */
   public AIAgentService(DrawingState initialState, boolean loadHistoryOnStartup,
       boolean persistHistory) {
-    this.geminiClient = GeminiClient.getInstance();
-    this.toolInvoker = new ToolInvoker(ToolRegistry.getInstance());
     this.currentState = initialState != null ? initialState : DrawingState.defaultState();
-    
+
     // Initialize separated service components
     this.conversationService = new ConversationService();
-    this.promptBuilder = new PromptBuilder(conversationService);
     this.historyRepository = new JsonHistoryRepository(persistHistory);
-    this.toolCoordinator = new ToolCoordinator();
+    this.workflowService = new WorkflowOrchestrationService(conversationService.getSessionId());
+
+    // Set initial state for workflow service
+    this.workflowService.setCurrentState(this.currentState);
+
+    // Forward event listeners to workflow service
+    this.workflowService.addProcessingListener(new ForwardingListener());
+
+    Logger.getLogger(getClass().getName())
+        .info("AIAgentService initialized with WorkflowOrchestrationService");
     
     this.loadHistoryOnStartup = loadHistoryOnStartup;
     
@@ -120,44 +125,7 @@ public class AIAgentService {
     });
   }
 
-  private void firePromptAnalyzing(String analysis, String requestId) {
-    EventMeta meta = new EventMeta(conversationService.getSessionId(), requestId, sequenceCounter.incrementAndGet());
-    PromptAnalyzingEvent event = new PromptAnalyzingEvent(meta, analysis);
-    listeners.forEach(l -> {
-      try {
-        l.onPromptAnalyzing(event);
-      } catch (Exception e) {
-        // Prevent listener exceptions from affecting processing
-      }
-    });
-  }
-
-  private void fireToolSelecting(String toolName, String reason, Map<String, Object> parameters,
-      String requestId, UUID toolCallId) {
-    EventMeta meta = new EventMeta(conversationService.getSessionId(), requestId, sequenceCounter.incrementAndGet());
-    ToolSelectingEvent event =
-        new ToolSelectingEvent(meta, toolName, reason, parameters, toolCallId);
-    listeners.forEach(l -> {
-      try {
-        l.onToolSelecting(event);
-      } catch (Exception e) {
-        // Prevent listener exceptions from affecting processing
-      }
-    });
-  }
-
-  private void fireToolExecuting(String toolName, ToolStatus status, String requestId,
-      UUID toolCallId) {
-    EventMeta meta = new EventMeta(conversationService.getSessionId(), requestId, sequenceCounter.incrementAndGet());
-    ToolExecutingEvent event = new ToolExecutingEvent(meta, toolName, status, toolCallId);
-    listeners.forEach(l -> {
-      try {
-        l.onToolExecuting(event);
-      } catch (Exception e) {
-        // Prevent listener exceptions from affecting processing
-      }
-    });
-  }
+  // Removed unused event firing methods - these are now handled by LLM workflow
 
   private void fireProcessingCompleted(String result, DrawingState newState, String requestId) {
     EventMeta meta = new EventMeta(conversationService.getSessionId(), requestId, sequenceCounter.incrementAndGet());
@@ -221,126 +189,91 @@ public class AIAgentService {
     // State has been applied and approved
   }
   
+
   /**
-   * Handle user prompt using Gemini Automatic Function Calling (AFC). Allows natural language
-   * commands to trigger drawing operations.
+   * @deprecated LLM workflow is now always enabled through WorkflowOrchestrationService
+   */
+  @Deprecated
+  public void setLlmWorkflowMode(boolean enabled) {
+    // No-op: LLM workflow is always enabled now
+    if (!enabled) {
+      Logger.getLogger(getClass().getName())
+          .warning("AFC mode has been removed. ADK LLM Workflow is always enabled through WorkflowOrchestrationService.");
+    }
+  }
+
+
+  /**
+   * Handle user prompt using WorkflowOrchestrationService.
    */
   public AgentReply handleUserPrompt(String userPrompt) {
     String requestId = UUID.randomUUID().toString();
     fireProcessingStarted(userPrompt, requestId);
 
-    // Fire analyzing event to show we're working on it
-    firePromptAnalyzing("プロンプトを解析中...", requestId);
-
-    // Record user turn using ConversationService
-    conversationService.addUserMessage(userPrompt);
-    
-    // Also add to AgentHistory session
-    if (currentSession != null) {
-      currentSession.addMessage(new AgentHistory.Message("user", userPrompt));
-    }
-    
-    // Persist history using JsonHistoryRepository
-    historyRepository.persistHistoryMaybe(currentSession, currentState);
-
     try {
-      // Update ToolCoordinator with current state
-      toolCoordinator.updateCurrentState(currentState);
-
-      // Build conversation context using PromptBuilder (include canvas size)
-      String contextPrompt = promptBuilder.buildContextPrompt(userPrompt, currentState);
-
-      // Fire analyzing event
-      firePromptAnalyzing("描画関数を準備中...", requestId);
-
-      // Get drawing function configuration from ToolCoordinator
-      GenerateContentConfig config = toolCoordinator.createToolConfig();
-
-      // Call Gemini with Function Calling support
-      Optional<GenerateContentResponse> responseOpt =
-          geminiClient.generateContentWithTools(contextPrompt, config);
-
-      if (responseOpt.isEmpty()) {
-        String error = "申し訳ございません。AIサービスへの接続に失敗しました。";
-        fireProcessingFailed(error, FailurePoint.CONNECTION, requestId);
-        return new AgentReply(error, currentState, null);
+      // Add user message to conversation history
+      conversationService.addUserMessage(userPrompt);
+      if (currentSession != null) {
+        currentSession.addMessage(new AgentHistory.Message("user", userPrompt));
       }
 
-      GenerateContentResponse response = responseOpt.get();
+      // Execute workflow through orchestration service
+      WorkflowOrchestrationService.WorkflowResult result =
+          workflowService.executeWorkflow(userPrompt).get();
 
-      // Get the text response
-      String textResponse = response.text();
+      if (result.isSuccess()) {
+        DrawingState newState = result.getFinalState();
+        String message = result.getMessage();
 
-      // Check if automatic function calling occurred using ToolCoordinator
-      DrawingState previousState = currentState;
-      DrawingState proposedState = toolCoordinator.getCurrentState();
-
-      // Infer tool calls from state changes using ToolCoordinator
-      List<ToolCall> toolCalls = toolCoordinator.inferToolCallsFromStateChange(previousState, proposedState);
-      
-      // Fire events for detected tool calls
-      for (ToolCall tc : toolCalls) {
-        UUID toolCallId = UUID.randomUUID();
-        fireToolSelecting(tc.name, "Automatic Function Calling", tc.arguments, requestId, toolCallId);
-        fireToolExecuting(tc.name, ToolStatus.COMPLETED, requestId, toolCallId);
-      }
-
-      // Use response text or default message
-      String finalMessage =
-          textResponse != null && !textResponse.isBlank() ? textResponse : "操作を完了しました。";
-
-      // Check if state has changed and requires approval
-      boolean stateChanged = !previousState.equals(proposedState);
-      
-      if (stateChanged && approvalCallback != null) {
-        // Trigger approval dialog with the proposed state and message
-        approvalCallback.onApprove(proposedState, finalMessage);
-        
-        // Return current state (not the proposed one) until approved
-        fireProcessingCompleted("変更の承認待ち...", currentState, requestId);
-        return new AgentReply("変更の承認待ち...", currentState, null);
-        
-      } else {
-        // No state change or no approval callback - apply immediately
-        currentState = proposedState;
-        
-        // Record assistant response using ConversationService
-        if (!toolCalls.isEmpty()) {
-          conversationService.addAssistantMessageWithTools(finalMessage, toolCalls);
-          
-          // Also add to AgentHistory session
-          if (currentSession != null) {
-            AgentHistory.Message msg = new AgentHistory.Message("assistant", finalMessage);
-            for (ToolCall tc : toolCalls) {
-              msg.getToolCalls().add(new AgentHistory.ToolCall(tc.name, tc.arguments, tc.result));
-            }
-            currentSession.addMessage(msg);
-          }
-        } else {
-          conversationService.addAssistantMessage(finalMessage);
-          
-          // Also add to AgentHistory session
-          if (currentSession != null) {
-            currentSession.addMessage(new AgentHistory.Message("assistant", finalMessage));
-          }
+        // Request approval if callback is set
+        if (approvalCallback != null && !newState.equals(currentState)) {
+          approvalCallback.onApprove(newState, message);
         }
-        
-        // Update session's final state and persist using JsonHistoryRepository
+
+        // Update current state
+        this.currentState = newState;
+        workflowService.setCurrentState(newState);
+
+        // Record in conversation history
+        conversationService.addAssistantMessage(message);
         if (currentSession != null) {
-          currentSession.setFinalState(currentState);
+          currentSession.addMessage(new AgentHistory.Message("assistant", message));
+          currentSession.setFinalState(newState);
         }
-        
+
+        fireProcessingCompleted(message, newState, requestId);
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("success", true);
+        metadata.put("progressLog", result.getProgressLog());
+        metadata.put("score", result.getScore());
+
+        // Persist history
         historyRepository.persistHistoryMaybe(currentSession, currentState);
 
-        fireProcessingCompleted(finalMessage, currentState, requestId);
-        System.out.println("AIAgentService returning state with " + currentState.getShapes().size() + " shapes");
-        return new AgentReply(finalMessage, currentState, null);
-      }
+        return new AgentReply(message, newState, metadata);
+      } else {
+        String errorMessage = result.getErrorMessage();
+        fireProcessingFailed(errorMessage, FailurePoint.PROCESSING, requestId);
 
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("success", false);
+        metadata.put("progressLog", result.getProgressLog());
+
+        return new AgentReply(errorMessage, currentState, metadata);
+      }
     } catch (Exception e) {
-      String error = "エラーが発生しました: " + e.getMessage();
-      fireProcessingFailed(error, FailurePoint.TOOL_EXECUTION, requestId);
-      return new AgentReply(error, currentState, null);
+      String errorMessage = "Workflow execution error: " + e.getMessage();
+      Logger.getLogger(getClass().getName())
+          .log(Level.SEVERE, "Workflow execution failed", e);
+
+      fireProcessingFailed(errorMessage, FailurePoint.PROCESSING, requestId);
+
+      Map<String, Object> metadata = new HashMap<>();
+      metadata.put("success", false);
+      metadata.put("error", e.getMessage());
+
+      return new AgentReply(errorMessage, currentState, metadata);
     }
   }
 
@@ -350,15 +283,12 @@ public class AIAgentService {
 
 
   /**
-   * Hook for future structured tool call execution.
+   * @deprecated Tool execution is now handled through WorkflowOrchestrationService
    */
+  @Deprecated
   public AgentReply executeTool(String toolName, Map<String, Object> params) {
-    ToolExecutionResult res = toolInvoker.invokeTool(toolName, params, currentState);
-    if (res.isSuccess()) {
-      currentState = res.getResultState();
-      return new AgentReply("Tool executed: " + toolName, currentState, res.getMetadata());
-    }
-    return new AgentReply("Tool failed: " + res.getErrorMessage(), currentState, res.getMetadata());
+    // This method is no longer used - tools are executed through ADK workflow
+    return new AgentReply("Tool execution moved to WorkflowOrchestrationService", currentState, new HashMap<>());
   }
 
 
@@ -465,15 +395,101 @@ public class AIAgentService {
 
 
   /** Simple immutable reply DTO */
+  /**
+   * Inner class to forward events from workflow service to local listeners.
+   */
+  private class ForwardingListener implements IAIProcessingListener {
+    @Override
+    public void onProcessingStarted(ProcessingStartedEvent event) {
+      listeners.forEach(l -> {
+        try {
+          l.onProcessingStarted(event);
+        } catch (Exception e) {
+          // Prevent listener exceptions from affecting processing
+        }
+      });
+    }
+
+    @Override
+    public void onPromptAnalyzing(PromptAnalyzingEvent event) {
+      listeners.forEach(l -> {
+        try {
+          l.onPromptAnalyzing(event);
+        } catch (Exception e) {
+          // Prevent listener exceptions from affecting processing
+        }
+      });
+    }
+
+    @Override
+    public void onToolSelecting(ToolSelectingEvent event) {
+      listeners.forEach(l -> {
+        try {
+          l.onToolSelecting(event);
+        } catch (Exception e) {
+          // Prevent listener exceptions from affecting processing
+        }
+      });
+    }
+
+    @Override
+    public void onToolExecuting(ToolExecutingEvent event) {
+      listeners.forEach(l -> {
+        try {
+          l.onToolExecuting(event);
+        } catch (Exception e) {
+          // Prevent listener exceptions from affecting processing
+        }
+      });
+    }
+
+    @Override
+    public void onProcessingCompleted(ProcessingCompletedEvent event) {
+      listeners.forEach(l -> {
+        try {
+          l.onProcessingCompleted(event);
+        } catch (Exception e) {
+          // Prevent listener exceptions from affecting processing
+        }
+      });
+    }
+
+    @Override
+    public void onProcessingFailed(ProcessingFailedEvent event) {
+      listeners.forEach(l -> {
+        try {
+          l.onProcessingFailed(event);
+        } catch (Exception e) {
+          // Prevent listener exceptions from affecting processing
+        }
+      });
+    }
+  }
+
   public static class AgentReply {
+    public final boolean success;
     public final String message;
     public final DrawingState state;
     public final Map<String, Object> metadata;
+    public final List<String> progressLog;
 
+    // Main constructor with all fields
+    public AgentReply(boolean success, String message, DrawingState state, List<String> progressLog) {
+      this.success = success;
+      this.message = message;
+      this.state = state;
+      this.metadata = null;
+      this.progressLog = progressLog != null ? progressLog : new ArrayList<>();
+    }
+
+    // Backward compatibility constructor
     public AgentReply(String message, DrawingState state, Map<String, Object> metadata) {
+      this.success = true;
       this.message = message;
       this.state = state;
       this.metadata = metadata;
+      this.progressLog = new ArrayList<>();
     }
   }
+
 }

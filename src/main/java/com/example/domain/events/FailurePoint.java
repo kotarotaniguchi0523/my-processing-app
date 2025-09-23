@@ -6,6 +6,8 @@ package com.example.domain.events;
  */
 public enum FailurePoint {
     CONNECTION("接続エラー"),
+    ANALYSIS("コンテキスト分析"),
+    PROCESSING("処理実行"),
     PROMPT_PARSING("プロンプト解析"),
     TOOL_SELECTION("ツール選択"),
     TOOL_VALIDATION("ツール検証"),

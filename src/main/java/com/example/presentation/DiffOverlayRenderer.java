@@ -154,7 +154,7 @@ public class DiffOverlayRenderer {
         int popupY = canvasAreaY + 20;
         
         // Popup shadow
-        drawShadow(popupX, popupY, popupWidth, popupHeight, 8, 8, 40);
+        UIRenderingUtils.drawShadow(sketch, popupX, popupY, popupWidth, popupHeight, 8, 8, 40);
         
         // Popup background
         sketch.fill(255, 255, 255, 240);
@@ -199,20 +199,6 @@ public class DiffOverlayRenderer {
         sketch.rect(popupX, popupY + popupHeight - 3, popupWidth * timeLeft, 3, 0, 0, 4, 4);
     }
     
-    private void drawShadow(float x, float y, float w, float h, float r, int layers, float alpha) {
-        sketch.pushStyle();
-        try {
-            for (int i = layers; i >= 1; i--) {
-                float spread = i * 1.5f;
-                int a = (int) (alpha * (i / (float) layers));
-                sketch.noStroke();
-                sketch.fill(0, 0, 0, a);
-                sketch.rect(x + 0.5f * i, y + 0.8f * i, w, h, r + spread);
-            }
-        } finally {
-            sketch.popStyle();
-        }
-    }
     
     private DiffSummary computeDiffSummary(DrawingState prev, DrawingState curr) {
         List<Shape> prevShapes = prev != null ? prev.getShapes() : Collections.emptyList();

@@ -10,6 +10,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Handles JSON-based persistence of agent history and conversation data.
@@ -80,7 +81,7 @@ public class JsonHistoryRepository {
                 // Initialize new AgentHistory and session
                 agentHistory = new AgentHistory();
                 AgentHistory.Session session = new AgentHistory.Session(
-                    java.util.UUID.randomUUID().toString()
+                    UUID.randomUUID().toString()
                 );
                 
                 // Process old format messages

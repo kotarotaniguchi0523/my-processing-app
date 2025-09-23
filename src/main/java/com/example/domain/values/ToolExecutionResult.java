@@ -67,6 +67,28 @@ public class ToolExecutionResult {
     public static ToolExecutionResult error(String toolName, String errorMessage) {
         return new ToolExecutionResult(toolName, false, errorMessage, null, null);
     }
+
+    /**
+     * Creates a failed tool execution result (alias for error method)
+     * @param errorMessage The error message
+     * @return A new error result
+     */
+    public static ToolExecutionResult failure(String errorMessage) {
+        return error(errorMessage);
+    }
+
+    /**
+     * Creates a successful tool execution result with shape ID and message
+     * @param shapeId The ID of the created/modified shape
+     * @param message The success message
+     * @return A new successful result
+     */
+    public static ToolExecutionResult success(String shapeId, String message) {
+        Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("shapeId", shapeId);
+        metadata.put("message", message);
+        return new ToolExecutionResult(null, true, null, null, metadata);
+    }
     
     // Getters
     public String getToolName() {

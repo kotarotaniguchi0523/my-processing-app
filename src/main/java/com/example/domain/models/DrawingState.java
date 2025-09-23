@@ -1,6 +1,5 @@
 package com.example.domain.models;
 
-import com.example.domain.serialization.YamlUtils;
 import com.example.domain.values.Color;
 
 import java.util.ArrayList;
@@ -143,6 +142,10 @@ public final class DrawingState {
     return value instanceof Boolean ? (Boolean) value : defaultValue;
   }
 
+  public String getBackgroundColor() {
+    return getStringSetting("backgroundColor", "#FFFFFF");
+  }
+
   // Methods to create new state with modifications (immutable updates)
   public DrawingState withSettings(Map<String, Object> newSettings) {
     return new DrawingState(newSettings, shapes, arrays, lists);
@@ -239,7 +242,8 @@ public final class DrawingState {
   // YAML Serialization
 
   public Map<String, Object> toYamlMap() {
-    Map<String, Object> map = YamlUtils.createYamlMap(getYamlType());
+    Map<String, Object> map = new HashMap<>();
+    map.put("type", getYamlType());
     map.put("settings", new HashMap<>(settings));
     // Convert shapes to YamlSerializable list
     List<Map<String, Object>> shapeMapList = new ArrayList<>();
@@ -247,8 +251,8 @@ public final class DrawingState {
       shapeMapList.add(shape.toYamlMap());
     }
     map.put("shapes", shapeMapList);
-    map.put("arrays", YamlUtils.serializeMapOfLists(arrays));
-    map.put("lists", YamlUtils.serializeMapOfLists(lists));
+    map.put("arrays", new HashMap<>(arrays));
+    map.put("lists", new HashMap<>(lists));
     map.put("stateTimestamp", timestamp);
     return map;
   }
@@ -260,13 +264,17 @@ public final class DrawingState {
 
   @SuppressWarnings("unchecked")
   public static DrawingState fromYamlMap(Map<String, Object> yamlMap) {
-    YamlUtils.validateYamlType(yamlMap, "drawing_state");
+    // Validate type
+    String type = (String) yamlMap.get("type");
+    if (!"drawing_state".equals(type)) {
+      throw new IllegalArgumentException("Invalid type. Expected 'drawing_state' but got '" + type + "'");
+    }
 
-    Map<String, Object> settings = YamlUtils.getMap(yamlMap, "settings", new HashMap<>());
+    Map<String, Object> settings = (Map<String, Object>) yamlMap.getOrDefault("settings", new HashMap<>());
 
     // Safely deserialize arrays and lists
     Map<String, List<Object>> arrays = new HashMap<>();
-    Map<String, Object> arraysMap = YamlUtils.getMap(yamlMap, "arrays", new HashMap<>());
+    Map<String, Object> arraysMap = (Map<String, Object>) yamlMap.getOrDefault("arrays", new HashMap<>());
     for (Map.Entry<String, Object> entry : arraysMap.entrySet()) {
       if (entry.getValue() instanceof List) {
         arrays.put(entry.getKey(), (List<Object>) entry.getValue());
@@ -274,7 +282,7 @@ public final class DrawingState {
     }
 
     Map<String, List<Object>> lists = new HashMap<>();
-    Map<String, Object> listsMap = YamlUtils.getMap(yamlMap, "lists", new HashMap<>());
+    Map<String, Object> listsMap = (Map<String, Object>) yamlMap.getOrDefault("lists", new HashMap<>());
     for (Map.Entry<String, Object> entry : listsMap.entrySet()) {
       if (entry.getValue() instanceof List) {
         lists.put(entry.getKey(), (List<Object>) entry.getValue());
@@ -283,11 +291,17 @@ public final class DrawingState {
 
     // Deserialize shapes
     List<Shape> shapes = new ArrayList<>();
-    List<Map<String, Object>> shapeMapList = YamlUtils.getMapList(yamlMap, "shapes");
-    for (Map<String, Object> shapeMap : shapeMapList) {
-      Shape shape = deserializeShape(shapeMap);
-      if (shape != null) {
-        shapes.add(shape);
+    Object shapesObj = yamlMap.get("shapes");
+    if (shapesObj instanceof List) {
+      List<?> shapesList = (List<?>) shapesObj;
+      for (Object obj : shapesList) {
+        if (obj instanceof Map) {
+          Map<String, Object> shapeMap = (Map<String, Object>) obj;
+          Shape shape = deserializeShape(shapeMap);
+          if (shape != null) {
+            shapes.add(shape);
+          }
+        }
       }
     }
 
@@ -295,7 +309,7 @@ public final class DrawingState {
   }
 
   private static Shape deserializeShape(Map<String, Object> shapeMap) {
-    String shapeType = YamlUtils.getString(shapeMap, "type", null);
+    String shapeType = (String) shapeMap.get("type");
     if (shapeType == null) {
       return null;
     }

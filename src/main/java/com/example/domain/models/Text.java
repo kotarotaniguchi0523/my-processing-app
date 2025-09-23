@@ -1,8 +1,8 @@
 package com.example.domain.models;
 
+import com.example.domain.serialization.YamlUtils;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
-import com.example.domain.serialization.YamlUtils;
 
 import java.util.Locale;
 import java.util.Map;

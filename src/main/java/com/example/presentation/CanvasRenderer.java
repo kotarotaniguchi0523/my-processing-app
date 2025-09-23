@@ -6,6 +6,8 @@ import com.example.application.services.AIAgentService;
 import com.example.domain.models.DrawingState;
 import com.example.infrastructure.rendering.DrawingEngine;
 
+import static com.example.presentation.UIRenderingUtils.*;
+
 /**
  * CanvasRenderer handles the drawing canvas area rendering.
  * Manages the canvas card, title, and shape rendering via DrawingEngine.
@@ -44,7 +46,11 @@ public class CanvasRenderer {
     sketch.pushStyle();
     try {
       // Canvas card with soft shadow
-      drawCard(MARGIN, canvasAreaY, sketch.width - MARGIN * 2, canvasAreaHeight, CARD_RADIUS);
+      drawShadow(sketch, MARGIN, canvasAreaY, sketch.width - MARGIN * 2, canvasAreaHeight, CARD_RADIUS, 12, SHADOW_ALPHA);
+      sketch.fill(themeManager.getColorSurface());
+      sketch.stroke(themeManager.getColorBorder());
+      sketch.strokeWeight(1);
+      sketch.rect(MARGIN, canvasAreaY, sketch.width - MARGIN * 2, canvasAreaHeight, CARD_RADIUS);
 
             // Canvas title
             sketch.fill(themeManager.getColorTextSecondary());
@@ -94,27 +100,5 @@ public class CanvasRenderer {
       sketch.popStyle();
     }
   }
-    
-    private void drawCard(float x, float y, float w, float h, float r) {
-        drawShadow(x, y, w, h, r, 12, SHADOW_ALPHA);
-        sketch.fill(themeManager.getColorSurface());
-        sketch.stroke(themeManager.getColorBorder());
-        sketch.strokeWeight(1);
-        sketch.rect(x, y, w, h, r);
-    }
-    
-    private void drawShadow(float x, float y, float w, float h, float r, int layers, float alpha) {
-        sketch.pushStyle();
-        try {
-            for (int i = layers; i >= 1; i--) {
-                float spread = i * 1.5f;
-                int a = (int) (alpha * (i / (float) layers));
-                sketch.noStroke();
-                sketch.fill(0, 0, 0, a);
-                sketch.rect(x + 0.5f * i, y + 0.8f * i, w, h, r + spread);
-            }
-        } finally {
-            sketch.popStyle();
-        }
-    }
+
 }

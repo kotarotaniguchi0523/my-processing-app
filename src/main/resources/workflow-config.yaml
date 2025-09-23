@@ -1,0 +1,93 @@
+# ADK Native Workflow Configuration
+# This file configures the behavior of the drawing workflow
+
+workflow:
+  # Maximum number of iterations for the refinement loop
+  maxIterations: 3
+
+  # Timeout for workflow execution (in seconds)
+  timeoutSeconds: 60
+
+  # Score thresholds for review
+  scoring:
+    acceptable: 60    # Minimum score to approve
+    good: 75         # Good quality threshold
+    excellent: 90    # Excellent quality threshold
+
+  # Evaluation weights (must sum to 1.0)
+  evaluation:
+    weights:
+      coherence: 0.3        # Shape relationships and consistency
+      completeness: 0.25    # All necessary elements present
+      visualQuality: 0.25   # Aesthetic appeal and balance
+      efficiency: 0.2       # Performance and resource usage
+
+  # Shape limits for efficiency scoring
+  shapes:
+    optimal: 15      # Ideal number of shapes
+    warning: 30      # Warning threshold
+    maximum: 50      # Maximum before penalty
+
+  # State management prefixes
+  statePrefix:
+    context: "context:"
+    plan: "plan:"
+    review: "review:"
+    drawing: "drawing:"
+    workflow: "workflow:"
+    temp: "temp:"
+    user: "user:"
+
+# Agent-specific configuration
+agents:
+  context:
+    enabled: true
+    timeout: 10
+
+  planner:
+    enabled: true
+    timeout: 15
+    defaultShapeColor: "#4CAF50"
+    layoutModes:
+      - default
+      - centered
+      - grid
+      - random
+
+  review:
+    enabled: true
+    timeout: 10
+    strictMode: false  # If true, requires higher scores
+
+# Session configuration
+session:
+  # Session retention (in minutes)
+  retentionMinutes: 60
+
+  # Maximum sessions per user
+  maxSessionsPerUser: 10
+
+  # Enable session persistence
+  persistence:
+    enabled: false
+    path: "./sessions"
+
+# Logging configuration
+logging:
+  level: INFO
+  agents:
+    context: FINE
+    planner: FINE
+    review: FINE
+  workflow: INFO
+
+# UI integration
+ui:
+  # Show progress in chat
+  showProgress: true
+
+  # Show detailed scores
+  showDetailedScores: true
+
+  # Auto-approve threshold (0 to disable)
+  autoApproveScore: 0

@@ -3,7 +3,9 @@ package com.example.application.services;
 import com.example.domain.models.AgentHistory;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -107,9 +109,9 @@ public class ConversationService {
         toolCalls = new ArrayList<>();
         for (AgentHistory.ToolCall tc : msg.getToolCalls()) {
           @SuppressWarnings("unchecked")
-          java.util.Map<String, Object> args = tc.getArguments() instanceof java.util.Map
-              ? (java.util.Map<String, Object>) tc.getArguments()
-              : new java.util.HashMap<>();
+          Map<String, Object> args = tc.getArguments() instanceof Map
+              ? (Map<String, Object>) tc.getArguments()
+              : new HashMap<>();
           toolCalls.add(new AIAgentService.ToolCall(tc.getName(), args, tc.getResult()));
         }
       }

@@ -1,5 +1,6 @@
 package com.example.domain.models;
 
+import com.example.domain.values.Color;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
 
@@ -76,6 +77,14 @@ public abstract class Shape {
 
     public int getLayerOrder() {
         return layerOrder;
+    }
+
+    public Color getFillColor() {
+        return style.getFillColor();
+    }
+
+    public Color getStrokeColor() {
+        return style.getStrokeColor();
     }
 
     // Abstract method for creating new instances with different properties

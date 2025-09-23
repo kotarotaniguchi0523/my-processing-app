@@ -7,6 +7,8 @@ import com.example.application.services.ChatFormatterService.FormattedMessage;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.example.presentation.UIRenderingUtils.*;
+
 /**
  * ChatRenderer handles chat log display and message bubble rendering. Manages scrolling, message
  * formatting, and bubble styling.
@@ -49,7 +51,11 @@ public class ChatRenderer {
     sketch.pushStyle();
     try {
       // Chat area card
-      drawCard(MARGIN, chatAreaY, sketch.width - MARGIN * 2, chatAreaHeight, CARD_RADIUS);
+      drawShadow(sketch, MARGIN, chatAreaY, sketch.width - MARGIN * 2, chatAreaHeight, CARD_RADIUS, 12, SHADOW_ALPHA);
+      sketch.fill(themeManager.getColorSurface());
+      sketch.stroke(themeManager.getColorBorder());
+      sketch.strokeWeight(1);
+      sketch.rect(MARGIN, chatAreaY, sketch.width - MARGIN * 2, chatAreaHeight, CARD_RADIUS);
 
       // Chat area title
       sketch.fill(themeManager.getColorTextSecondary());
@@ -164,7 +170,7 @@ public class ChatRenderer {
     sketch.pushStyle();
 
     // Bubble background with subtle shadow
-    drawShadow(bubbleX, y, bubbleWidth, bubbleHeight, BUBBLE_RADIUS, 6, SHADOW_ALPHA);
+    UIRenderingUtils.drawShadow(sketch, bubbleX, y, bubbleWidth, bubbleHeight, BUBBLE_RADIUS, 6, SHADOW_ALPHA);
 
     if (isUser) {
       sketch.noStroke();
@@ -230,26 +236,4 @@ public class ChatRenderer {
     }
   }
 
-  private void drawCard(float x, float y, float w, float h, float r) {
-    drawShadow(x, y, w, h, r, 12, SHADOW_ALPHA);
-    sketch.fill(themeManager.getColorSurface());
-    sketch.stroke(themeManager.getColorBorder());
-    sketch.strokeWeight(1);
-    sketch.rect(x, y, w, h, r);
-  }
-
-  private void drawShadow(float x, float y, float w, float h, float r, int layers, float alpha) {
-    sketch.pushStyle();
-    try {
-      for (int i = layers; i >= 1; i--) {
-        float spread = i * 1.5f;
-        int a = (int) (alpha * (i / (float) layers));
-        sketch.noStroke();
-        sketch.fill(0, 0, 0, a);
-        sketch.rect(x + 0.5f * i, y + 0.8f * i, w, h, r + spread);
-      }
-    } finally {
-      sketch.popStyle();
-    }
-  }
 }

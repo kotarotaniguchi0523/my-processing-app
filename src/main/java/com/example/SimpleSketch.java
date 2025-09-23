@@ -107,6 +107,10 @@ public class SimpleSketch extends PApplet {
     if (aiAgentService != null) {
       aiAgentService.addProcessingListener(chatManager);
 
+      // ADK LLM Workflow is now always enabled by default
+      chatManager.addMessage("System: ADK LLM AI Workflow Enabled - Gemini 2.5 Pro");
+      println("ADK LLM Workflow enabled: AI-powered processing with Gemini 2.5 Pro");
+
       // Set up approval callback for DiffApprovalRenderer
       setupApprovalCallback();
     }

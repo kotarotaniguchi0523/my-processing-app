@@ -1,6 +1,6 @@
 package com.example.application.ports;
 
-import com.example.domain.tools.IAgentTool;
+import com.example.domain.tools.adk.ADKTool;
 import com.example.domain.values.ToolExecutionResult;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +38,7 @@ public interface ToolCoordinatorPort {
      * @return Optional containing the tool if found, empty otherwise
      * @throws IllegalArgumentException if toolName is null or empty
      */
-    Optional<IAgentTool> findToolByName(String toolName);
+    Optional<ADKTool> findToolByName(String toolName);
     
     /**
      * Validates tool parameters before execution.
@@ -76,7 +76,7 @@ public interface ToolCoordinatorPort {
      * @return true if registration was successful, false otherwise
      * @throws IllegalArgumentException if tool is null
      */
-    boolean registerTool(IAgentTool tool);
+    boolean registerTool(ADKTool tool);
     
     /**
      * Unregisters a tool by name.

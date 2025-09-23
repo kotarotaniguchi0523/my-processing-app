@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important Configuration
+
+**環境変数の設定**
+- このプロジェクトでは`.env`ファイルに`GEMINI_API_KEY`を設定しています
+- ADKは`GOOGLE_API_KEY`環境変数を必要としますが、PowerShellスクリプト（`run-adk.ps1`）が自動的に`GEMINI_API_KEY`から`GOOGLE_API_KEY`にコピーします
+- **重要**: APIキーは必ず`.env`ファイルから読み込み、ソースコードにハードコーディングしないでください
+
 ## Project Overview
 
 This is a Processing-based Java application for an AI-powered coding agent that enables users to interact with an AI to generate and execute visual drawings through natural language instructions.
@@ -18,13 +25,15 @@ Main entry point: `com.example.SimpleSketch` - A Processing sketch that provides
 
 ## Build and Run Commands
 
-### Compile the project
-```bash
-mvn compile
+### ADK LLM Workflowを使用する場合（推奨）
+```powershell
+# PowerShellで実行（.envからGEMINI_API_KEYを自動読み込み）
+powershell -ExecutionPolicy Bypass -File run-adk.ps1
 ```
 
-### Run the application
+### 通常実行
 ```bash
+mvn compile
 mvn exec:java
 ```
 The main class is configured in `pom.xml` as `com.example.SimpleSketch`.
@@ -89,7 +98,17 @@ mvn exec:java -Dexec.jvmArgs="-agentlib:jdwp=transport=dt_socket,server=y,suspen
 
 ## AI Agent Integration
 
-The system is designed to integrate with Claude API or Gemini API for natural language processing. The agent interprets user instructions and generates YAML-based drawing instructions that require user approval before execution.
+The system uses Google's Agent Development Kit (ADK) with Gemini 2.5 Pro for natural language processing.
+
+### ADK LLM Workflow Components:
+- **Context Analyzer**: Understands user input in multiple languages
+- **Drawing Planner**: Creates tool-based drawing plans
+- **Tool Executor**: Executes the planned drawing tools
+- **Drawing Reviewer**: Reviews and scores the execution results
+
+### Model Configuration:
+- **必須**: すべてのLLMエージェントは`gemini-2.5-pro`を使用
+- **環境変数**: `.env`ファイルの`GEMINI_API_KEY`を使用（ADK用に自動的に`GOOGLE_API_KEY`にコピーされます）
 
 ## Important Notes
 

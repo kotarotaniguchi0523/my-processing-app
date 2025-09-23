@@ -8,6 +8,7 @@ import com.example.domain.services.IHistoryService;
 
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.logging.Level;
 
 /**
  * Service for managing drawing state and session operations. Provides a high-level interface for
@@ -50,7 +51,7 @@ public class StateService {
   public void initializeSession(DrawingSession session) {
     this.currentSession = session;
     stateManager.updateState(session.getCurrentState());
-    if (LOGGER.isLoggable(java.util.logging.Level.INFO)) {
+    if (LOGGER.isLoggable(Level.INFO)) {
       LOGGER.info("Drawing session initialized: " + session.getSessionId());
     }
   }
@@ -89,7 +90,7 @@ public class StateService {
       currentSession.updateState(newState);
       stateManager.updateState(newState);
 
-      if (LOGGER.isLoggable(java.util.logging.Level.FINE)) {
+      if (LOGGER.isLoggable(Level.FINE)) {
         LOGGER.fine("State updated for session: " + currentSession.getSessionId());
       }
     }
@@ -111,7 +112,7 @@ public class StateService {
       currentSession.addShape(shape);
       stateManager.updateState(currentSession.getCurrentState());
 
-      if (LOGGER.isLoggable(java.util.logging.Level.INFO)) {
+      if (LOGGER.isLoggable(Level.INFO)) {
         LOGGER.info("Shape added: " + shape.getId() + " (" + shape.getType() + ")");
       }
     }
@@ -124,7 +125,7 @@ public class StateService {
       currentSession.removeShape(shapeId);
       stateManager.updateState(currentSession.getCurrentState());
 
-      if (LOGGER.isLoggable(java.util.logging.Level.INFO)) {
+      if (LOGGER.isLoggable(Level.INFO)) {
         LOGGER.info("Shape removed: " + shapeId);
       }
     }
@@ -137,7 +138,7 @@ public class StateService {
       currentSession.clearAllShapes();
       stateManager.updateState(currentSession.getCurrentState());
 
-      if (LOGGER.isLoggable(java.util.logging.Level.INFO)) {
+      if (LOGGER.isLoggable(Level.INFO)) {
         LOGGER.info("All shapes cleared from session: " + currentSession.getSessionId());
       }
     }
@@ -162,7 +163,7 @@ public class StateService {
         DrawingState currentState = stateManager.getCurrentState();
         currentSession.updateState(currentState);
 
-        if (LOGGER.isLoggable(java.util.logging.Level.INFO)) {
+        if (LOGGER.isLoggable(Level.INFO)) {
           LOGGER.info("Undo operation performed");
         }
         return true;
@@ -180,7 +181,7 @@ public class StateService {
         DrawingState currentState = stateManager.getCurrentState();
         currentSession.updateState(currentState);
 
-        if (LOGGER.isLoggable(java.util.logging.Level.INFO)) {
+        if (LOGGER.isLoggable(Level.INFO)) {
           LOGGER.info("Redo operation performed");
         }
         return true;
@@ -202,7 +203,7 @@ public class StateService {
   /** Clear the history. */
   public void clearHistory() {
     historyService.clear();
-    if (LOGGER.isLoggable(java.util.logging.Level.INFO)) {
+    if (LOGGER.isLoggable(Level.INFO)) {
       LOGGER.info("History cleared");
     }
   }

@@ -129,12 +129,8 @@ public class DiffApprovalRenderer {
   }
 
   private void drawPanel(int x, int y, int w, int h) {
-    // Shadow
-    for (int i = 5; i >= 1; i--) {
-      sketch.fill(0, 0, 0, 10 * i);
-      sketch.noStroke();
-      sketch.rect(x + i, y + i * 2, w, h, PANEL_RADIUS);
-    }
+    // Shadow using UIRenderingUtils
+    UIRenderingUtils.drawShadow(sketch, x, y, w, h, PANEL_RADIUS, 5, 50);
 
     // Panel background
     sketch.fill(COLOR_PANEL_BG);
