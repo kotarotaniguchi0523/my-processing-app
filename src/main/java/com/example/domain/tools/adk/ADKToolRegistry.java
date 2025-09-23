@@ -39,14 +39,14 @@ public class ADKToolRegistry {
         // Clear existing tools
         tools.clear();
 
-        // Register all ADK tools (no longer need UseCase port)
-        registerTool("createCircle", new CreateCircleADKTool());
-        registerTool("createRectangle", new CreateRectangleADKTool());
-        registerTool("createLine", new CreateLineADKTool());
-        registerTool("createTriangle", new CreateTriangleADKTool());
-        registerTool("createEllipse", new CreateEllipseADKTool());
-        registerTool("clearCanvas", new ClearCanvasADKTool());
-        registerTool("changeColor", new ChangeColorADKTool());
+        // Register all ADK tools with underscore names to match orchestrator expectations
+        registerTool("create_circle", new CreateCircleADKTool());
+        registerTool("create_rectangle", new CreateRectangleADKTool());
+        registerTool("create_line", new CreateLineADKTool());
+        registerTool("create_triangle", new CreateTriangleADKTool());
+        registerTool("create_ellipse", new CreateEllipseADKTool());
+        registerTool("clear_canvas", new ClearCanvasADKTool());
+        registerTool("change_color", new ChangeColorADKTool());
 
         LOGGER.info("ADK Tool Registry initialized with " + tools.size() + " tools");
     }

@@ -1,10 +1,7 @@
 package com.example.domain.models;
 
-import com.example.domain.serialization.YamlUtils;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
-
-import java.util.Map;
 
 /**
  * Ellipse shape implementation 
@@ -139,39 +136,4 @@ public final class Ellipse extends Shape {
     }
   }
 
-  // YAML Serialization
-  @Override
-  public Map<String, Object> toYamlMap() {
-    Map<String, Object> map = YamlUtils.createYamlMap(getYamlType());
-    map.put("id", id);
-    map.put("center", position.toYamlMap());
-    map.put("radiusX", radiusX);
-    map.put("radiusY", radiusY);
-    map.put("style", style.toYamlMap());
-    map.put("visible", visible);
-    map.put("layerOrder", layerOrder);
-    return map;
-  }
-
-  @Override
-  public String getYamlType() {
-    return "ellipse";
-  }
-
-  public static Ellipse fromYamlMap(Map<String, Object> yamlMap) {
-    YamlUtils.validateYamlType(yamlMap, "ellipse");
-    YamlUtils.validateRequiredFields(yamlMap, "id", "center", "radiusX", "radiusY");
-
-    String id = YamlUtils.getRequiredString(yamlMap, "id");
-    Position center = Position.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "center"));
-    float radiusX = YamlUtils.getRequiredFloat(yamlMap, "radiusX");
-    float radiusY = YamlUtils.getRequiredFloat(yamlMap, "radiusY");
-    Style style = YamlUtils.getMap(yamlMap, "style", null) != null
-        ? Style.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "style"))
-        : Style.DEFAULT;
-    boolean visible = YamlUtils.getBoolean(yamlMap, "visible", true);
-    int layerOrder = YamlUtils.getInt(yamlMap, "layerOrder", 0);
-
-    return new Ellipse(id, center, radiusX, radiusY, style, visible, layerOrder);
-  }
 }

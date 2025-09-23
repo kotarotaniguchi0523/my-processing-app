@@ -1,10 +1,8 @@
 package com.example.domain.models;
 
-import com.example.domain.serialization.YamlUtils;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
 
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -139,39 +137,4 @@ public final class Rectangle extends Shape {
                 id, position, width, height, visible);
     }
 
-    // YAML Serialization
-    @Override
-    public Map<String, Object> toYamlMap() {
-        Map<String, Object> map = YamlUtils.createYamlMap(getYamlType());
-        map.put("id", id);
-        map.put("position", position.toYamlMap());
-        map.put("width", width);
-        map.put("height", height);
-        map.put("style", style.toYamlMap());
-        map.put("visible", visible);
-        map.put("layerOrder", layerOrder);
-        return map;
-    }
-
-    @Override
-    public String getYamlType() {
-        return "rectangle";
-    }
-
-    public static Rectangle fromYamlMap(Map<String, Object> yamlMap) {
-        YamlUtils.validateYamlType(yamlMap, "rectangle");
-        YamlUtils.validateRequiredFields(yamlMap, "id", "position", "width", "height");
-
-        String id = YamlUtils.getRequiredString(yamlMap, "id");
-        Position position = Position.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "position"));
-        float width = YamlUtils.getRequiredFloat(yamlMap, "width");
-        float height = YamlUtils.getRequiredFloat(yamlMap, "height");
-        Style style = YamlUtils.getMap(yamlMap, "style", null) != null
-                        ? Style.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "style"))
-                        : Style.DEFAULT;
-        boolean visible = YamlUtils.getBoolean(yamlMap, "visible", true);
-        int layerOrder = YamlUtils.getInt(yamlMap, "layerOrder", 0);
-
-        return new Rectangle(id, position, width, height, style, visible, layerOrder);
-    }
 }

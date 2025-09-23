@@ -44,7 +44,8 @@ public class SketchEventHandler {
       if (!chatManager.getCurrentInput().isBlank()) {
         String text = chatManager.getCurrentInput();
         chatManager.setCurrentInput("");
-        AiChatHelper.sendAndAppendAsync(aiAgentService, chatManager, text, "AI-Call-Input");
+        AiChatHelper.sendAndAppendAsync(aiAgentService, chatManager, text,
+            () -> chatManager.flushQueueToUI());
         // クリック押下のフィードバック
         uiRenderer.setSendPressed(true);
       }
@@ -144,7 +145,8 @@ public class SketchEventHandler {
             chatManager.addMessage("System: AIサービスが無効のため履歴を読み込めません");
           }
         } else {
-          AiChatHelper.sendAndAppendAsync(aiAgentService, chatManager, text, "AI-Call-Input");
+          AiChatHelper.sendAndAppendAsync(aiAgentService, chatManager, text,
+            () -> chatManager.flushQueueToUI());
         }
       }
     }

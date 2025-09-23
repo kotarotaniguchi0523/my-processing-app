@@ -1,8 +1,5 @@
 package com.example.domain.values;
 
-import com.example.domain.serialization.YamlUtils;
-
-import java.util.Map;
 
 /**
  * Color value object representing RGBA color values Immutable value object for color information
@@ -114,42 +111,4 @@ public final class Color {
   public static final Color GREEN = new Color(0, 255, 0);
   public static final Color BLUE = new Color(0, 0, 255);
   public static final Color TRANSPARENT = new Color(0, 0, 0, 0);
-
-  // YAML Serialization
-  public Map<String, Object> toYamlMap() {
-    Map<String, Object> map = YamlUtils.createYamlMap(getYamlType());
-    map.put("red", red);
-    map.put("green", green);
-    map.put("blue", blue);
-    map.put("alpha", alpha);
-    map.put("hex", toHex());
-    return map;
-  }
-
-  public String getYamlType() {
-    return "color";
-  }
-
-  public static Color fromYamlMap(Map<String, Object> yamlMap) {
-    YamlUtils.validateYamlType(yamlMap, "color");
-
-    // Try to parse from hex first (more compact)
-    String hex = YamlUtils.getString(yamlMap, "hex", null);
-    if (hex != null) {
-      try {
-        return fromHex(hex);
-      } catch (Exception e) {
-        // Fall back to RGBA values
-      }
-    }
-
-    // Parse from RGBA values
-    YamlUtils.validateRequiredFields(yamlMap, "red", "green", "blue");
-    int red = YamlUtils.getRequiredInt(yamlMap, "red");
-    int green = YamlUtils.getRequiredInt(yamlMap, "green");
-    int blue = YamlUtils.getRequiredInt(yamlMap, "blue");
-    int alpha = YamlUtils.getInt(yamlMap, "alpha", 255);
-
-    return new Color(red, green, blue, alpha);
-  }
 }

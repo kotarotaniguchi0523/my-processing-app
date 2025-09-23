@@ -20,7 +20,6 @@ import java.util.logging.Level;
  * Handling approval workflows
  */
 public class AIAgentService {
-  private DrawingState currentState;
 
   // --- Separated Service Components ---
   private final ConversationService conversationService;
@@ -54,7 +53,10 @@ public class AIAgentService {
    */
   public AIAgentService(DrawingState initialState, boolean loadHistoryOnStartup,
       boolean persistHistory) {
-    this.currentState = initialState != null ? initialState : DrawingState.defaultState();
+    // Initialize the StateManager with the initial state
+    if (initialState == null) {
+      initialState = DrawingState.defaultState();
+    }
 
     // Initialize separated service components
     this.conversationService = new ConversationService();
@@ -63,14 +65,13 @@ public class AIAgentService {
     this.stateChangeNotifier = new StateChangeNotifier();
 
     // Get StateManager and HistoryService from ServiceInitializer
-    // Initialize ServiceInitializer if not already done
-    ServiceInitializer.initialize();
+    // ServiceInitializer should already be initialized by SimpleSketch
     this.stateManager = ServiceInitializer.getStateManager();
     this.historyService = ServiceInitializer.getHistoryService();
 
-    // Set initial state for workflow service and state manager
-    this.workflowService.setCurrentState(this.currentState);
-    this.stateManager.updateState(this.currentState);
+    // Set initial state for state manager first, then workflow service
+    this.stateManager.updateState(initialState);
+    this.workflowService.setStateManager(this.stateManager);
 
     // Register as a state change listener
     setupStateChangeListener();
@@ -95,12 +96,12 @@ public class AIAgentService {
 
     // Create initial history file if persistence is enabled and file doesn't exist
     if (persistHistory && !historyRepository.historyFileExists()) {
-      historyRepository.persistHistoryImmediately(currentSession, currentState);
+      historyRepository.persistHistoryImmediately(currentSession, stateManager.getCurrentState());
     }
   }
 
   public DrawingState getCurrentState() {
-    return currentState;
+    return stateManager.getCurrentState();
   }
 
   /**
@@ -151,20 +152,14 @@ public class AIAgentService {
     stateManager.addListener(new com.example.domain.services.StateChangeListener() {
       @Override
       public void onStateChanged(DrawingState oldState, DrawingState newState) {
-        // Sync the state back to AIAgentService without triggering another state update
-        if (!newState.equals(currentState)) {
-          currentState = newState;
-          workflowService.setCurrentState(newState);
-
-          // Update session state if available
-          if (currentSession != null) {
-            currentSession.setFinalState(newState);
-          }
-
-          Logger.getLogger(getClass().getName())
-              .info("AIAgentService state synced from StateManager: "
-                  + stateManager.calculateStateDifference(oldState, newState));
+        // Update session state if available
+        if (currentSession != null) {
+          currentSession.setFinalState(newState);
         }
+
+        Logger.getLogger(getClass().getName())
+            .info("AIAgentService notified of state change: "
+                + stateManager.calculateStateDifference(oldState, newState));
       }
 
       @Override
@@ -203,20 +198,19 @@ public class AIAgentService {
    * Apply approved state changes
    */
   public void applyApprovedState(DrawingState newState, String message) {
-    DrawingState previousState = this.currentState;
-    this.currentState = newState;
+    DrawingState previousState = stateManager.getCurrentState();
 
     // Record the approved change in conversation history
     conversationService.addAssistantMessage(message);
     if (currentSession != null) {
       currentSession.addMessage(new AgentHistory.Message("assistant", message));
-      currentSession.setFinalState(currentState);
+      currentSession.setFinalState(newState);
     }
 
     // Persist history
-    historyRepository.persistHistoryMaybe(currentSession, currentState);
+    historyRepository.persistHistoryMaybe(currentSession, newState);
 
-    // Update StateManager and HistoryService
+    // Update StateManager and HistoryService (StateManager is single source of truth)
     if (!newState.equals(previousState)) {
       stateManager.updateState(newState);
       historyService.addState(newState);
@@ -247,15 +241,16 @@ public class AIAgentService {
         DrawingState newState = result.getFinalState();
         String message = result.getMessage();
 
+        // Get current state from StateManager for comparison
+        DrawingState currentState = stateManager.getCurrentState();
+
         // Request approval if callback is set
         if (approvalCallback != null && !newState.equals(currentState)) {
           approvalCallback.onApprove(newState, message);
         }
 
-        // Update current state
-        DrawingState previousState = this.currentState;
-        this.currentState = newState;
-        workflowService.setCurrentState(newState);
+        // Update state through StateManager (single source of truth)
+        DrawingState previousState = currentState;
 
         // Record in conversation history
         conversationService.addAssistantMessage(message);
@@ -270,7 +265,7 @@ public class AIAgentService {
         metadata.put("score", result.getScore());
 
         // Persist history
-        historyRepository.persistHistoryMaybe(currentSession, currentState);
+        historyRepository.persistHistoryMaybe(currentSession, newState);
 
         // Update StateManager and HistoryService, then notify listeners
         if (!newState.equals(previousState)) {
@@ -288,7 +283,7 @@ public class AIAgentService {
         metadata.put("success", false);
         metadata.put("progressLog", result.getProgressLog());
 
-        return new AgentReply(errorMessage, currentState, metadata);
+        return new AgentReply(errorMessage, stateManager.getCurrentState(), metadata);
       }
     } catch (Exception e) {
       String errorMessage = "Workflow execution error: " + e.getMessage();
@@ -298,7 +293,7 @@ public class AIAgentService {
       metadata.put("success", false);
       metadata.put("error", e.getMessage());
 
-      return new AgentReply(errorMessage, currentState, metadata);
+      return new AgentReply(errorMessage, stateManager.getCurrentState(), metadata);
     }
   }
 
@@ -323,9 +318,9 @@ public class AIAgentService {
       this.currentSession = loadedSession;
       conversationService.loadFromAgentHistory(loadedSession);
 
-      // Load final state if available
+      // Load final state if available and update StateManager
       if (currentSession.getFinalState() != null) {
-        currentState = currentSession.getFinalState();
+        stateManager.updateState(currentSession.getFinalState());
       }
     } else {
       // Create new session if no history loaded

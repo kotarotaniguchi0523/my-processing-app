@@ -1,8 +1,5 @@
 package com.example.domain.values;
 
-import com.example.domain.serialization.YamlUtils;
-
-import java.util.Map;
 
 /**
  * Position value object representing x, y coordinates Immutable value object for position
@@ -55,30 +52,6 @@ public final class Position {
   @Override
   public String toString() {
     return String.format("Position(x=%.2f, y=%.2f)", x, y);
-  }
-
-  // YAML Serialization
-
-  public Map<String, Object> toYamlMap() {
-    Map<String, Object> map = YamlUtils.createYamlMap(getYamlType());
-    map.put("x", x);
-    map.put("y", y);
-    return map;
-  }
-
-
-  public String getYamlType() {
-    return "position";
-  }
-
-  public static Position fromYamlMap(Map<String, Object> yamlMap) {
-    YamlUtils.validateYamlType(yamlMap, "position");
-    YamlUtils.validateRequiredFields(yamlMap, "x", "y");
-
-    float x = YamlUtils.getRequiredFloat(yamlMap, "x");
-    float y = YamlUtils.getRequiredFloat(yamlMap, "y");
-
-    return new Position(x, y);
   }
 
   /**

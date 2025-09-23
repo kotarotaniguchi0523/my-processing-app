@@ -1,11 +1,9 @@
 package com.example.domain.models;
 
-import com.example.domain.serialization.YamlUtils;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
 
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -254,52 +252,6 @@ public final class Text extends Shape {
   }
 
 
-  // YAML Serialization
-  @Override
-  public Map<String, Object> toYamlMap() {
-    Map<String, Object> map = YamlUtils.createYamlMap(getYamlType());
-    map.put("id", id);
-    map.put("position", position.toYamlMap());
-    map.put("content", content);
-    map.put("fontFamily", fontFamily);
-    map.put("fontSize", fontSize);
-    map.put("horizontalAlign", horizontalAlign.name());
-    map.put("verticalAlign", verticalAlign.name());
-    map.put("style", style.toYamlMap());
-    map.put("visible", visible);
-    map.put("layerOrder", layerOrder);
-    return map;
-  }
-
-  @Override
-  public String getYamlType() {
-    return "text";
-  }
-
-  public static Text fromYamlMap(Map<String, Object> yamlMap) {
-    YamlUtils.validateYamlType(yamlMap, "text");
-    YamlUtils.validateRequiredFields(yamlMap, "id", "position", "content");
-
-    String id = YamlUtils.getRequiredString(yamlMap, "id");
-    Position position = Position.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "position"));
-    String content = YamlUtils.getRequiredString(yamlMap, "content");
-    String fontFamily = YamlUtils.getString(yamlMap, "fontFamily", "Arial");
-    float fontSize = YamlUtils.getFloat(yamlMap, "fontSize", 12.0f);
-
-    TextAlign horizontalAlign =
-        YamlUtils.getEnum(yamlMap, "horizontalAlign", TextAlign.class, TextAlign.LEFT);
-    TextAlign verticalAlign =
-        YamlUtils.getEnum(yamlMap, "verticalAlign", TextAlign.class, TextAlign.TOP);
-
-    Style style = YamlUtils.getMap(yamlMap, "style", null) != null
-        ? Style.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "style"))
-        : Style.NO_STROKE;
-    boolean visible = YamlUtils.getBoolean(yamlMap, "visible", true);
-    int layerOrder = YamlUtils.getInt(yamlMap, "layerOrder", 0);
-
-    return new Text(id, position, content, fontFamily, fontSize, horizontalAlign, verticalAlign,
-        style, visible, layerOrder);
-  }
 
   // Enum for text alignment
   public enum TextAlign {

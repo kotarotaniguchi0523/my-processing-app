@@ -1,10 +1,8 @@
 package com.example.domain.models;
 
-import com.example.domain.serialization.YamlUtils;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
 
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -172,41 +170,4 @@ public final class Triangle extends Shape {
   }
 
 
-  // YAML Serialization
-  @Override
-  public Map<String, Object> toYamlMap() {
-    Map<String, Object> map = YamlUtils.createYamlMap(getYamlType());
-    map.put("id", id);
-    map.put("position", position.toYamlMap());
-    map.put("p1", p1.toYamlMap());
-    map.put("p2", p2.toYamlMap());
-    map.put("p3", p3.toYamlMap());
-    map.put("style", style.toYamlMap());
-    map.put("visible", visible);
-    map.put("layerOrder", layerOrder);
-    return map;
-  }
-
-  @Override
-  public String getYamlType() {
-    return "triangle";
-  }
-
-  public static Triangle fromYamlMap(Map<String, Object> yamlMap) {
-    YamlUtils.validateYamlType(yamlMap, "triangle");
-    YamlUtils.validateRequiredFields(yamlMap, "id", "position", "p1", "p2", "p3");
-
-    String id = YamlUtils.getRequiredString(yamlMap, "id");
-    Position position = Position.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "position"));
-    Position p1 = Position.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "p1"));
-    Position p2 = Position.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "p2"));
-    Position p3 = Position.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "p3"));
-    Style style = YamlUtils.getMap(yamlMap, "style", null) != null
-        ? Style.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "style"))
-        : Style.DEFAULT;
-    boolean visible = YamlUtils.getBoolean(yamlMap, "visible", true);
-    int layerOrder = YamlUtils.getInt(yamlMap, "layerOrder", 0);
-
-    return new Triangle(id, position, p1, p2, p3, style, visible, layerOrder);
-  }
 }

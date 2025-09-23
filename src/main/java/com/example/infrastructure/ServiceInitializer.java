@@ -68,8 +68,8 @@ public class ServiceInitializer {
 
   public static StateManager getStateManager() {
     if (!initialized) {
-      throw new IllegalStateException(
-          "ServiceInitializer must be initialized first. Call initialize() before accessing services.");
+      // Auto-initialize if not done yet for backward compatibility
+      initialize();
     }
     if (stateManager == null) {
       throw new IllegalStateException(
@@ -80,8 +80,8 @@ public class ServiceInitializer {
 
   public static HistoryService getHistoryService() {
     if (!initialized) {
-      throw new IllegalStateException(
-          "ServiceInitializer must be initialized first. Call initialize() before accessing services.");
+      // Auto-initialize if not done yet for backward compatibility
+      initialize();
     }
     if (historyService == null) {
       throw new IllegalStateException(

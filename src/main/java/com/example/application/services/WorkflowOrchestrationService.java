@@ -2,6 +2,7 @@ package com.example.application.services;
 
 import com.example.domain.models.DrawingState;
 import com.example.domain.agents.adk.ADKLlmWorkflowOrchestrator;
+import com.example.infrastructure.services.StateManager;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,28 +23,31 @@ public class WorkflowOrchestrationService {
       Logger.getLogger(WorkflowOrchestrationService.class.getName());
 
   private final ADKLlmWorkflowOrchestrator llmWorkflowOrchestrator;
-  private DrawingState currentState;
+  private StateManager stateManager;
 
   public WorkflowOrchestrationService(String sessionId) {
     this.llmWorkflowOrchestrator = new ADKLlmWorkflowOrchestrator();
-    this.currentState = DrawingState.defaultState();
+    // StateManager will be set by AIAgentService
 
     LOGGER.info("WorkflowOrchestrationService initialized with ADK LLM Workflow");
   }
 
 
   /**
-   * Updates the current drawing state.
+   * Sets the StateManager reference for accessing current state.
    */
-  public void setCurrentState(DrawingState state) {
-    this.currentState = state != null ? state : DrawingState.defaultState();
+  public void setStateManager(StateManager stateManager) {
+    this.stateManager = stateManager;
   }
 
   /**
-   * Gets the current drawing state.
+   * Gets the current drawing state from StateManager.
    */
   public DrawingState getCurrentState() {
-    return currentState;
+    if (stateManager == null) {
+      throw new IllegalStateException("StateManager not set. Call setStateManager() first.");
+    }
+    return stateManager.getCurrentState();
   }
 
   /**
@@ -59,6 +63,9 @@ public class WorkflowOrchestrationService {
       try {
         LOGGER.info("Starting workflow execution for request: " + requestId);
 
+        // Get current state from StateManager
+        DrawingState currentState = getCurrentState();
+
         // Execute through ADK LLM workflow
         ADKLlmWorkflowOrchestrator.WorkflowResult adkResult =
             llmWorkflowOrchestrator.execute(userPrompt, currentState);
@@ -66,10 +73,7 @@ public class WorkflowOrchestrationService {
         // Convert ADK result to our domain result
         WorkflowResult result = convertResult(adkResult, requestId);
 
-        // Update state if successful
-        if (result.isSuccess()) {
-          currentState = result.getFinalState();
-        }
+        // Note: State updates will be handled by AIAgentService to maintain single source of truth
 
         return result;
 
@@ -77,7 +81,7 @@ public class WorkflowOrchestrationService {
         LOGGER.log(Level.SEVERE, "Workflow execution failed", e);
         String errorMessage = "Workflow execution error: " + e.getMessage();
 
-        return WorkflowResult.failure(errorMessage, currentState);
+        return WorkflowResult.failure(errorMessage, getCurrentState());
       }
     });
   }

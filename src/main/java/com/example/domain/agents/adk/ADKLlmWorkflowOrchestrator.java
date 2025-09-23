@@ -194,9 +194,6 @@ public class ADKLlmWorkflowOrchestrator {
      * Planning Agent - Creates tool-based drawing plan
      */
     private LlmAgent createPlannerAgent() {
-        // Tool declarations disabled for now due to genai API issues
-        // List<FunctionDeclaration> toolDeclarations = toolRegistry.getFunctionDeclarations();
-
         return LlmAgent.builder()
             .name("DrawingPlanner")
             .model("gemini-2.5-pro")
@@ -467,29 +464,34 @@ public class ADKLlmWorkflowOrchestrator {
                                                    DrawingState currentState) {
         DrawingState state = currentState;
 
+        LOGGER.info("Executing " + tools.size() + " tools with " + params.size() + " parameter sets");
+
         for (int i = 0; i < tools.size() && i < params.size(); i++) {
             String toolName = tools.get(i);
             Map<String, Object> toolParams = params.get(i);
 
             try {
-                // Get the ADK tool from registry
-                ADKTool tool = toolRegistry.getTool(toolName);
-                if (tool != null) {
-                    // Execute the tool
-                    ADKTool.ToolResult result = tool.execute(toolParams, state);
-                    if (result.isSuccess()) {
-                        state = result.getNewState();
-                        LOGGER.info("Successfully executed tool: " + toolName);
-                    } else {
-                        LOGGER.warning("Tool execution failed: " + toolName + " - " + result.getMessage());
-                    }
+                LOGGER.info("Executing tool " + (i + 1) + "/" + tools.size() + ": " + toolName);
+                LOGGER.fine("Tool parameters: " + toolParams);
+
+                // Execute the tool via registry (single execution path)
+                ADKTool.ToolResult result = toolRegistry.executeTool(toolName, toolParams, state);
+                if (result.isSuccess()) {
+                    state = result.getNewState();
+                    LOGGER.info("Successfully executed tool: " + toolName + " - " + result.getMessage());
+                    LOGGER.fine("State now has " + state.getShapes().size() + " shapes");
                 } else {
-                    LOGGER.warning("Tool not found: " + toolName);
+                    LOGGER.warning("Tool execution failed: " + toolName + " - " + result.getMessage());
+                    if (!toolRegistry.hasTool(toolName)) {
+                        LOGGER.warning("Available tools: " + toolRegistry.getToolNames());
+                    }
                 }
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "Error executing tool: " + toolName, e);
             }
         }
+
+        LOGGER.info("Tool execution completed. Final state has " + state.getShapes().size() + " shapes");
 
         return state;
     }
@@ -720,11 +722,8 @@ public class ADKLlmWorkflowOrchestrator {
             executionSuccess = state.get("plan:tools") != null;
         }
 
-        Object shapesObj = state.get("execution:shapes_created");
+        // Calculate actual shapes created after tool execution (will be updated below)
         Integer shapesCreated = 0;
-        if (shapesObj instanceof Number) {
-            shapesCreated = ((Number) shapesObj).intValue();
-        }
 
         // Get planned tools and parameters to execute
         List<String> plannedTools = normalizeToolList(state.get("plan:tools"));
@@ -747,6 +746,9 @@ public class ADKLlmWorkflowOrchestrator {
         } else {
             LOGGER.warning("Skipping tool execution - missing requirements");
         }
+
+        // Calculate actual shapes created from the difference in state
+        shapesCreated = finalState.getShapes().size() - originalState.getShapes().size();
 
         String summary = String.format(
             "Workflow %s: Score %d/100, %d shapes created. %s",

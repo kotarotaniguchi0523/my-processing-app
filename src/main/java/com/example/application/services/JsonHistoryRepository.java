@@ -29,11 +29,7 @@ public class JsonHistoryRepository {
         this.persistEnabled = persistEnabled;
         this.agentHistory = new AgentHistory();
     }
-    
-    public AgentHistory getAgentHistory() {
-        return agentHistory;
-    }
-    
+
     public boolean historyFileExists() {
         return Files.exists(HISTORY_FILE);
     }

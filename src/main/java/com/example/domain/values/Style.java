@@ -1,8 +1,5 @@
 package com.example.domain.values;
 
-import com.example.domain.serialization.YamlUtils;
-
-import java.util.Map;
 
 /**
  * Style value object representing visual styling properties Immutable value object for styling
@@ -151,45 +148,5 @@ public final class Style {
    */
   public static Style defaultStyle() {
     return DEFAULT;
-  }
-
-  // YAML Serialization
-
-  public Map<String, Object> toYamlMap() {
-    Map<String, Object> map = YamlUtils.createYamlMap(getYamlType());
-    YamlUtils.putIfNotNull(map, "fillColor", hasFill ? fillColor.toYamlMap() : null);
-    YamlUtils.putIfNotNull(map, "strokeColor", hasStroke ? strokeColor.toYamlMap() : null);
-    map.put("strokeWeight", strokeWeight);
-    map.put("hasFill", hasFill);
-    map.put("hasStroke", hasStroke);
-    return map;
-  }
-
-
-  public String getYamlType() {
-    return "style";
-  }
-
-  public static Style fromYamlMap(Map<String, Object> yamlMap) {
-    YamlUtils.validateYamlType(yamlMap, "style");
-
-    Color fillColor = Color.WHITE;
-    Color strokeColor = Color.BLACK;
-
-    Map<String, Object> fillColorMap = YamlUtils.getMap(yamlMap, "fillColor", null);
-    if (fillColorMap != null) {
-      fillColor = Color.fromYamlMap(fillColorMap);
-    }
-
-    Map<String, Object> strokeColorMap = YamlUtils.getMap(yamlMap, "strokeColor", null);
-    if (strokeColorMap != null) {
-      strokeColor = Color.fromYamlMap(strokeColorMap);
-    }
-
-    float strokeWeight = YamlUtils.getFloat(yamlMap, "strokeWeight", 1.0f);
-    boolean hasFill = YamlUtils.getBoolean(yamlMap, "hasFill", true);
-    boolean hasStroke = YamlUtils.getBoolean(yamlMap, "hasStroke", true);
-
-    return new Style(fillColor, strokeColor, strokeWeight, hasFill, hasStroke);
   }
 }

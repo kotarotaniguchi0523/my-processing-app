@@ -1,10 +1,8 @@
 package com.example.domain.models;
 
-import com.example.domain.serialization.YamlUtils;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
 
-import java.util.Map;
 import java.util.Objects;
 
 /** Line shape implementation Represents a line segment from one point to another */
@@ -270,37 +268,4 @@ public final class Line extends Shape {
                 id, position, endPosition, getLength(), visible);
     }
 
-    // YAML Serialization
-    @Override
-    public Map<String, Object> toYamlMap() {
-        Map<String, Object> map = YamlUtils.createYamlMap(getYamlType());
-        map.put("id", id);
-        map.put("startPosition", position.toYamlMap());
-        map.put("endPosition", endPosition.toYamlMap());
-        map.put("style", style.toYamlMap());
-        map.put("visible", visible);
-        map.put("layerOrder", layerOrder);
-        return map;
-    }
-
-    @Override
-    public String getYamlType() {
-        return "line";
-    }
-
-    public static Line fromYamlMap(Map<String, Object> yamlMap) {
-        YamlUtils.validateYamlType(yamlMap, "line");
-        YamlUtils.validateRequiredFields(yamlMap, "id", "startPosition", "endPosition");
-
-        String id = YamlUtils.getRequiredString(yamlMap, "id");
-        Position startPosition = Position.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "startPosition"));
-        Position endPosition = Position.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "endPosition"));
-        Style style = YamlUtils.getMap(yamlMap, "style", null) != null
-                        ? Style.fromYamlMap(YamlUtils.getRequiredMap(yamlMap, "style"))
-                        : Style.NO_FILL;
-        boolean visible = YamlUtils.getBoolean(yamlMap, "visible", true);
-        int layerOrder = YamlUtils.getInt(yamlMap, "layerOrder", 0);
-
-        return new Line(id, startPosition, endPosition, style, visible, layerOrder);
-    }
 }

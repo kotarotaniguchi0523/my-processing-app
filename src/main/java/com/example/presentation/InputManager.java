@@ -56,7 +56,8 @@ public class InputManager {
           public void actionPerformed(ActionEvent e) {
             String text = japaneseInputField.getText();
             if (!text.isBlank()) {
-              AiChatHelper.sendAndAppendAsync(aiAgentService, chatManager, text, "AI-Call-JPInput");
+              AiChatHelper.sendAndAppendAsync(aiAgentService, chatManager, text,
+                  () -> chatManager.flushQueueToUI());
               japaneseInputField.setText("");
               chatManager.setCurrentInput("");
             }

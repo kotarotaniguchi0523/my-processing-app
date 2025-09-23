@@ -12,6 +12,7 @@ import com.example.infrastructure.ServiceInitializer;
 
 import processing.core.PApplet;
 import processing.core.PFont;
+import com.example.presentation.AiChatHelper;
 
 
 public class SimpleSketch extends PApplet {
@@ -77,6 +78,14 @@ public class SimpleSketch extends PApplet {
   }
 
   private void initializeUIComponents() {
+    // Initialize ServiceInitializer first to ensure StateManager is available
+    try {
+      ServiceInitializer.initialize();
+    } catch (IllegalStateException e) {
+      System.err.println("エラー: サービスの初期化に失敗しました: " + e.getMessage());
+      return;
+    }
+
     // Initialize managers in order of dependency
     chatManager = new ChatManager(this);
 
@@ -239,5 +248,18 @@ public class SimpleSketch extends PApplet {
     aiAgentService.setApprovalCallback(approvalCallback);
   }
 
+  @Override
+  public void dispose() {
+    // Properly cleanup resources when the sketch is closed
+    try {
+      AiChatHelper.shutdown();
+      if (inputManager != null) {
+        inputManager.hideJapaneseInput();
+      }
+    } catch (Exception e) {
+      System.err.println("Error during cleanup: " + e.getMessage());
+    }
+    super.dispose();
+  }
 
 }

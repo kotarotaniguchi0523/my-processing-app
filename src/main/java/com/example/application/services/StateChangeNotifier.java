@@ -4,6 +4,7 @@ import com.example.domain.models.DrawingState;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 /**
@@ -55,6 +56,8 @@ public class StateChangeNotifier {
 
     /**
      * Notify all registered listeners of a state change.
+     * This method creates a snapshot of listeners to avoid deadlocks and ensures
+     * that failing listeners don't affect other notifications.
      *
      * @param newState the new drawing state
      * @param changeDescription description of what changed
@@ -65,19 +68,27 @@ public class StateChangeNotifier {
             return;
         }
 
-        if (listeners.isEmpty()) {
+        // Create a snapshot of listeners to avoid concurrent modification issues
+        // and reduce lock contention
+        List<StateChangeListener> listenerSnapshot = new ArrayList<>(listeners);
+
+        if (listenerSnapshot.isEmpty()) {
             logger.fine("No listeners registered for state change notification");
             return;
         }
 
-        logger.info("Notifying " + listeners.size() + " listeners of state change: " + changeDescription);
+        logger.info("Notifying " + listenerSnapshot.size() + " listeners of state change: " + changeDescription);
 
-        for (StateChangeListener listener : listeners) {
+        // Notify listeners outside of any synchronized blocks to prevent deadlocks
+        for (StateChangeListener listener : listenerSnapshot) {
             try {
+                // Each listener notification is isolated to prevent cascading failures
                 listener.onStateChanged(newState, changeDescription);
             } catch (Exception e) {
-                logger.severe("Error notifying listener " + listener.getClass().getSimpleName() + ": " + e.getMessage());
+                logger.severe("Error notifying listener " + listener.getClass().getSimpleName() +
+                    ": " + e.getMessage() + " (continuing with other listeners)");
                 // Continue notifying other listeners even if one fails
+                // This isolation prevents one bad listener from breaking the entire notification chain
             }
         }
     }

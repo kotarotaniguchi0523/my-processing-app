@@ -36,16 +36,24 @@ public class CreateEllipseADKTool extends BaseADKTool {
         try {
             LOGGER.info("Executing create_ellipse with parameters: " + parameters);
 
-            // Extract center position
-            Map<String, Object> centerMap = getMap(parameters, "center");
-            if (centerMap == null) {
-                return ToolResult.failure(state, "Center position is required");
+            // Extract center position - support both flat and nested position formats
+            Number x = getNumber(parameters, "x");
+            Number y = getNumber(parameters, "y");
+
+            // If flat parameters not found, try nested position/center object
+            if (x == null || y == null) {
+                Map<String, Object> position = getMap(parameters, "position");
+                if (position == null) {
+                    position = getMap(parameters, "center");
+                }
+                if (position != null) {
+                    x = getNumber(position, "x");
+                    y = getNumber(position, "y");
+                }
             }
 
-            Number x = getNumber(centerMap, "x");
-            Number y = getNumber(centerMap, "y");
             if (x == null || y == null) {
-                return ToolResult.failure(state, "Center x and y coordinates are required");
+                return ToolResult.failure(state, "Position x and y coordinates are required (either as flat x,y or position/center:{x,y})");
             }
 
             // Extract radii

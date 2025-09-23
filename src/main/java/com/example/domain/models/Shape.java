@@ -4,7 +4,6 @@ import com.example.domain.values.Color;
 import com.example.domain.values.Position;
 import com.example.domain.values.Style;
 
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -51,12 +50,6 @@ public abstract class Shape {
 
     // Abstract method for actual drawing implementation
     protected abstract void performDraw(Object canvas);
-    
-    // Abstract method for YAML serialization
-    public abstract Map<String, Object> toYamlMap();
-
-    // Abstract method for getting YAML type identifier
-    public abstract String getYamlType();
 
     // Common getters
     public String getId() {

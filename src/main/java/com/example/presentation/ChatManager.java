@@ -25,9 +25,9 @@ public class ChatManager implements StateChangeNotifier.StateChangeListener {
 
   // Chat state (thread-safe)
   private final List<String> chatMessages;
-  private String currentInput = "";
-  private int chatScrollOffset;
-  private boolean inputFocused;
+  private volatile String currentInput = "";
+  private volatile int chatScrollOffset;
+  private volatile boolean inputFocused;
   // Layout metrics (updated by UI renderer for exact calculations)
   private int layoutLineHeight = DEFAULT_LINE_HEIGHT;
   private int layoutBubblePadding = 14;
@@ -165,24 +165,24 @@ public class ChatManager implements StateChangeNotifier.StateChangeListener {
     this.layoutContentMaxWidth = Math.max(10f, contentMaxWidth);
   }
 
-  // Input management
-  public String getCurrentInput() {
+  // Input management (thread-safe)
+  public synchronized String getCurrentInput() {
     return currentInput;
   }
 
-  public void setCurrentInput(String input) {
-    this.currentInput = input;
+  public synchronized void setCurrentInput(String input) {
+    this.currentInput = input != null ? input : "";
   }
 
-  public void addToCurrentInput(char c) {
+  public synchronized void addToCurrentInput(char c) {
     this.currentInput += c;
   }
 
-  public boolean isInputFocused() {
+  public synchronized boolean isInputFocused() {
     return inputFocused;
   }
 
-  public void setInputFocused(boolean focused) {
+  public synchronized void setInputFocused(boolean focused) {
     this.inputFocused = focused;
   }
 
