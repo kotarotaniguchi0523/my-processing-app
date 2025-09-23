@@ -2,7 +2,6 @@ package com.example.infrastructure.rendering;
 
 import com.example.domain.models.DrawingState;
 import com.example.domain.models.Shape;
-import com.example.domain.values.Color;
 
 import processing.core.PApplet;
 import processing.core.PGraphics;
@@ -24,7 +23,6 @@ public final class DrawingEngine {
   // Extracted components
   private final ShapeRenderingDispatcher shapeDispatcher;
   private final CanvasManager canvasManager;
-  private final BoundsCalculator boundsCalculator;
 
   /**
    * Creates a new DrawingEngine with the specified Processing sketch
@@ -38,24 +36,9 @@ public final class DrawingEngine {
     // Initialize extracted components
     this.shapeDispatcher = new ShapeRenderingDispatcher(canvas);
     this.canvasManager = new CanvasManager(sketch, canvas);
-    this.boundsCalculator = new BoundsCalculator();
+
   }
 
-  /**
-   * Creates a new DrawingEngine with custom graphics context
-   *
-   * @param sketch the PApplet instance
-   * @param canvas the PGraphics context to draw on
-   */
-  public DrawingEngine(PApplet sketch, PGraphics canvas) {
-    Objects.requireNonNull(sketch, "PApplet sketch cannot be null");
-    this.canvas = Objects.requireNonNull(canvas, "PGraphics canvas cannot be null");
-
-    // Initialize extracted components
-    this.shapeDispatcher = new ShapeRenderingDispatcher(canvas);
-    this.canvasManager = new CanvasManager(sketch, canvas);
-    this.boundsCalculator = new BoundsCalculator();
-  }
 
   /**
    * Sets the graphics context for rendering
@@ -69,14 +52,6 @@ public final class DrawingEngine {
   }
 
 
-  /**
-   * Gets the current graphics context
-   *
-   * @return the current PGraphics canvas
-   */
-  public PGraphics getCanvas() {
-    return canvas;
-  }
 
   /**
    * Renders a complete DrawingState to the canvas
@@ -153,26 +128,6 @@ public final class DrawingEngine {
 
 
 
-
-  /**
-   * Clears the entire canvas with specified color
-   *
-   * @param color the background color
-   */
-  public void clearCanvas(Color color) {
-    canvasManager.clearCanvas(color);
-  }
-
-  /**
-   * Gets the bounds of all shapes in the drawing state
-   *
-   * @param drawingState the drawing state
-   * @return the bounding box containing all shapes, or null if no shapes
-   */
-  public Shape.BoundingBox getDrawingBounds(DrawingState drawingState) {
-    return boundsCalculator.getDrawingBounds(drawingState);
-  }
-
   /** Custom exception for drawing errors */
   public static class DrawingException extends Exception {
     private static final long serialVersionUID = 1L;
@@ -185,8 +140,6 @@ public final class DrawingEngine {
       super(message, cause);
     }
 
-    public DrawingException(Throwable cause) {
-      super(cause);
-    }
+
   }
 }

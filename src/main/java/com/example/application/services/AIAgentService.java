@@ -72,8 +72,10 @@ public class AIAgentService {
     this.historyService = ServiceInitializer.getHistoryService();
 
     // Initialize extracted components
-    this.stateSyncManager = new StateSynchronizationManager(stateManager, historyService, stateChangeNotifier);
-    this.historyManager = new HistoryManager(conversationService, historyRepository, loadHistoryOnStartup, persistHistory);
+    this.stateSyncManager =
+        new StateSynchronizationManager(stateManager, historyService, stateChangeNotifier);
+    this.historyManager = new HistoryManager(conversationService, historyRepository,
+        loadHistoryOnStartup, persistHistory);
 
     // Set initial state for state manager first, then workflow service
     this.stateManager.updateState(initialState);
@@ -108,14 +110,6 @@ public class AIAgentService {
     return stateChangeNotifier;
   }
 
-  /**
-   * Get the StateManager instance for direct access to state operations.
-   *
-   * @return the state manager
-   */
-  public StateManager getStateManager() {
-    return stateManager;
-  }
 
   /**
    * Get the HistoryService instance for direct access to undo/redo operations.
@@ -159,9 +153,9 @@ public class AIAgentService {
     historyManager.persistSession(newState);
 
     // Apply state change through sync manager
-    stateSyncManager.applyStateChange(previousState, newState, "Approved drawing change: " + message);
+    stateSyncManager.applyStateChange(previousState, newState,
+        "Approved drawing change: " + message);
   }
-
 
 
 
@@ -235,18 +229,6 @@ public class AIAgentService {
 
 
 
-
-
-  /**
-   * Clear persisted history file (if exists) and reset in-memory history to seeded system prompt.
-   * Best-effort: exceptions are swallowed to avoid affecting agent runtime.
-   */
-  public void clearHistoryFile() {
-    historyManager.clearHistory();
-    this.currentSession = historyManager.getCurrentSession();
-    stateSyncManager.setCurrentSession(currentSession);
-  }
-
   /** Public wrapper to allow UI to trigger history loading on demand. */
   public boolean loadHistoryOnDemand() {
     boolean loaded = historyManager.loadHistoryOnDemand();
@@ -260,16 +242,6 @@ public class AIAgentService {
     }
     return loaded;
   }
-
-
-  public List<MessageConverter.ChatMessage> getHistory() {
-    return conversationService.getHistory();
-  }
-
-  public void resetHistory() {
-    conversationService.resetHistory();
-  }
-
 
 
 

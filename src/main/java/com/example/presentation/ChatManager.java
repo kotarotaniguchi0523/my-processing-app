@@ -4,7 +4,6 @@ import processing.core.PApplet;
 import com.example.application.services.StateChangeNotifier;
 import com.example.domain.models.DrawingState;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -41,14 +40,6 @@ public class ChatManager implements StateChangeNotifier.StateChangeListener {
     return messageStorage.getChatMessages();
   }
 
-  public List<String> getWrappedMessageLines(float maxWidth) {
-    List<String> allLines = new ArrayList<>();
-    for (String message : messageStorage.getChatMessages()) {
-      String displayText = textFormatter.stripPrefix(message);
-      allLines.addAll(textFormatter.wrapText(displayText, maxWidth));
-    }
-    return allLines;
-  }
 
   public void adjustScrollOffset(float scrollAmount) {
     int totalHeight = computeTotalContentHeight();
@@ -112,12 +103,6 @@ public class ChatManager implements StateChangeNotifier.StateChangeListener {
   }
 
 
-  /**
-   * Add a system message to the thread-safe queue.
-   */
-  private void addSystemMessage(String message) {
-    messageStorage.queueSystemMessage(message);
-  }
 
   /**
    * Flush queued messages to UI (must be called from draw() thread).
@@ -151,7 +136,7 @@ public class ChatManager implements StateChangeNotifier.StateChangeListener {
   @Override
   public void onStateChanged(DrawingState newState, String changeDescription) {
     // Add a system message to notify users about the state change
-    addSystemMessage(
-        "Drawing updated: " + changeDescription + " (Shapes: " + newState.getShapes().size() + ")");
+    addMessage("[System] Drawing updated: " + changeDescription + " (Shapes: "
+        + newState.getShapes().size() + ")");
   }
 }

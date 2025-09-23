@@ -28,8 +28,8 @@ public final class AiChatHelper {
   }
 
   /**
-   * Send user input and process AI response asynchronously, ensuring all UI updates
-   * happen on the main Processing thread via callbacks.
+   * Send user input and process AI response asynchronously, ensuring all UI updates happen on the
+   * main Processing thread via callbacks.
    */
   public static Future<?> sendAndAppendAsync(AIAgentService ai, ChatManager chat, String userText,
       MainThreadCallback onComplete) {
@@ -45,7 +45,8 @@ public final class AiChatHelper {
 
     return executor.submit(() -> {
       try {
-        logger.info("Starting AI processing for user input: " + userText.substring(0, Math.min(50, userText.length())));
+        logger.info("Starting AI processing for user input: "
+            + userText.substring(0, Math.min(50, userText.length())));
 
         // AI processing happens in background thread
         AIAgentService.AgentReply reply = ai.handleUserPrompt(userText);
@@ -91,10 +92,11 @@ public final class AiChatHelper {
   }
 
   /**
-   * Add state change messages to chat. This method should only be called
-   * from within a synchronized block on chat.
+   * Add state change messages to chat. This method should only be called from within a synchronized
+   * block on chat.
    */
-  private static void addStateChangeMessages(ChatManager chat, DrawingState stateBefore, DrawingState stateAfter) {
+  private static void addStateChangeMessages(ChatManager chat, DrawingState stateBefore,
+      DrawingState stateAfter) {
     try {
       // Use StateManager's calculateStateDifference for detailed diff
       StateManager stateManager = new StateManager();
@@ -131,10 +133,5 @@ public final class AiChatHelper {
     executor.shutdown();
   }
 
-  /**
-   * Check if there are any pending AI operations
-   */
-  public static boolean hasPendingOperations() {
-    return !executor.isTerminated();
-  }
+
 }

@@ -44,7 +44,8 @@ public final class DrawingState {
         if (entry.getKey() == null) {
           throw new IllegalArgumentException("Arrays map cannot contain null keys");
         }
-        this.arrays.put(entry.getKey(), entry.getValue() != null ? new ArrayList<>(entry.getValue()) : new ArrayList<>());
+        this.arrays.put(entry.getKey(),
+            entry.getValue() != null ? new ArrayList<>(entry.getValue()) : new ArrayList<>());
       }
     } else {
       this.arrays = new HashMap<>();
@@ -57,7 +58,8 @@ public final class DrawingState {
         if (entry.getKey() == null) {
           throw new IllegalArgumentException("Lists map cannot contain null keys");
         }
-        this.lists.put(entry.getKey(), entry.getValue() != null ? new ArrayList<>(entry.getValue()) : new ArrayList<>());
+        this.lists.put(entry.getKey(),
+            entry.getValue() != null ? new ArrayList<>(entry.getValue()) : new ArrayList<>());
       }
     } else {
       this.lists = new HashMap<>();
@@ -170,30 +172,6 @@ public final class DrawingState {
     return value instanceof Number ? ((Number) value).intValue() : defaultValue;
   }
 
-  public float getFloatSetting(String key, float defaultValue) {
-    Object value = settings.get(key);
-    return value instanceof Number ? ((Number) value).floatValue() : defaultValue;
-  }
-
-  public boolean getBooleanSetting(String key, boolean defaultValue) {
-    Object value = settings.get(key);
-    return value instanceof Boolean ? (Boolean) value : defaultValue;
-  }
-
-  public String getBackgroundColor() {
-    return getStringSetting("backgroundColor", "#FFFFFF");
-  }
-
-  // Methods to create new state with modifications (immutable updates)
-  public DrawingState withSettings(Map<String, Object> newSettings) {
-    return new DrawingState(newSettings, shapes, arrays, lists);
-  }
-
-  public DrawingState withSetting(String key, Object value) {
-    Map<String, Object> newSettings = new HashMap<>(settings);
-    newSettings.put(key, value);
-    return new DrawingState(newSettings, shapes, arrays, lists);
-  }
 
   public DrawingState withShapes(List<Shape> newShapes) {
     return new DrawingState(settings, newShapes, arrays, lists);
@@ -208,48 +186,6 @@ public final class DrawingState {
     return new DrawingState(settings, newShapes, arrays, lists);
   }
 
-  public DrawingState withShape(Shape shape) {
-    return withAddedShape(shape);
-  }
-
-  public DrawingState withoutShape(String shapeId) {
-    if (shapeId == null) {
-      throw new IllegalArgumentException("Shape ID cannot be null");
-    }
-    List<Shape> newShapes = new ArrayList<>();
-    for (Shape shape : shapes) {
-      if (shape != null && !shapeId.equals(shape.getId())) {
-        newShapes.add(shape);
-      }
-    }
-    return new DrawingState(settings, newShapes, arrays, lists);
-  }
-
-  public DrawingState withRemovedShape(int index) {
-    if (index < 0 || index >= shapes.size()) {
-      return this; // Return unchanged if index is invalid
-    }
-    List<Shape> newShapes = new ArrayList<>(shapes);
-    newShapes.remove(index);
-    return new DrawingState(settings, newShapes, arrays, lists);
-  }
-
-  public DrawingState withReplacedShape(int index, Shape shape) {
-    if (shape == null) {
-      throw new IllegalArgumentException("Replacement shape cannot be null");
-    }
-    if (index < 0 || index >= shapes.size()) {
-      return this; // Return unchanged if index is invalid
-    }
-    List<Shape> newShapes = new ArrayList<>(shapes);
-    newShapes.set(index, shape);
-    return new DrawingState(settings, newShapes, arrays, lists);
-  }
-
-  // Create empty state
-  public static DrawingState empty() {
-    return new DrawingState(new HashMap<>(), new ArrayList<>(), new HashMap<>(), new HashMap<>());
-  }
 
   // Create default state with common settings
   public static DrawingState defaultState() {
