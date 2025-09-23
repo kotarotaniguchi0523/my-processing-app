@@ -13,6 +13,9 @@ import com.example.domain.values.Color;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -304,7 +307,25 @@ public final class DrawingEngine {
      * @return the bounding box containing all shapes, or null if no shapes
      */
     public Shape.BoundingBox getDrawingBounds(DrawingState drawingState) {
-        return CoordinateTransformer.getDrawingBounds(drawingState);
+        if (drawingState == null || drawingState.getShapes().isEmpty()) {
+            return null;
+        }
+
+        // Calculate bounds from visible shapes
+        List<Shape> visibleShapes = drawingState.getShapes().stream()
+                .filter(Shape::isVisible)
+                .collect(Collectors.toList());
+
+        if (visibleShapes.isEmpty()) {
+            return null;
+        }
+
+        Shape.BoundingBox totalBounds = visibleShapes.get(0).getBounds();
+        for (int i = 1; i < visibleShapes.size(); i++) {
+            totalBounds = totalBounds.union(visibleShapes.get(i).getBounds());
+        }
+
+        return totalBounds;
     }
 
     /** Custom exception for drawing errors */

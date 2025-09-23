@@ -6,11 +6,9 @@ import com.example.domain.models.DrawingState;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
@@ -36,12 +34,6 @@ public class ChatManager implements StateChangeNotifier.StateChangeListener {
   private int layoutMessageSpacing = 12;
   private float layoutContentMaxWidth = 600f;
 
-  // Icons for different message types
-  private static final String AI_THINKING_PREFIX = "🤖 ";
-  private static final String TOOL_PREFIX = "🔧 ";
-  private static final String SUCCESS_PREFIX = "✅ ";
-  private static final String ERROR_PREFIX = "❌ ";
-  private static final String ANALYSIS_PREFIX = "🔍 ";
 
   // Thread-safe queue for UI updates
   private final Queue<String> uiMessageQueue = new ConcurrentLinkedQueue<>();
@@ -279,33 +271,6 @@ public class ChatManager implements StateChangeNotifier.StateChangeListener {
     return message.substring(0, MAX_MESSAGE_LENGTH) + "...";
   }
 
-  /**
-   * Format parameters for display.
-   */
-  private String formatParameters(Map<String, Object> params) {
-    if (params == null || params.isEmpty()) {
-      return "";
-    }
-
-    return params.entrySet().stream().map(e -> formatParameter(e.getKey(), e.getValue()))
-        .collect(Collectors.joining(", "));
-  }
-
-  /**
-   * Format a single parameter for display.
-   */
-  private String formatParameter(String key, Object value) {
-    if (value instanceof Map) {
-      // Handle nested objects (like position)
-      @SuppressWarnings("unchecked")
-      Map<String, Object> nested = (Map<String, Object>) value;
-      String nestedStr = nested.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue())
-          .collect(Collectors.joining(","));
-      return key + "={" + nestedStr + "}";
-    } else {
-      return key + "=" + value;
-    }
-  }
 
   /**
    * Adjust scroll to show new message.
@@ -346,13 +311,13 @@ public class ChatManager implements StateChangeNotifier.StateChangeListener {
   }
 
   /**
-   * Implementation of StateChangeListener interface.
-   * Called when the drawing state changes to update the chat display.
+   * Implementation of StateChangeListener interface. Called when the drawing state changes to
+   * update the chat display.
    */
   @Override
   public void onStateChanged(DrawingState newState, String changeDescription) {
     // Add a system message to notify users about the state change
-    addSystemMessage("Drawing updated: " + changeDescription +
-                    " (Shapes: " + newState.getShapes().size() + ")");
+    addSystemMessage(
+        "Drawing updated: " + changeDescription + " (Shapes: " + newState.getShapes().size() + ")");
   }
 }

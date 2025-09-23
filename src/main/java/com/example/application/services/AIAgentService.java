@@ -10,17 +10,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
 /**
- * Refactored AIAgentService for managing AI agent interactions.
- * Delegates workflow orchestration to WorkflowOrchestrationService for better separation of concerns.
- * Follows Single Responsibility Principle by focusing on:
- * - Managing conversation history
- * - Coordinating between services
- * - Handling approval workflows
+ * Refactored AIAgentService for managing AI agent interactions. Delegates workflow orchestration to
+ * WorkflowOrchestrationService for better separation of concerns. Follows Single Responsibility
+ * Principle by focusing on: - Managing conversation history - Coordinating between services -
+ * Handling approval workflows
  */
 public class AIAgentService {
   private DrawingState currentState;
@@ -84,17 +81,18 @@ public class AIAgentService {
 
     Logger.getLogger(getClass().getName())
         .info("AIAgentService initialized with WorkflowOrchestrationService");
-    
+
     this.loadHistoryOnStartup = loadHistoryOnStartup;
-    
+
     if (this.loadHistoryOnStartup) {
       loadHistoryIfExists();
     } else {
       // Create new session if not loading from file
       this.currentSession = new AgentHistory.Session(conversationService.getSessionId());
-      this.currentSession.addMessage(new AgentHistory.Message("system", conversationService.getSystemPrompt()));
+      this.currentSession
+          .addMessage(new AgentHistory.Message("system", conversationService.getSystemPrompt()));
     }
-    
+
     // Create initial history file if persistence is enabled and file doesn't exist
     if (persistHistory && !historyRepository.historyFileExists()) {
       historyRepository.persistHistoryImmediately(currentSession, currentState);
@@ -122,8 +120,7 @@ public class AIAgentService {
       @Override
       public void onStateChanged(DrawingState newState, String changeDescription) {
         // This is already handled in the calling methods, but we can log it
-        Logger.getLogger(getClass().getName())
-            .info("State change processed: " + changeDescription);
+        Logger.getLogger(getClass().getName()).info("State change processed: " + changeDescription);
       }
     });
   }
@@ -147,8 +144,8 @@ public class AIAgentService {
   }
 
   /**
-   * Set up the StateManager listener to sync state changes back to AIAgentService.
-   * This ensures undo/redo operations update the AI agent's current state.
+   * Set up the StateManager listener to sync state changes back to AIAgentService. This ensures
+   * undo/redo operations update the AI agent's current state.
    */
   private void setupStateManagerListener() {
     stateManager.addListener(new com.example.domain.services.StateChangeListener() {
@@ -165,8 +162,8 @@ public class AIAgentService {
           }
 
           Logger.getLogger(getClass().getName())
-              .info("AIAgentService state synced from StateManager: " +
-                    stateManager.calculateStateDifference(oldState, newState));
+              .info("AIAgentService state synced from StateManager: "
+                  + stateManager.calculateStateDifference(oldState, newState));
         }
       }
 
@@ -179,8 +176,7 @@ public class AIAgentService {
 
       @Override
       public void onStateValidationError(DrawingState state, String error) {
-        Logger.getLogger(getClass().getName())
-            .warning("State validation error: " + error);
+        Logger.getLogger(getClass().getName()).warning("State validation error: " + error);
       }
     });
   }
@@ -192,16 +188,17 @@ public class AIAgentService {
    */
   public interface ApprovalCallback {
     void onApprove(DrawingState newState, String message);
+
     void onReject();
   }
-  
+
   /**
    * Set the approval callback for state changes
    */
   public void setApprovalCallback(ApprovalCallback callback) {
     this.approvalCallback = callback;
   }
-  
+
   /**
    * Apply approved state changes
    */
@@ -226,26 +223,14 @@ public class AIAgentService {
       stateChangeNotifier.notifyStateChanged(newState, "Approved drawing change: " + message);
     }
   }
-  
 
-  /**
-   * @deprecated LLM workflow is now always enabled through WorkflowOrchestrationService
-   */
-  @Deprecated
-  public void setLlmWorkflowMode(boolean enabled) {
-    // No-op: LLM workflow is always enabled now
-    if (!enabled) {
-      Logger.getLogger(getClass().getName())
-          .warning("AFC mode has been removed. ADK LLM Workflow is always enabled through WorkflowOrchestrationService.");
-    }
-  }
+
 
 
   /**
    * Handle user prompt using WorkflowOrchestrationService.
    */
   public AgentReply handleUserPrompt(String userPrompt) {
-    String requestId = UUID.randomUUID().toString();
 
     try {
       // Add user message to conversation history
@@ -291,7 +276,8 @@ public class AIAgentService {
         if (!newState.equals(previousState)) {
           stateManager.updateState(newState);
           historyService.addState(newState);
-          stateChangeNotifier.notifyStateChanged(newState, "Workflow execution completed: " + message);
+          stateChangeNotifier.notifyStateChanged(newState,
+              "Workflow execution completed: " + message);
         }
 
         return new AgentReply(message, newState, metadata);
@@ -306,8 +292,7 @@ public class AIAgentService {
       }
     } catch (Exception e) {
       String errorMessage = "Workflow execution error: " + e.getMessage();
-      Logger.getLogger(getClass().getName())
-          .log(Level.SEVERE, "Workflow execution failed", e);
+      Logger.getLogger(getClass().getName()).log(Level.SEVERE, "Workflow execution failed", e);
 
       Map<String, Object> metadata = new HashMap<>();
       metadata.put("success", false);
@@ -321,17 +306,6 @@ public class AIAgentService {
 
 
 
-
-  /**
-   * @deprecated Tool execution is now handled through WorkflowOrchestrationService
-   */
-  @Deprecated
-  public AgentReply executeTool(String toolName, Map<String, Object> params) {
-    // This method is no longer used - tools are executed through ADK workflow
-    return new AgentReply("Tool execution moved to WorkflowOrchestrationService", currentState, new HashMap<>());
-  }
-
-
   /**
    * Clear persisted history file (if exists) and reset in-memory history to seeded system prompt.
    * Best-effort: exceptions are swallowed to avoid affecting agent runtime.
@@ -343,12 +317,12 @@ public class AIAgentService {
 
   private void loadHistoryIfExists() {
     AgentHistory.Session loadedSession = historyRepository.loadHistoryFromFile();
-    
+
     if (loadedSession != null) {
       // Load the session and update conversation service
       this.currentSession = loadedSession;
       conversationService.loadFromAgentHistory(loadedSession);
-      
+
       // Load final state if available
       if (currentSession.getFinalState() != null) {
         currentState = currentSession.getFinalState();
@@ -356,7 +330,8 @@ public class AIAgentService {
     } else {
       // Create new session if no history loaded
       this.currentSession = new AgentHistory.Session(conversationService.getSessionId());
-      this.currentSession.addMessage(new AgentHistory.Message("system", conversationService.getSystemPrompt()));
+      this.currentSession
+          .addMessage(new AgentHistory.Message("system", conversationService.getSystemPrompt()));
     }
   }
 
@@ -444,7 +419,8 @@ public class AIAgentService {
     public final List<String> progressLog;
 
     // Main constructor with all fields
-    public AgentReply(boolean success, String message, DrawingState state, List<String> progressLog) {
+    public AgentReply(boolean success, String message, DrawingState state,
+        List<String> progressLog) {
       this.success = success;
       this.message = message;
       this.state = state;

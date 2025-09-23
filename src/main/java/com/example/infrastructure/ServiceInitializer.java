@@ -1,13 +1,12 @@
 package com.example.infrastructure;
 
 import com.example.application.services.AIAgentService;
-import com.example.infrastructure.adapters.StateManagerAdapter;
 import com.example.infrastructure.services.StateManager;
 import com.example.infrastructure.services.HistoryService;
 
 /**
- * Initializes domain services with infrastructure implementations.
- * Simplified after removing UseCase layer and StateService.
+ * Initializes domain services with infrastructure implementations. Simplified after removing
+ * UseCase layer and StateService.
  */
 public class ServiceInitializer {
 
@@ -26,19 +25,8 @@ public class ServiceInitializer {
       try {
         // Create infrastructure implementations with null checks
         stateManager = new StateManager();
-        if (stateManager == null) {
-          throw new IllegalStateException("Failed to create StateManager - instance is null");
-        }
-
-        StateManagerAdapter stateManagerAdapter = new StateManagerAdapter(stateManager);
-        if (stateManagerAdapter == null) {
-          throw new IllegalStateException("Failed to create StateManagerAdapter - instance is null");
-        }
 
         historyService = new HistoryService(stateManager);
-        if (historyService == null) {
-          throw new IllegalStateException("Failed to create HistoryService - instance is null");
-        }
 
         initialized = true;
 
@@ -65,7 +53,8 @@ public class ServiceInitializer {
 
   public static AIAgentService getAIAgentService() {
     if (!initialized) {
-      throw new IllegalStateException("ServiceInitializer must be initialized first. Call initialize() before accessing services.");
+      throw new IllegalStateException(
+          "ServiceInitializer must be initialized first. Call initialize() before accessing services.");
     }
     return aiAgentService;
   }
@@ -79,20 +68,24 @@ public class ServiceInitializer {
 
   public static StateManager getStateManager() {
     if (!initialized) {
-      throw new IllegalStateException("ServiceInitializer must be initialized first. Call initialize() before accessing services.");
+      throw new IllegalStateException(
+          "ServiceInitializer must be initialized first. Call initialize() before accessing services.");
     }
     if (stateManager == null) {
-      throw new IllegalStateException("StateManager is not available. Initialization may have failed.");
+      throw new IllegalStateException(
+          "StateManager is not available. Initialization may have failed.");
     }
     return stateManager;
   }
 
   public static HistoryService getHistoryService() {
     if (!initialized) {
-      throw new IllegalStateException("ServiceInitializer must be initialized first. Call initialize() before accessing services.");
+      throw new IllegalStateException(
+          "ServiceInitializer must be initialized first. Call initialize() before accessing services.");
     }
     if (historyService == null) {
-      throw new IllegalStateException("HistoryService is not available. Initialization may have failed.");
+      throw new IllegalStateException(
+          "HistoryService is not available. Initialization may have failed.");
     }
     return historyService;
   }

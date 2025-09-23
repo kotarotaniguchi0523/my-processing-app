@@ -75,15 +75,6 @@ public class StateManager implements IStateManager {
         notifyStateChanged(oldState, newState);
     }
 
-    /**
-     * Validates the current state.
-     *
-     * @return true if the state is valid, false otherwise
-     */
-    public boolean validateCurrentState() {
-        DrawingState state = getCurrentState();
-        return validateState(state);
-    }
 
     /**
      * Validates a drawing state.
@@ -146,20 +137,6 @@ public class StateManager implements IStateManager {
      */
     public void removeListener(StateChangeListener listener) {
         listeners.remove(listener);
-    }
-
-    /** Removes all state change listeners. */
-    public void clearListeners() {
-        listeners.clear();
-    }
-
-    /**
-     * Gets the number of registered listeners.
-     *
-     * @return the number of listeners
-     */
-    public int getListenerCount() {
-        return listeners.size();
     }
 
     /** Resets the state to the default state. */

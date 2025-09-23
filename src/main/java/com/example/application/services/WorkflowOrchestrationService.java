@@ -22,11 +22,9 @@ public class WorkflowOrchestrationService {
       Logger.getLogger(WorkflowOrchestrationService.class.getName());
 
   private final ADKLlmWorkflowOrchestrator llmWorkflowOrchestrator;
-  private final String sessionId;
   private DrawingState currentState;
 
   public WorkflowOrchestrationService(String sessionId) {
-    this.sessionId = sessionId;
     this.llmWorkflowOrchestrator = new ADKLlmWorkflowOrchestrator();
     this.currentState = DrawingState.defaultState();
 
@@ -84,41 +82,6 @@ public class WorkflowOrchestrationService {
     });
   }
 
-  /**
-   * Validates a workflow without executing it.
-   *
-   * @param userPrompt The user's natural language request
-   * @return ValidationResult indicating if the workflow is valid
-   */
-  public ValidationResult validateWorkflow(String userPrompt) {
-    try {
-      // Basic validation logic
-      if (userPrompt == null || userPrompt.trim().isEmpty()) {
-        return new ValidationResult(false, "Empty prompt is not valid");
-      }
-
-      // Could add more sophisticated validation here
-      // For example, checking if the prompt contains valid tool references
-
-      return new ValidationResult(true, "Workflow is valid");
-
-    } catch (Exception e) {
-      LOGGER.log(Level.WARNING, "Workflow validation failed", e);
-      return new ValidationResult(false, "Validation error: " + e.getMessage());
-    }
-  }
-
-  /**
-   * Gets workflow metrics for monitoring.
-   */
-  public WorkflowMetrics getMetrics() {
-    // In a real implementation, these would be tracked over time
-    return new WorkflowMetrics(0, // Total workflows executed
-        0, // Success count (would be tracked)
-        0, // Failure count (would be tracked)
-        0.0 // Average execution time (would be calculated)
-    );
-  }
 
 
   // Helper methods
@@ -213,41 +176,4 @@ public class WorkflowOrchestrationService {
     }
   }
 
-  /**
-   * Workflow execution metrics.
-   */
-  public static class WorkflowMetrics {
-    private final long totalExecutions;
-    private final long successCount;
-    private final long failureCount;
-    private final double averageExecutionTime;
-
-    public WorkflowMetrics(long totalExecutions, long successCount, long failureCount,
-        double averageExecutionTime) {
-      this.totalExecutions = totalExecutions;
-      this.successCount = successCount;
-      this.failureCount = failureCount;
-      this.averageExecutionTime = averageExecutionTime;
-    }
-
-    public long getTotalExecutions() {
-      return totalExecutions;
-    }
-
-    public long getSuccessCount() {
-      return successCount;
-    }
-
-    public long getFailureCount() {
-      return failureCount;
-    }
-
-    public double getAverageExecutionTime() {
-      return averageExecutionTime;
-    }
-
-    public double getSuccessRate() {
-      return totalExecutions > 0 ? (double) successCount / totalExecutions : 0.0;
-    }
-  }
 }

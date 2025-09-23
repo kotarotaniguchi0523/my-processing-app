@@ -107,9 +107,6 @@ public class CreateRectangleADKTool implements ADKTool {
                     style
                 );
 
-                if (rectangle == null) {
-                    return ToolResult.failure(state, "Failed to create rectangle object");
-                }
             } catch (Exception e) {
                 LOGGER.warning("Error creating rectangle: " + e.getMessage());
                 return ToolResult.failure(state, "Failed to create rectangle: " + e.getMessage());
