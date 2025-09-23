@@ -81,28 +81,9 @@ public final class Circle extends Shape {
 
     @Override
     protected void performDraw(Object canvas) {
-        // This would be implemented based on the specific rendering system
-        // For now, it's a placeholder that would work with Processing
-        if (canvas instanceof processing.core.PGraphics) {
-            processing.core.PGraphics pg = (processing.core.PGraphics) canvas;
-
-            // Apply style
-            if (style.hasFill()) {
-                pg.fill(style.getFillColor().toProcessingColor());
-            } else {
-                pg.noFill();
-            }
-
-            if (style.hasStroke()) {
-                pg.stroke(style.getStrokeColor().toProcessingColor());
-                pg.strokeWeight(style.getStrokeWeight());
-            } else {
-                pg.noStroke();
-            }
-
-            // Draw circle
-            pg.ellipse(position.getX(), position.getY(), getDiameter(), getDiameter());
-        }
+        // Drawing is handled by infrastructure layer renderers (CircleRenderer)
+        // This method is kept for backward compatibility but should not contain logic
+        throw new UnsupportedOperationException("Drawing should be handled by CircleRenderer in infrastructure layer");
     }
 
     @Override

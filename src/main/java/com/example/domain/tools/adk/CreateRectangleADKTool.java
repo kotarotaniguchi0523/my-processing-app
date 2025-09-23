@@ -8,7 +8,6 @@ import com.example.domain.values.Color;
 import static com.example.domain.tools.adk.ParameterExtractor.*;
 
 import java.util.Map;
-import java.util.UUID;
 import java.util.logging.Logger;
 
 /**
@@ -32,28 +31,15 @@ public class CreateRectangleADKTool implements ADKTool {
         try {
             LOGGER.info("Executing create_rectangle with parameters: " + parameters);
 
-            // Validate required parameters - support both flat and nested position formats
-            boolean hasPosition = hasRequiredParameters(parameters, "x", "y") ||
-                                (parameters.containsKey("position") && getMap(parameters, "position") != null);
-            if (!hasPosition || !hasRequiredParameters(parameters, "width", "height")) {
-                return ToolResult.failure(state, "Missing required parameters: position (x,y or position:{x,y}) and width, height");
+            // Extract position using utility
+            Position position = ADKToolUtils.extractPosition(parameters);
+            if (position == null) {
+                return ToolResult.failure(state, ADKToolUtils.getPositionErrorMessage("Position"));
             }
 
-            // Extract coordinates - support both flat and nested position formats
-            Number x = getNumber(parameters, "x");
-            Number y = getNumber(parameters, "y");
-
-            // If flat parameters not found, try nested position object
-            if (x == null || y == null) {
-                Map<String, Object> position = getMap(parameters, "position");
-                if (position != null) {
-                    x = getNumber(position, "x");
-                    y = getNumber(position, "y");
-                }
-            }
-
-            if (x == null || y == null) {
-                return ToolResult.failure(state, "Position x and y coordinates are required (either as flat x,y or position:{x,y})");
+            // Validate position is within bounds
+            if (!ADKToolUtils.isPositionInStandardBounds(position)) {
+                return ToolResult.failure(state, "Position is outside reasonable bounds (±10000)");
             }
 
             // Extract and validate dimensions using ParameterExtractor
@@ -63,23 +49,13 @@ public class CreateRectangleADKTool implements ADKTool {
                 return ToolResult.failure(state, "Width and height are required and must be valid numbers");
             }
 
-            // Validate dimensions are positive
-            if (width.doubleValue() <= 0 || height.doubleValue() <= 0) {
-                return ToolResult.failure(state, "Width and height must be positive values, got width=" + width + ", height=" + height);
+            // Validate dimensions
+            if (!ADKToolUtils.isDimensionInStandardBounds(width)) {
+                return ToolResult.failure(state, ADKToolUtils.getDimensionErrorMessage("Width", width));
             }
-
-            // Validate coordinates are within reasonable bounds
-            if (Math.abs(x.doubleValue()) > 10000 || Math.abs(y.doubleValue()) > 10000) {
-                return ToolResult.failure(state, "Coordinates are outside reasonable bounds (±10000)");
+            if (!ADKToolUtils.isDimensionInStandardBounds(height)) {
+                return ToolResult.failure(state, ADKToolUtils.getDimensionErrorMessage("Height", height));
             }
-
-            // Validate dimensions are within reasonable bounds
-            if (width.doubleValue() > 5000 || height.doubleValue() > 5000) {
-                return ToolResult.failure(state, "Dimensions are too large (max 5000 pixels)");
-            }
-
-            // Create position
-            Position position = new Position(x.floatValue(), y.floatValue());
 
             // Build style using ParameterExtractor with defensive programming
             Style style;
@@ -105,8 +81,8 @@ public class CreateRectangleADKTool implements ADKTool {
                 return ToolResult.failure(state, "Invalid style parameters: " + e.getMessage());
             }
 
-            // Generate unique shape ID
-            String shapeId = "rect_" + UUID.randomUUID().toString().substring(0, 8);
+            // Generate unique shape ID using utility
+            String shapeId = ADKToolUtils.generateShapeId("rect");
 
             // Create the rectangle with validation
             Rectangle rectangle;
@@ -137,7 +113,7 @@ public class CreateRectangleADKTool implements ADKTool {
             }
 
             String message = String.format("Created rectangle at (%.1f, %.1f) with size %.1fx%.1f",
-                x.floatValue(), y.floatValue(), width.floatValue(), height.floatValue());
+                position.getX(), position.getY(), width.floatValue(), height.floatValue());
 
             return ToolResult.success(newState, shapeId, message);
 

@@ -5,7 +5,6 @@ import com.example.presentation.SketchUIRenderer;
 import com.example.presentation.SketchEventHandler;
 import com.example.presentation.ChatManager;
 import com.example.presentation.InputManager;
-import com.example.presentation.DiffApprovalRenderer;
 import com.example.application.services.AIAgentService;
 import com.example.domain.models.DrawingState;
 import com.example.infrastructure.ServiceInitializer;
@@ -169,8 +168,8 @@ public class SimpleSketch extends PApplet {
   @Override
   public void mousePressed() {
     // Check if diff approval dialog is handling the click
-    if (uiRenderer.getDiffApprovalRenderer().isShowingApproval()) {
-      if (uiRenderer.getDiffApprovalRenderer().handleMousePressed(mouseX, mouseY)) {
+    if (uiRenderer.getDiffApprovalRenderer().isVisible()) {
+      if (uiRenderer.getDiffApprovalRenderer().handleMousePressed()) {
         return; // Click was handled by diff approval
       }
     }
@@ -201,10 +200,9 @@ public class SimpleSketch extends PApplet {
   @Override
   public void mouseWheel(processing.event.MouseEvent event) {
     // If diff approval modal is open and wants to consume the wheel, do not propagate
-    if (uiRenderer.getDiffApprovalRenderer().isShowingApproval()) {
-      boolean handled = uiRenderer.getDiffApprovalRenderer().handleMouseWheel(event);
-      if (handled)
-        return;
+    if (uiRenderer.getDiffApprovalRenderer().isVisible()) {
+      uiRenderer.getDiffApprovalRenderer().handleMouseWheel(event.getCount());
+      return;
     }
     eventHandler.handleMouseWheel(event);
   }
@@ -216,25 +214,20 @@ public class SimpleSketch extends PApplet {
       public void onApprove(DrawingState newState, String message) {
         // Show approval dialog
         DrawingState currentState = aiAgentService.getCurrentState();
-        uiRenderer.getDiffApprovalRenderer().showApproval(currentState, newState);
-
-        // Set up the renderer's approval callback
-        uiRenderer.getDiffApprovalRenderer()
-            .setApprovalCallback(new DiffApprovalRenderer.ApprovalCallback() {
-              @Override
-              public void onApprove() {
+        uiRenderer.getDiffApprovalRenderer().show(
+            currentState,
+            newState,
+            () -> { // onApprove
                 // Apply the approved state
                 aiAgentService.applyApprovedState(newState, message);
                 chatManager.addMessage("AI: " + message);
                 chatManager.addMessage("System: 変更が承認されました");
-              }
-
-              @Override
-              public void onReject() {
+            },
+            () -> { // onReject
                 // Just add a rejection message
                 chatManager.addMessage("System: 変更が拒否されました");
-              }
-            });
+            }
+        );
       }
 
       @Override

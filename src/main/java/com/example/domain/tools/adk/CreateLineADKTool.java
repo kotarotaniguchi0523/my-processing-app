@@ -8,7 +8,6 @@ import com.example.domain.values.Color;
 import static com.example.domain.tools.adk.ParameterExtractor.*;
 
 import java.util.Map;
-import java.util.UUID;
 import java.util.logging.Logger;
 
 /**
@@ -24,36 +23,22 @@ public class CreateLineADKTool implements ADKTool {
         try {
             LOGGER.info("Executing create_line with parameters: " + parameters);
 
-            // Extract start and end coordinates - support both flat and nested position formats
-            Number x1 = getNumber(parameters, "x1");
-            Number y1 = getNumber(parameters, "y1");
-            Number x2 = getNumber(parameters, "x2");
-            Number y2 = getNumber(parameters, "y2");
-
-            // If flat parameters not found, try nested start/end objects
-            if (x1 == null || y1 == null) {
-                Map<String, Object> start = getMap(parameters, "start");
-                if (start != null) {
-                    x1 = getNumber(start, "x");
-                    y1 = getNumber(start, "y");
-                }
-            }
-
-            if (x2 == null || y2 == null) {
-                Map<String, Object> end = getMap(parameters, "end");
-                if (end != null) {
-                    x2 = getNumber(end, "x");
-                    y2 = getNumber(end, "y");
-                }
-            }
-
-            if (x1 == null || y1 == null || x2 == null || y2 == null) {
+            // Extract line positions using utility
+            Position[] positions = ADKToolUtils.extractLinePositions(parameters);
+            if (positions == null) {
                 return ToolResult.failure(state, "Start and end coordinates are required (either as flat x1,y1,x2,y2 or start/end:{x,y})");
             }
 
-            // Create positions
-            Position startPos = new Position(x1.floatValue(), y1.floatValue());
-            Position endPos = new Position(x2.floatValue(), y2.floatValue());
+            Position startPos = positions[0];
+            Position endPos = positions[1];
+
+            // Validate positions are within bounds
+            if (!ADKToolUtils.isPositionInStandardBounds(startPos)) {
+                return ToolResult.failure(state, "Start position is outside reasonable bounds (±10000)");
+            }
+            if (!ADKToolUtils.isPositionInStandardBounds(endPos)) {
+                return ToolResult.failure(state, "End position is outside reasonable bounds (±10000)");
+            }
 
             // Build style for line (lines have no fill, only stroke)
             Style.Builder styleBuilder = buildStyleFromParameters(
@@ -69,8 +54,8 @@ public class CreateLineADKTool implements ADKTool {
 
             Style style = styleBuilder.build();
 
-            // Generate unique shape ID
-            String shapeId = "line_" + UUID.randomUUID().toString().substring(0, 8);
+            // Generate unique shape ID using utility
+            String shapeId = ADKToolUtils.generateShapeId("line");
 
             // Create the line
             Line line = new Line(shapeId, startPos, endPos, style);
@@ -80,8 +65,8 @@ public class CreateLineADKTool implements ADKTool {
 
             String message = String.format(
                 "Created line from (%.1f, %.1f) to (%.1f, %.1f)",
-                x1.floatValue(), y1.floatValue(),
-                x2.floatValue(), y2.floatValue()
+                startPos.getX(), startPos.getY(),
+                endPos.getX(), endPos.getY()
             );
 
             return ToolResult.success(newState, shapeId, message);

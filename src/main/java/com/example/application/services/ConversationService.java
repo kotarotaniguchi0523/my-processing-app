@@ -52,12 +52,12 @@ public class ConversationService {
       "- 見栄え: パーツのベタ付けを避ける。必要なら胴体/頭のサイズを相対的に調整し、自然な重なりにする。");
 
   private static final int MAX_HISTORY = 20;
-  private final List<AIAgentService.ChatMessage> history = new ArrayList<>();
+  private final List<MessageConverter.ChatMessage> history = new ArrayList<>();
   private final String sessionId = UUID.randomUUID().toString();
 
   public ConversationService() {
     // Seed system message
-    history.add(AIAgentService.ChatMessage.system(SYSTEM_PROMPT));
+    history.add(MessageConverter.ChatMessage.system(SYSTEM_PROMPT));
   }
 
   public String getSessionId() {
@@ -69,28 +69,28 @@ public class ConversationService {
   }
 
   public void addUserMessage(String content) {
-    history.add(AIAgentService.ChatMessage.user(content));
+    history.add(MessageConverter.ChatMessage.user(content));
     trimHistory();
   }
 
   public void addAssistantMessage(String content) {
-    history.add(AIAgentService.ChatMessage.assistant(content));
+    history.add(MessageConverter.ChatMessage.assistant(content));
     trimHistory();
   }
 
   public void addAssistantMessageWithTools(String content,
-      List<AIAgentService.ToolCall> toolCalls) {
-    history.add(AIAgentService.ChatMessage.assistantWithTools(content, toolCalls));
+      List<MessageConverter.ToolCall> toolCalls) {
+    history.add(MessageConverter.ChatMessage.assistantWithTools(content, toolCalls));
     trimHistory();
   }
 
-  public List<AIAgentService.ChatMessage> getHistory() {
+  public List<MessageConverter.ChatMessage> getHistory() {
     return Collections.unmodifiableList(history);
   }
 
   public void resetHistory() {
     history.clear();
-    history.add(AIAgentService.ChatMessage.system(SYSTEM_PROMPT));
+    history.add(MessageConverter.ChatMessage.system(SYSTEM_PROMPT));
   }
 
   public void loadFromAgentHistory(AgentHistory.Session session) {
@@ -105,7 +105,7 @@ public class ConversationService {
       String content = msg.getContent();
 
       // Convert tool calls if present
-      List<AIAgentService.ToolCall> toolCalls = null;
+      List<MessageConverter.ToolCall> toolCalls = null;
       if (msg.getToolCalls() != null && !msg.getToolCalls().isEmpty()) {
         toolCalls = new ArrayList<>();
         for (AgentHistory.ToolCall tc : msg.getToolCalls()) {
@@ -113,23 +113,23 @@ public class ConversationService {
           Map<String, Object> args = tc.getArguments() instanceof Map
               ? (Map<String, Object>) tc.getArguments()
               : new HashMap<>();
-          toolCalls.add(new AIAgentService.ToolCall(tc.getName(), args, tc.getResult()));
+          toolCalls.add(new MessageConverter.ToolCall(tc.getName(), args, tc.getResult()));
         }
       }
 
       switch (roleStr) {
         case "system":
-          history.add(AIAgentService.ChatMessage.system(content));
+          history.add(MessageConverter.ChatMessage.system(content));
           hasSystemMessage = true;
           break;
         case "user":
-          history.add(AIAgentService.ChatMessage.user(content));
+          history.add(MessageConverter.ChatMessage.user(content));
           break;
         default:
           if (toolCalls != null && !toolCalls.isEmpty()) {
-            history.add(AIAgentService.ChatMessage.assistantWithTools(content, toolCalls));
+            history.add(MessageConverter.ChatMessage.assistantWithTools(content, toolCalls));
           } else {
-            history.add(AIAgentService.ChatMessage.assistant(content));
+            history.add(MessageConverter.ChatMessage.assistant(content));
           }
           break;
       }
@@ -137,7 +137,7 @@ public class ConversationService {
 
     // Ensure we have system message
     if (!hasSystemMessage) {
-      history.add(0, AIAgentService.ChatMessage.system(SYSTEM_PROMPT));
+      history.add(0, MessageConverter.ChatMessage.system(SYSTEM_PROMPT));
     }
   }
 
@@ -159,7 +159,7 @@ public class ConversationService {
    */
   public String buildContextPrompt(String currentPrompt) {
     StringBuilder prompt = new StringBuilder();
-    List<AIAgentService.ChatMessage> historyList = getHistory();
+    List<MessageConverter.ChatMessage> historyList = getHistory();
 
     // Add system prompt
     prompt.append(getSystemPrompt()).append("\n\n");
@@ -180,10 +180,10 @@ public class ConversationService {
     if (startIndex < historyList.size()) {
       prompt.append("会話履歴:\n");
       for (int i = startIndex; i < historyList.size(); i++) {
-        AIAgentService.ChatMessage msg = historyList.get(i);
-        if (msg.role == AIAgentService.Role.USER) {
+        MessageConverter.ChatMessage msg = historyList.get(i);
+        if (msg.role == MessageConverter.Role.USER) {
           prompt.append("ユーザー: ").append(msg.content).append("\n");
-        } else if (msg.role == AIAgentService.Role.ASSISTANT) {
+        } else if (msg.role == MessageConverter.Role.ASSISTANT) {
           // Truncate long assistant messages to avoid prompt size issues
           String content = msg.content;
           if (content.length() > 200) {

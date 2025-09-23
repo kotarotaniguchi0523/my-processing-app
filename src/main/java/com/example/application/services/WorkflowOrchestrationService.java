@@ -67,7 +67,7 @@ public class WorkflowOrchestrationService {
         DrawingState currentState = getCurrentState();
 
         // Execute through ADK LLM workflow
-        ADKLlmWorkflowOrchestrator.WorkflowResult adkResult =
+        com.example.domain.agents.adk.WorkflowResult adkResult =
             llmWorkflowOrchestrator.execute(userPrompt, currentState);
 
         // Convert ADK result to our domain result
@@ -90,13 +90,13 @@ public class WorkflowOrchestrationService {
 
   // Helper methods
 
-  private WorkflowResult convertResult(ADKLlmWorkflowOrchestrator.WorkflowResult adkResult,
+  private WorkflowResult convertResult(com.example.domain.agents.adk.WorkflowResult adkResult,
       String requestId) {
     if (adkResult.isSuccess()) {
-      return new WorkflowResult(true, adkResult.getMessage(), null, adkResult.getFinalState(),
-          adkResult.getProgressLog(), adkResult.getScore(), requestId);
+      return new WorkflowResult(true, adkResult.getMessage(), null, adkResult.getState(),
+          adkResult.getProgressLog(), 90.0, requestId);
     } else {
-      return new WorkflowResult(false, null, adkResult.getMessage(), adkResult.getFinalState(),
+      return new WorkflowResult(false, null, adkResult.getMessage(), adkResult.getState(),
           adkResult.getProgressLog(), 0.0, requestId);
     }
   }

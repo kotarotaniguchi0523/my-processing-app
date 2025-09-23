@@ -43,6 +43,7 @@ public interface ADKTool {
         }
 
         public boolean isSuccess() { return success; }
+        public DrawingState getState() { return newState; }  // Added getState() alias
         public DrawingState getNewState() { return newState; }
         public String getMessage() { return message; }
         public String getShapeId() { return shapeId; }

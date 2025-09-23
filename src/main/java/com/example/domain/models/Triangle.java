@@ -128,28 +128,9 @@ public final class Triangle extends Shape {
 
   @Override
   protected void performDraw(Object canvas) {
-    // This would be implemented based on the specific rendering system
-    // For now, it's a placeholder that would work with Processing
-    if (canvas instanceof processing.core.PGraphics) {
-      processing.core.PGraphics pg = (processing.core.PGraphics) canvas;
-
-      // Apply style
-      if (style.hasFill()) {
-        pg.fill(style.getFillColor().toProcessingColor());
-      } else {
-        pg.noFill();
-      }
-
-      if (style.hasStroke()) {
-        pg.stroke(style.getStrokeColor().toProcessingColor());
-        pg.strokeWeight(style.getStrokeWeight());
-      } else {
-        pg.noStroke();
-      }
-
-      // Draw triangle using Processing's triangle function
-      pg.triangle(p1.getX(), p1.getY(), p2.getX(), p2.getY(), p3.getX(), p3.getY());
-    }
+    // Drawing is handled by infrastructure layer renderers
+    // This method is kept for backward compatibility but should not contain logic
+    throw new UnsupportedOperationException("Drawing should be handled by infrastructure layer renderers");
   }
 
   // Scale triangle from its centroid

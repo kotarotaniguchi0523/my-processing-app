@@ -55,12 +55,4 @@ public class ApiKeyManager {
         }
     }
 
-    /**
-     * Validate that required API key is available.
-     * @return true if API key is properly configured
-     */
-    public static boolean isApiKeyConfigured() {
-        String googleApiKey = System.getenv("GOOGLE_API_KEY");
-        return googleApiKey != null && !googleApiKey.isEmpty();
-    }
 }

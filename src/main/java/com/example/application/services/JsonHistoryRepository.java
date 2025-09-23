@@ -175,24 +175,24 @@ public class JsonHistoryRepository {
     /**
      * Update session with current conversation history.
      */
-    public void updateSessionFromHistory(AgentHistory.Session session, 
-                                       List<AIAgentService.ChatMessage> history) {
+    public void updateSessionFromHistory(AgentHistory.Session session,
+                                       List<MessageConverter.ChatMessage> history) {
         if (session == null || history == null) return;
-        
+
         // Clear session messages and re-add from history
         session.getMessages().clear();
-        for (AIAgentService.ChatMessage m : history) {
+        for (MessageConverter.ChatMessage m : history) {
             AgentHistory.Message msg = new AgentHistory.Message(
                 m.role.name().toLowerCase(), m.content);
-            
+
             // Add tool calls if present
             if (m.toolCalls != null && !m.toolCalls.isEmpty()) {
-                for (AIAgentService.ToolCall tc : m.toolCalls) {
+                for (MessageConverter.ToolCall tc : m.toolCalls) {
                     msg.getToolCalls().add(new AgentHistory.ToolCall(
                         tc.name, tc.arguments, tc.result));
                 }
             }
-            
+
             // Add message to session (handles max limit internally)
             session.addMessage(msg);
         }

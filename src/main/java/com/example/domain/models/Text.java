@@ -139,70 +139,9 @@ public final class Text extends Shape {
 
   @Override
   protected void performDraw(Object canvas) {
-    // This would be implemented based on the specific rendering system
-    // For now, it's a placeholder that would work with Processing
-    if (canvas instanceof processing.core.PGraphics) {
-      processing.core.PGraphics pg = (processing.core.PGraphics) canvas;
-
-      // Apply text style
-      if (style.hasFill()) {
-        pg.fill(style.getFillColor().toProcessingColor());
-      } else {
-        pg.noFill();
-      }
-
-      if (style.hasStroke()) {
-        pg.stroke(style.getStrokeColor().toProcessingColor());
-        pg.strokeWeight(style.getStrokeWeight());
-      } else {
-        pg.noStroke();
-      }
-
-      // Set text properties
-      pg.textSize(fontSize);
-
-      // Convert alignment to Processing constants
-      int hAlign = processing.core.PConstants.LEFT;
-      switch (horizontalAlign) {
-        case LEFT:
-          hAlign = processing.core.PConstants.LEFT;
-          break;
-        case CENTER:
-          hAlign = processing.core.PConstants.CENTER;
-          break;
-        case RIGHT:
-          hAlign = processing.core.PConstants.RIGHT;
-          break;
-        case TOP: // map to LEFT for horizontal alignment
-        case BOTTOM: // map to LEFT for horizontal alignment
-        default:
-          hAlign = processing.core.PConstants.LEFT;
-          break;
-      }
-
-      int vAlign = processing.core.PConstants.TOP;
-      switch (verticalAlign) {
-        case TOP:
-          vAlign = processing.core.PConstants.TOP;
-          break;
-        case CENTER:
-          vAlign = processing.core.PConstants.CENTER;
-          break;
-        case BOTTOM:
-          vAlign = processing.core.PConstants.BOTTOM;
-          break;
-        case LEFT: // map to TOP for vertical alignment
-        case RIGHT: // map to TOP for vertical alignment
-        default:
-          vAlign = processing.core.PConstants.TOP;
-          break;
-      }
-
-      pg.textAlign(hAlign, vAlign);
-
-      // Draw text
-      pg.text(content, position.getX(), position.getY());
-    }
+    // Drawing is handled by infrastructure layer renderers (TextRenderer)
+    // This method is kept for backward compatibility but should not contain logic
+    throw new UnsupportedOperationException("Drawing should be handled by TextRenderer in infrastructure layer");
   }
 
   // Get a substring as a new Text object

@@ -29,10 +29,12 @@ public class AIAgentService {
   private StateManager stateManager;
   private HistoryService historyService;
 
+  // --- Extracted Components ---
+  private final StateSynchronizationManager stateSyncManager;
+  private final HistoryManager historyManager;
 
   // --- Session Management ---
   private AgentHistory.Session currentSession;
-  private final boolean loadHistoryOnStartup;
 
   // --- Diff Approval ---
   private ApprovalCallback approvalCallback;
@@ -69,34 +71,27 @@ public class AIAgentService {
     this.stateManager = ServiceInitializer.getStateManager();
     this.historyService = ServiceInitializer.getHistoryService();
 
+    // Initialize extracted components
+    this.stateSyncManager = new StateSynchronizationManager(stateManager, historyService, stateChangeNotifier);
+    this.historyManager = new HistoryManager(conversationService, historyRepository, loadHistoryOnStartup, persistHistory);
+
     // Set initial state for state manager first, then workflow service
     this.stateManager.updateState(initialState);
     this.workflowService.setStateManager(this.stateManager);
-
-    // Register as a state change listener
-    setupStateChangeListener();
-
-    // Register with StateManager to receive state updates (for undo/redo)
-    setupStateManagerListener();
 
 
     Logger.getLogger(getClass().getName())
         .info("AIAgentService initialized with WorkflowOrchestrationService");
 
-    this.loadHistoryOnStartup = loadHistoryOnStartup;
 
-    if (this.loadHistoryOnStartup) {
-      loadHistoryIfExists();
-    } else {
-      // Create new session if not loading from file
-      this.currentSession = new AgentHistory.Session(conversationService.getSessionId());
-      this.currentSession
-          .addMessage(new AgentHistory.Message("system", conversationService.getSystemPrompt()));
-    }
+    // Get session from history manager
+    this.currentSession = historyManager.getCurrentSession();
+    stateSyncManager.setCurrentSession(currentSession);
 
-    // Create initial history file if persistence is enabled and file doesn't exist
-    if (persistHistory && !historyRepository.historyFileExists()) {
-      historyRepository.persistHistoryImmediately(currentSession, stateManager.getCurrentState());
+    // Load final state if available
+    DrawingState sessionState = historyManager.getSessionFinalState();
+    if (sessionState != null) {
+      stateManager.updateState(sessionState);
     }
   }
 
@@ -111,19 +106,6 @@ public class AIAgentService {
    */
   public StateChangeNotifier getStateChangeNotifier() {
     return stateChangeNotifier;
-  }
-
-  /**
-   * Set up the state change listener to connect StateChangeNotifier with StateManager.
-   */
-  private void setupStateChangeListener() {
-    stateChangeNotifier.addListener(new StateChangeNotifier.StateChangeListener() {
-      @Override
-      public void onStateChanged(DrawingState newState, String changeDescription) {
-        // This is already handled in the calling methods, but we can log it
-        Logger.getLogger(getClass().getName()).info("State change processed: " + changeDescription);
-      }
-    });
   }
 
   /**
@@ -142,38 +124,6 @@ public class AIAgentService {
    */
   public HistoryService getHistoryService() {
     return historyService;
-  }
-
-  /**
-   * Set up the StateManager listener to sync state changes back to AIAgentService. This ensures
-   * undo/redo operations update the AI agent's current state.
-   */
-  private void setupStateManagerListener() {
-    stateManager.addListener(new com.example.domain.services.StateChangeListener() {
-      @Override
-      public void onStateChanged(DrawingState oldState, DrawingState newState) {
-        // Update session state if available
-        if (currentSession != null) {
-          currentSession.setFinalState(newState);
-        }
-
-        Logger.getLogger(getClass().getName())
-            .info("AIAgentService notified of state change: "
-                + stateManager.calculateStateDifference(oldState, newState));
-      }
-
-      @Override
-      public void onHistoryChanged(DrawingState currentState, boolean canUndo, boolean canRedo) {
-        // Log history status changes
-        Logger.getLogger(getClass().getName())
-            .fine("History status: canUndo=" + canUndo + ", canRedo=" + canRedo);
-      }
-
-      @Override
-      public void onStateValidationError(DrawingState state, String error) {
-        Logger.getLogger(getClass().getName()).warning("State validation error: " + error);
-      }
-    });
   }
 
 
@@ -198,24 +148,18 @@ public class AIAgentService {
    * Apply approved state changes
    */
   public void applyApprovedState(DrawingState newState, String message) {
-    DrawingState previousState = stateManager.getCurrentState();
+    DrawingState previousState = stateSyncManager.getCurrentState();
 
     // Record the approved change in conversation history
     conversationService.addAssistantMessage(message);
-    if (currentSession != null) {
-      currentSession.addMessage(new AgentHistory.Message("assistant", message));
-      currentSession.setFinalState(newState);
-    }
+    historyManager.addMessageToSession("assistant", message);
+    historyManager.updateSessionState(newState);
 
     // Persist history
-    historyRepository.persistHistoryMaybe(currentSession, newState);
+    historyManager.persistSession(newState);
 
-    // Update StateManager and HistoryService (StateManager is single source of truth)
-    if (!newState.equals(previousState)) {
-      stateManager.updateState(newState);
-      historyService.addState(newState);
-      stateChangeNotifier.notifyStateChanged(newState, "Approved drawing change: " + message);
-    }
+    // Apply state change through sync manager
+    stateSyncManager.applyStateChange(previousState, newState, "Approved drawing change: " + message);
   }
 
 
@@ -229,9 +173,7 @@ public class AIAgentService {
     try {
       // Add user message to conversation history
       conversationService.addUserMessage(userPrompt);
-      if (currentSession != null) {
-        currentSession.addMessage(new AgentHistory.Message("user", userPrompt));
-      }
+      historyManager.addMessageToSession("user", userPrompt);
 
       // Execute workflow through orchestration service
       WorkflowOrchestrationService.WorkflowResult result =
@@ -254,10 +196,8 @@ public class AIAgentService {
 
         // Record in conversation history
         conversationService.addAssistantMessage(message);
-        if (currentSession != null) {
-          currentSession.addMessage(new AgentHistory.Message("assistant", message));
-          currentSession.setFinalState(newState);
-        }
+        historyManager.addMessageToSession("assistant", message);
+        historyManager.updateSessionState(newState);
 
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("success", true);
@@ -265,15 +205,11 @@ public class AIAgentService {
         metadata.put("score", result.getScore());
 
         // Persist history
-        historyRepository.persistHistoryMaybe(currentSession, newState);
+        historyManager.persistSession(newState);
 
-        // Update StateManager and HistoryService, then notify listeners
-        if (!newState.equals(previousState)) {
-          stateManager.updateState(newState);
-          historyService.addState(newState);
-          stateChangeNotifier.notifyStateChanged(newState,
-              "Workflow execution completed: " + message);
-        }
+        // Apply state change through sync manager
+        stateSyncManager.applyStateChange(previousState, newState,
+            "Workflow execution completed: " + message);
 
         return new AgentReply(message, newState, metadata);
       } else {
@@ -306,39 +242,27 @@ public class AIAgentService {
    * Best-effort: exceptions are swallowed to avoid affecting agent runtime.
    */
   public void clearHistoryFile() {
-    historyRepository.clearHistoryFile();
-    conversationService.resetHistory();
-  }
-
-  private void loadHistoryIfExists() {
-    AgentHistory.Session loadedSession = historyRepository.loadHistoryFromFile();
-
-    if (loadedSession != null) {
-      // Load the session and update conversation service
-      this.currentSession = loadedSession;
-      conversationService.loadFromAgentHistory(loadedSession);
-
-      // Load final state if available and update StateManager
-      if (currentSession.getFinalState() != null) {
-        stateManager.updateState(currentSession.getFinalState());
-      }
-    } else {
-      // Create new session if no history loaded
-      this.currentSession = new AgentHistory.Session(conversationService.getSessionId());
-      this.currentSession
-          .addMessage(new AgentHistory.Message("system", conversationService.getSystemPrompt()));
-    }
+    historyManager.clearHistory();
+    this.currentSession = historyManager.getCurrentSession();
+    stateSyncManager.setCurrentSession(currentSession);
   }
 
   /** Public wrapper to allow UI to trigger history loading on demand. */
   public boolean loadHistoryOnDemand() {
-    int before = conversationService.getHistory().size();
-    loadHistoryIfExists();
-    return conversationService.getHistory().size() > before;
+    boolean loaded = historyManager.loadHistoryOnDemand();
+    if (loaded) {
+      this.currentSession = historyManager.getCurrentSession();
+      stateSyncManager.setCurrentSession(currentSession);
+      DrawingState sessionState = historyManager.getSessionFinalState();
+      if (sessionState != null) {
+        stateSyncManager.updateState(sessionState);
+      }
+    }
+    return loaded;
   }
 
 
-  public List<ChatMessage> getHistory() {
+  public List<MessageConverter.ChatMessage> getHistory() {
     return conversationService.getHistory();
   }
 
@@ -346,61 +270,6 @@ public class AIAgentService {
     conversationService.resetHistory();
   }
 
-  // --- ChatMessage DTO ---
-  public static class ChatMessage {
-    public final Role role;
-    public final String content;
-    public final List<ToolCall> toolCalls;
-
-    private ChatMessage(Role role, String content) {
-      this(role, content, null);
-    }
-
-    private ChatMessage(Role role, String content, List<ToolCall> toolCalls) {
-      this.role = role;
-      this.content = content;
-      this.toolCalls = toolCalls;
-    }
-
-    public static ChatMessage system(String c) {
-      return new ChatMessage(Role.SYSTEM, c);
-    }
-
-    public static ChatMessage user(String c) {
-      return new ChatMessage(Role.USER, c);
-    }
-
-    public static ChatMessage assistant(String c) {
-      return new ChatMessage(Role.ASSISTANT, c);
-    }
-
-    public static ChatMessage assistantWithTools(String c, List<ToolCall> tools) {
-      return new ChatMessage(Role.ASSISTANT, c, tools);
-    }
-  }
-
-  // --- ToolCall DTO ---
-  public static class ToolCall {
-    public final String name;
-    public final Map<String, Object> arguments;
-    public final String result;
-
-    public ToolCall(String name, Map<String, Object> arguments, String result) {
-      this.name = name;
-      this.arguments = arguments;
-      this.result = result;
-    }
-  }
-
-  public enum Role {
-    SYSTEM("System"), USER("User"), ASSISTANT("Assistant");
-
-    public final String display;
-
-    Role(String d) {
-      this.display = d;
-    }
-  }
 
 
 

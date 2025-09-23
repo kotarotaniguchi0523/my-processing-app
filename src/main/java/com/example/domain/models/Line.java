@@ -157,25 +157,9 @@ public final class Line extends Shape {
 
     @Override
     protected void performDraw(Object canvas) {
-        // This would be implemented based on the specific rendering system
-        // For now, it's a placeholder that would work with Processing
-        if (canvas instanceof processing.core.PGraphics) {
-            processing.core.PGraphics pg = (processing.core.PGraphics) canvas;
-
-            // Apply style (lines typically don't have fill)
-            if (style.hasStroke()) {
-                pg.stroke(style.getStrokeColor().toProcessingColor());
-                pg.strokeWeight(style.getStrokeWeight());
-            } else {
-                pg.noStroke();
-            }
-
-            // Disable fill for lines
-            pg.noFill();
-
-            // Draw line
-            pg.line(position.getX(), position.getY(), endPosition.getX(), endPosition.getY());
-        }
+        // Drawing is handled by infrastructure layer renderers (LineRenderer)
+        // This method is kept for backward compatibility but should not contain logic
+        throw new UnsupportedOperationException("Drawing should be handled by LineRenderer in infrastructure layer");
     }
 
     // Check if this line intersects with another line

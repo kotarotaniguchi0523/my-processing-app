@@ -8,7 +8,6 @@ import com.example.domain.values.Color;
 import static com.example.domain.tools.adk.ParameterExtractor.*;
 
 import java.util.Map;
-import java.util.UUID;
 import java.util.logging.Logger;
 
 /**
@@ -24,21 +23,15 @@ public class CreateCircleADKTool implements ADKTool {
         try {
             LOGGER.info("Executing create_circle with parameters: " + parameters);
 
-            // Extract coordinates - support both flat and nested position formats
-            Number x = getNumber(parameters, "x");
-            Number y = getNumber(parameters, "y");
-
-            // If flat parameters not found, try nested position object
-            if (x == null || y == null) {
-                Map<String, Object> position = getMap(parameters, "position");
-                if (position != null) {
-                    x = getNumber(position, "x");
-                    y = getNumber(position, "y");
-                }
+            // Extract position using utility
+            Position position = ADKToolUtils.extractPosition(parameters);
+            if (position == null) {
+                return ToolResult.failure(state, ADKToolUtils.getPositionErrorMessage("Position"));
             }
 
-            if (x == null || y == null) {
-                return ToolResult.failure(state, "Position x and y coordinates are required (either as flat x,y or position:{x,y})");
+            // Validate position is within bounds
+            if (!ADKToolUtils.isPositionInStandardBounds(position)) {
+                return ToolResult.failure(state, "Position is outside reasonable bounds (±10000)");
             }
 
             // Extract radius using ParameterExtractor
@@ -47,13 +40,10 @@ public class CreateCircleADKTool implements ADKTool {
                 return ToolResult.failure(state, "Radius is required");
             }
 
-            // Validate radius is positive
-            if (radius.doubleValue() <= 0) {
-                return ToolResult.failure(state, "Radius must be positive");
+            // Validate radius
+            if (!ADKToolUtils.isDimensionInStandardBounds(radius)) {
+                return ToolResult.failure(state, ADKToolUtils.getDimensionErrorMessage("Radius", radius));
             }
-
-            // Create position
-            Position position = new Position(x.floatValue(), y.floatValue());
 
             // Build style using ParameterExtractor
             Style style = buildStyleFromParameters(
@@ -64,8 +54,8 @@ public class CreateCircleADKTool implements ADKTool {
                 true                       // Default filled
             ).build();
 
-            // Generate unique shape ID
-            String shapeId = "circle_" + UUID.randomUUID().toString().substring(0, 8);
+            // Generate unique shape ID using utility
+            String shapeId = ADKToolUtils.generateShapeId("circle");
 
             // Create the circle
             Circle circle = new Circle(shapeId, position, radius.floatValue(), style);
@@ -74,7 +64,7 @@ public class CreateCircleADKTool implements ADKTool {
             DrawingState newState = state.withAddedShape(circle);
 
             String message = String.format("Created circle at (%.1f, %.1f) with radius %.1f",
-                x.floatValue(), y.floatValue(), radius.floatValue());
+                position.getX(), position.getY(), radius.floatValue());
 
             return ToolResult.success(newState, shapeId, message);
 

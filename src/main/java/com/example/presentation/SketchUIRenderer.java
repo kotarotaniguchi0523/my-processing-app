@@ -46,7 +46,7 @@ public class SketchUIRenderer {
     // Initialize specialized renderers
     this.themeManager = new ThemeManager(sketch);
     this.backgroundRenderer = new BackgroundRenderer(sketch, themeManager);
-    this.diffApprovalRenderer = new DiffApprovalRenderer(sketch, themeManager);
+    this.diffApprovalRenderer = new DiffApprovalRenderer(sketch);
     this.canvasRenderer = new CanvasRenderer(sketch, themeManager, aiAgentService);
     this.chatRenderer = new ChatRenderer(sketch, themeManager, chatManager);
     this.inputRenderer = new InputRenderer(sketch, themeManager, chatManager);
@@ -58,7 +58,7 @@ public class SketchUIRenderer {
     canvasRenderer.setFont(font);
     chatRenderer.setFonts(font, smallFont);
     inputRenderer.setFont(smallFont);
-    diffApprovalRenderer.setFonts(font, smallFont);
+    // DiffApprovalRenderer doesn't need fonts anymore
   }
 
   public void calculateLayout() {
@@ -110,7 +110,7 @@ public class SketchUIRenderer {
   }
   
   public void drawDiffApproval() {
-    diffApprovalRenderer.render();
+    diffApprovalRenderer.draw(sketch.getGraphics());
   }
   
   public DiffApprovalRenderer getDiffApprovalRenderer() {
